@@ -1,38 +1,49 @@
-import { useEffect, useState } from 'react';
 import './App.scss';
-import type { TgUser } from './types/telegram';
 import AccessGate from './pages/AccessGate';
+import { Navigate, Route, Routes } from 'react-router-dom';
+import useUserTg from './shared/hooks/useUserTg';
+import Home from './pages/Home';
+import Navigation from './shared/components/Navigation';
+import DevPage from './pages/DevPage';
 
 function App() {
-  const [user, setUser] = useState<TgUser | null>(null);
-
-  // TODO: оязательно сделать проверку данных с помощью Bot API на беке
-  useEffect(() => {
-    // Telegram SDK доступен только внутри Telegram
-    const tg = window.Telegram?.WebApp;
-
-    if (!tg) return;
-
-    // Гарантируем что Mini App развёрнута
-    tg.expand();
-    const u = tg.initDataUnsafe?.user;
-
-    if (u) {
-      setUser(u);
-    }
-  }, []);
+  const user = useUserTg();
 
   return (
     <div className="app">
-      {!user ? (
-        <AccessGate />
-      ) : (
-        <>
-          <h1>Привет, {user.first_name}!</h1>
-          <p>ID: {user.id}</p>
-          {user.username && <p>@{user.username}</p>}
-        </>
-      )}
+      {/* если нет юзера - навигацию не отрисовываем */}
+      {user && <Navigation />}
+
+      <Routes>
+        {/* Если user нет → открываем AccessGate,
+        иначе редиректим на /home */}
+        <Route
+          path="/"
+          element={user ? <Navigate to="/home" replace /> : <AccessGate />}
+        />
+
+        {/* Закрытый роут: если user нет – редирект на "/" */}
+        <Route
+          path="/home"
+          element={user ? <Home /> : <Navigate to="/" replace />}
+        />
+        <Route
+          path="/discover"
+          element={user ? <DevPage /> : <Navigate to="/" replace />}
+        />
+        <Route
+          path="/wallet"
+          element={user ? <DevPage /> : <Navigate to="/" replace />}
+        />
+        <Route
+          path="/profile"
+          element={user ? <DevPage /> : <Navigate to="/" replace />}
+        />
+      </Routes>
+
+      {/* <AccessGate /> */}
+      {/* <Navigation /> */}
+      {/* <Home /> */}
     </div>
   );
 }

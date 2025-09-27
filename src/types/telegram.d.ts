@@ -4,6 +4,7 @@ export interface TgUser {
   last_name?: string;
   username?: string;
   language_code?: string;
+  photo_url?: string;
 }
 
 declare global {
@@ -17,6 +18,7 @@ declare global {
             last_name?: string;
             username?: string;
             language_code?: string;
+            photo_url?: string;
           };
         };
         expand(): void;
