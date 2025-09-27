@@ -30,12 +30,16 @@ const Home = () => {
     navigate('/discover');
   };
 
+  const handleClickAvatar = () => {
+    navigate('/profile');
+  };
+
   return (
     <div className="home">
       <div className="main-header">
         <img src={logo} alt="Showpls Logo" className="default-logo" />
 
-        <div className="avatar-container">
+        <div className="avatar-container" onClick={handleClickAvatar}>
           <img src={user?.photo_url} alt="" className="avatar" />
 
           <img src={checkIcon} alt="Check Icon" className="avatar__check" />
