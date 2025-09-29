@@ -146,16 +146,7 @@ const Discover = () => {
         </>
       )}
 
-      {activeSection === 'map' && (
-        <>
-          <p style={{ width: '90%' }}>
-            Для более удобного решения этой проблемы - напишите мне в телеграм:
-            @tg_tuman. Прошу, не пишите о телеграме на Кворке.
-          </p>
-
-          <Map />
-        </>
-      )}
+      {activeSection === 'map' && <Map />}
 
       <NavigationSkeleton />
     </div>
