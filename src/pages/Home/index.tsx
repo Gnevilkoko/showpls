@@ -1,6 +1,3 @@
-import useUserTg from '../../shared/hooks/useUserTg';
-import logo from '../../assets/logo.svg';
-import checkIcon from '../../assets/check-icon.svg';
 import plusActionBannerIcon from '../../assets/plus-action-banner.svg';
 import searchActionBannerIcon from '../../assets/search-action-banner.svg';
 import linkIcon from '../../assets/link.svg';
@@ -14,9 +11,9 @@ import bluetoothIcon from '../../assets/bluetooth.svg';
 import NavigationSkeleton from '../../shared/components/NavigationSkeleton';
 import { useNavigate } from 'react-router-dom';
 import { useState } from 'react';
+import Header from '../../shared/components/Header';
 
 const Home = () => {
-  const user = useUserTg();
   const navigate = useNavigate();
 
   // удалить - эта логика только для демонстрации
@@ -27,24 +24,12 @@ const Home = () => {
   };
 
   const handleClickMapBtn = () => {
-    navigate('/discover');
-  };
-
-  const handleClickAvatar = () => {
-    navigate('/profile');
+    navigate('/discover#map');
   };
 
   return (
-    <div className="home">
-      <div className="main-header">
-        <img src={logo} alt="Showpls Logo" className="default-logo" />
-
-        <div className="avatar-container" onClick={handleClickAvatar}>
-          <img src={user?.photo_url} alt="" className="avatar" />
-
-          <img src={checkIcon} alt="Check Icon" className="avatar__check" />
-        </div>
-      </div>
+    <div className="page home">
+      <Header />
 
       <div className="home__actions-container">
         <div className="action-banner green">

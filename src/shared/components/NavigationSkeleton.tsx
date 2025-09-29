@@ -1,8 +1,7 @@
 import { useEffect, useState } from 'react';
 
 const NavigationSkeleton = () => {
-  const [size, setSize] = useState<{ width: string; height: string }>({
-    width: '0px',
+  const [size, setSize] = useState<{ height: string }>({
     height: '0px',
   });
 
@@ -12,7 +11,6 @@ const NavigationSkeleton = () => {
 
     const styles = getComputedStyle(el);
     setSize({
-      width: styles.width,
       height: styles.height,
     });
   }, []);
@@ -20,7 +18,6 @@ const NavigationSkeleton = () => {
   return (
     <div
       style={{
-        width: size.width,
         height: size.height,
         opacity: 0,
         pointerEvents: 'none', // чтобы не перехватывал клики

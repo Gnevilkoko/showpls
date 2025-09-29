@@ -5,6 +5,7 @@ import useUserTg from './shared/hooks/useUserTg';
 import Home from './pages/Home';
 import Navigation from './shared/components/Navigation';
 import DevPage from './pages/DevPage';
+import Discover from './pages/Discover';
 
 function App() {
   const user = useUserTg();
@@ -29,7 +30,7 @@ function App() {
         />
         <Route
           path="/discover"
-          element={user ? <DevPage /> : <Navigate to="/" replace />}
+          element={user ? <Discover /> : <Navigate to="/" replace />}
         />
         <Route
           path="/wallet"
@@ -41,9 +42,16 @@ function App() {
         />
       </Routes>
 
-      {/* <AccessGate /> */}
-      {/* <Navigation /> */}
-      {/* <Home /> */}
+      {/* dev mode */}
+      {/* <Navigation />
+
+      <Routes>
+        <Route path="/" element={<AccessGate />} />
+        <Route path="/home" element={<Home />} />
+        <Route path="/discover" element={<Discover />} />
+        <Route path="/wallet" element={<DevPage />} />
+        <Route path="/profile" element={<DevPage />} />
+      </Routes> */}
     </div>
   );
 }
