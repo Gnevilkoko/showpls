@@ -73,6 +73,8 @@ const Discover = () => {
         </button>
       </div>
 
+      <p>Пасхалка: @tg_tuman</p>
+
       {activeSection === 'list' &&
         TasksList.map((task) => (
           <div
