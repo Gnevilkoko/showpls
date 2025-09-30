@@ -27,6 +27,10 @@ const Home = () => {
     navigate('/discover#map');
   };
 
+  const handleClickFindTask = () => {
+    navigate('/discover');
+  };
+
   return (
     <div className="page home">
       <Header />
@@ -48,7 +52,7 @@ const Home = () => {
           </div>
         </div>
 
-        <div className="action-banner blue">
+        <div className="action-banner blue" onClick={handleClickFindTask}>
           <img
             src={searchActionBannerIcon}
             alt="Create Request Icon"

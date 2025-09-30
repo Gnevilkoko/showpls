@@ -1,11 +1,10 @@
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import Header from '../../shared/components/Header';
-import cameraIcon from '../../assets/camera.svg';
 import starsWhiteIcon from '../../assets/stars-white.svg';
-import verifiedCheckIcon from '../../assets/verified-check.svg';
 import NavigationSkeleton from '../../shared/components/NavigationSkeleton';
-import Map from './Map';
 import { useLocation } from 'react-router-dom';
+import MapContainer from './MapContainer';
+import { TasksList } from './tasks';
 
 const Discover = () => {
   const location = useLocation();
@@ -13,9 +12,42 @@ const Discover = () => {
     location.hash === '#map' ? 'map' : 'list'
   );
 
+  // Хранит id активной таски
+  const [activeTaskId, setActiveTaskId] = useState<string | null>(null);
+
+  // Создаём ref для каждой таски в списке и на карте
+  const listTaskRefs = useRef<Record<string, HTMLDivElement | null>>({});
+  const mapTaskRefs = useRef<Record<string, HTMLDivElement | null>>({});
+
   const handleToggle = (val: 'list' | 'map') => {
     setActiveSection(val);
   };
+
+  // При выборе таски из списка
+  const handleTaskClick = (taskId: string) => {
+    setActiveTaskId(taskId); // отметить активную таску
+    setActiveSection('map'); // переключить вкладку на карту
+  };
+
+  // Прокрутка к активной таске в горизонтальном списке под картой
+  useEffect(() => {
+    if (activeSection === 'map' && activeTaskId) {
+      const ref = mapTaskRefs.current[activeTaskId];
+      if (ref) {
+        ref.scrollIntoView({ behavior: 'smooth', inline: 'center' });
+      }
+    }
+  }, [activeSection, activeTaskId]);
+
+  // Прокрутка к активной таске при возврате в список
+  useEffect(() => {
+    if (activeSection === 'list' && activeTaskId) {
+      const ref = listTaskRefs.current[activeTaskId];
+      if (ref) {
+        ref.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      }
+    }
+  }, [activeSection, activeTaskId]);
 
   return (
     <div className="page discover">
@@ -41,112 +73,133 @@ const Discover = () => {
         </button>
       </div>
 
-      {activeSection === 'list' && (
+      {activeSection === 'list' &&
+        TasksList.map((task) => (
+          <div
+            key={task.id}
+            className="discover__task"
+            ref={(el) => {
+              listTaskRefs.current[task.id] = el;
+            }}
+          >
+            <div className="task__header">
+              <img src={task.icon} alt="Task Icon" />
+              <span>{task.title}</span>
+            </div>
+
+            <div className="task__container">
+              <div className="task__content">
+                <div className="task__tags-container">
+                  {task.tags.map((tag, index) => {
+                    if (tag.type === 'badge') {
+                      return (
+                        <div key={index} className={`tag badge ${tag.color}`}>
+                          {tag.label}
+                        </div>
+                      );
+                    }
+
+                    if (tag.type === 'stars') {
+                      return (
+                        <div key={index} className="tag stars">
+                          {task.price}
+                          <span>
+                            <img src={starsWhiteIcon} alt="Stars Icon" />
+                          </span>
+                        </div>
+                      );
+                    }
+
+                    if (tag.type === 'text') {
+                      return (
+                        <div key={index} className="tag">
+                          {tag.label}
+                        </div>
+                      );
+                    }
+
+                    return null;
+                  })}
+                </div>
+
+                <span>{task.description}</span>
+              </div>
+
+              <button
+                className="task__button"
+                onClick={() => handleTaskClick(task.id)}
+              >
+                View details
+              </button>
+            </div>
+          </div>
+        ))}
+
+      {activeSection === 'map' && (
         <>
-          <div className="discover__task">
-            <div className="task__header">
-              <img src={cameraIcon} alt="Camera Icon" />
+          <MapContainer
+            activeTaskId={activeTaskId} // id активной таски
+            setActiveTaskId={setActiveTaskId} // при клике на маркер
+          />
 
-              <span>Take photo of coffee shop menu board</span>
-            </div>
-
-            <div className="task__container">
-              <div className="task__content">
-                <div className="task__tags-container">
-                  <div className="tag badge green">Urgent</div>
-
-                  <div className="tag stars">
-                    20
-                    <span>
-                      <img src={starsWhiteIcon} alt="Stars Icon" />
-                    </span>
+          <div className="map-tasks-wrapper">
+            <div className="map-tasks-container">
+              {TasksList.map((task) => (
+                <div
+                  key={task.id}
+                  className="discover__task"
+                  ref={(el) => {
+                    mapTaskRefs.current[task.id] = el;
+                  }}
+                  onClick={() => handleTaskClick(task.id)}
+                >
+                  <div className="task__header">
+                    <img src={task.icon} alt="Task Icon" />
+                    <span>{task.title}</span>
                   </div>
-
-                  <div className="tag">2h left</div>
-
-                  <div className="tag">1.2 km</div>
-                </div>
-
-                <span>
-                  Go to BeanCraft and show the full menu board clearly. Payment
-                  in escrow.
-                </span>
-              </div>
-
-              <button className="task__button">Viev details</button>
-            </div>
-          </div>
-
-          <div className="discover__task">
-            <div className="task__header">
-              <img src={verifiedCheckIcon} alt="Camera Icon" />
-
-              <span>Verify store opening hours</span>
-            </div>
-
-            <div className="task__container">
-              <div className="task__content">
-                <div className="task__tags-container">
-                  <div className="tag badge green">Urgent</div>
-
-                  <div className="tag stars">
-                    20
-                    <span>
-                      <img src={starsWhiteIcon} alt="Stars Icon" />
-                    </span>
+                  <div className="task__container">
+                    <div className="task__content">
+                      <div className="task__tags-container">
+                        {task.tags.map((tag, index) => {
+                          if (tag.type === 'badge') {
+                            return (
+                              <div
+                                key={index}
+                                className={`tag badge ${tag.color}`}
+                              >
+                                {tag.label}
+                              </div>
+                            );
+                          }
+                          if (tag.type === 'stars') {
+                            return (
+                              <div key={index} className="tag stars">
+                                {task.price}
+                                <span>
+                                  <img src={starsWhiteIcon} alt="Stars Icon" />
+                                </span>
+                              </div>
+                            );
+                          }
+                          if (tag.type === 'text') {
+                            return (
+                              <div key={index} className="tag">
+                                {tag.label}
+                              </div>
+                            );
+                          }
+                          return null;
+                        })}
+                      </div>
+                    </div>
                   </div>
-
-                  <div className="tag">1.2 km</div>
                 </div>
-
-                <span>
-                  Check and capture the posted hours at "Daily Mart". Confirm if
-                  holiday hours apply.
-                </span>
-              </div>
-
-              <button className="task__button">Viev details</button>
+              ))}
             </div>
-          </div>
-
-          <div className="discover__task">
-            <div className="task__header">
-              <img src={verifiedCheckIcon} alt="Camera Icon" />
-
-              <span>Translate menu from photo</span>
-            </div>
-
-            <div className="task__container">
-              <div className="task__content">
-                <div className="task__tags-container">
-                  <div className="tag badge blue">Remote</div>
-
-                  <div className="tag stars">
-                    20
-                    <span>
-                      <img src={starsWhiteIcon} alt="Stars Icon" />
-                    </span>
-                  </div>
-
-                  <div className="tag">1.2 km</div>
-                </div>
-
-                <span>
-                  Lorem ipsum dolor sit amet, consectetur adipisicing elit.
-                  Alias cumque natus minima excepturi. Veritatis, soluta aperiam
-                  necessitatibus iure consequatur doloribus! Officiis
-                  consequuntur et aliquam assumenda possimus natus praesentium
-                  omnis iste.
-                </span>
-              </div>
-
-              <button className="task__button">Viev details</button>
-            </div>
+            <NavigationSkeleton />
           </div>
         </>
       )}
-
-      {activeSection === 'map' && <Map />}
 
       <NavigationSkeleton />
     </div>

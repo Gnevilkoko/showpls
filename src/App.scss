@@ -595,6 +595,7 @@ $max-width-all-content: 450px;
 
 .task__tags-container {
   display: flex;
+  flex-wrap: nowrap;
   gap: 8px;
 }
 
@@ -648,4 +649,97 @@ $max-width-all-content: 450px;
   line-height: 100%;
 
   color: #ffffff;
+}
+
+// =========== map ===========
+
+.map {
+  flex: 1;
+  width: 90%;
+  height: 100%;
+  border-radius: 16px;
+}
+
+.custom-marker {
+  border-radius: 100px;
+  padding: 6px 11px 6px 11px;
+  transition: all 0.3s ease;
+  transform: translateY(-6px);
+
+  &.urgent {
+    background-color: #00da4c;
+
+    &::after {
+      border-top-color: #00da4c;
+    }
+  }
+
+  &.remote {
+    background-color: #007fff;
+
+    &::after {
+      border-top-color: #007fff;
+    }
+  }
+
+  &.active {
+    background-color: #fc9500;
+
+    &::after {
+      border-top-color: #fc9500;
+    }
+  }
+
+  &::after {
+    content: '';
+    position: absolute;
+    bottom: -6px; // расстояние под маркером
+    left: 50%; // центрируем
+    transform: translateX(-50%);
+    width: 0;
+    height: 0;
+    border-left: 6px solid transparent;
+    border-right: 6px solid transparent;
+    border-top: 6px solid;
+    transition: all 0.3s ease;
+  }
+}
+
+.custom-marker__content {
+  display: flex;
+  box-sizing: border-box;
+  font-family: Inter;
+  font-weight: 500;
+  font-size: 16px;
+  color: #ffffff;
+  gap: 4px;
+
+  img {
+    height: 14px;
+  }
+}
+
+.map-tasks-wrapper {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0; // весь контейнер упирается в низ
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+}
+
+.map-tasks-container {
+  padding-left: 10vw;
+  padding-right: 10vw;
+  display: flex;
+  gap: 10px;
+  overflow-x: auto;
+  scrollbar-width: none;
+
+  .discover__task {
+    flex: 0 0 80vw;
+    max-width: 450px;
+    min-width: 310px;
+  }
 }
