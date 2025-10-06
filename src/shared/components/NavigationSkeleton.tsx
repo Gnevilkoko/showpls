@@ -7,11 +7,13 @@ const NavigationSkeleton = () => {
 
   useEffect(() => {
     const el = document.querySelector('.navigation') as HTMLElement | null;
-    if (!el) return; // если элемент ещё не смонтирован, просто выходим
+    if (!el) return;
 
     const styles = getComputedStyle(el);
+    const height = parseFloat(styles.height) + 14; // прибавляем нужное количество пикселей под макет
+
     setSize({
-      height: styles.height,
+      height: `${height}px`,
     });
   }, []);
 

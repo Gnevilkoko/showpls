@@ -1,6 +1,5 @@
 import background from '../../assets/access-gate-bg.webp';
-import logo from '../../assets/logo.svg';
-import infoCircleWhite from '../../assets/Info-circle-white.svg';
+import logo from '../../assets/logo.png';
 import OpenTelegramButton from './OpenTelegramButton';
 
 const AccessGate = () => {
@@ -17,13 +16,12 @@ const AccessGate = () => {
 
       <div className="access-gate__container">
         <div className="access-gate__content">
-          <button className="access-gate__button-info">
-            <img src={infoCircleWhite} alt="Info" />
-          </button>
+          <h1 className="access-gate__header">Welcome to Showpls!</h1>
 
           <p className="access-gate__description">
-            You can search for executors anywhere. If you want to earn money,
-            just enable executor mode
+            8.7 billion eye. One Global Workforce
+            <br />
+            Every smartphone, camera, drone can earn with Showpls
           </p>
 
           <OpenTelegramButton />

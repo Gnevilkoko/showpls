@@ -1,13 +1,9 @@
 import plusActionBannerIcon from '../../assets/plus-action-banner.svg';
 import searchActionBannerIcon from '../../assets/search-action-banner.svg';
-import linkIcon from '../../assets/link.svg';
+import walletIcon from '../../assets/wallet-new.svg';
 import starsIcon from '../../assets/stars.svg';
-import mapPinIcon from '../../assets/map-pin.svg';
-import historyIcon from '../../assets/history.svg';
-import chatLineIcon from '../../assets/chat-line.svg';
-import cameraIcon from '../../assets/camera.svg';
-import verifiedCheckIcon from '../../assets/verified-check.svg';
-import bluetoothIcon from '../../assets/bluetooth.svg';
+import logoSpecials from '../../assets/logo-specials.png';
+import partnerNikeLogo from '../../assets/partnerNikeLogo.png';
 import NavigationSkeleton from '../../shared/components/NavigationSkeleton';
 import { useNavigate } from 'react-router-dom';
 import { useState } from 'react';
@@ -21,10 +17,6 @@ const Home = () => {
 
   const handleClickOption = (bool: boolean) => {
     setIsRequests(bool);
-  };
-
-  const handleClickMapBtn = () => {
-    navigate('/discover#map');
   };
 
   const handleClickFindTask = () => {
@@ -44,11 +36,9 @@ const Home = () => {
           />
 
           <div className="action-banner-container">
-            <p className="action-banner__header">Create request</p>
+            <p className="action-banner__header">I want to see</p>
 
-            <p className="action-banner__content">
-              Post what you need, get it done fast
-            </p>
+            <p className="action-banner__content">Post a reqiest</p>
           </div>
         </div>
 
@@ -60,11 +50,9 @@ const Home = () => {
           />
 
           <div className="action-banner-container">
-            <p className="action-banner__header">Find tasks</p>
+            <p className="action-banner__header">I can show</p>
 
-            <p className="action-banner__content">
-              Discover gigs to earn Stars
-            </p>
+            <p className="action-banner__content">Browse tasks to earn</p>
           </div>
         </div>
       </div>
@@ -72,7 +60,7 @@ const Home = () => {
       <div className="home__wallet">
         <div className="wallet__header">
           <div className="wallet__header__title">
-            <img src={linkIcon} alt="Link Icon" className="wallet__link-icon" />
+            <img src={walletIcon} alt="Wallet Icon" />
 
             <span>Wallet</span>
           </div>
@@ -91,90 +79,97 @@ const Home = () => {
         </div>
 
         <div className="content-container">
-          <div className="wallet-content">
-            <span className="count-stars">120</span>
+          <div className="wallet-content__wrapper">
+            <span className="wallet-content__available">Available</span>
 
-            <div className="tg-stars-icon__container">
-              <img
-                src={starsIcon}
-                alt="Telegram Stars Icon"
-                className="tg-stars-icon"
-              />
+            <div className="wallet-content">
+              <span className="count-stars">120</span>
+
+              <div className="tg-stars-icon__container">
+                <img
+                  src={starsIcon}
+                  alt="Telegram Stars Icon"
+                  className="tg-stars-icon"
+                />
+              </div>
             </div>
-
-            <span className="wallet-content__aviable">Aviable</span>
           </div>
 
-          <button className="button-switch-map" onClick={handleClickMapBtn}>
-            <img src={mapPinIcon} alt="Map Pin Icon" />
+          <div className="wallet-content__buttons-container">
+            <button className="wallet-content__button green">Top-up</button>
 
-            <span>Find Executors on Map</span>
-          </button>
+            <button className="wallet-content__button blue">Payout</button>
+          </div>
         </div>
       </div>
 
-      <div className="home__activity-banner">
-        <div className="activity-banner__header">
-          <img src={historyIcon} alt="History Icon" />
-
-          <span>Resent Activity</span>
+      <div className="home__specials-banner">
+        <div className="specials-banner__header">
+          <img
+            src={logoSpecials}
+            className="default-logo"
+            alt="Showpls Specials Logo"
+          />
         </div>
 
-        <div className="activity__container">
-          <div className="activity__options">
+        <div className="specials__container">
+          <div className="specials__options">
             <button
               className={`option ${isRequests ? 'active' : ''} `}
               onClick={() => handleClickOption(true)}
             >
-              Requests
+              Missions
             </button>
 
             <button
               className={`option ${!isRequests ? 'active' : ''} `}
               onClick={() => handleClickOption(false)}
             >
-              Executions
+              On Scene
             </button>
           </div>
 
           <div className="option__content-list">
-            <div className="option__content">
-              <img src={chatLineIcon} alt="Chat Line Icon" />
+            <div className="option__wrapper">
+              <img
+                src={partnerNikeLogo}
+                alt="Chat Line Icon"
+                className="partner-logo"
+              />
 
-              <span>Translate menu from photo</span>
+              <div className="option__content">
+                <span>Take photo with Nike shoes</span>
 
-              <div className="task__status">Founded</div>
+                <span className="option__price">
+                  Earn 50
+                  <img src={starsIcon} alt="Telegram Stars Icon" />
+                </span>
+              </div>
+
+              <button className="option__task-button">Details</button>
             </div>
 
-            <div className="option__content">
-              <img src={cameraIcon} alt="Chat Line Icon" />
+            <div className="option__wrapper">
+              <img
+                src={partnerNikeLogo}
+                alt="Chat Line Icon"
+                className="partner-logo"
+              />
 
-              <span>Take photo of store front</span>
+              <div className="option__content">
+                <span>Film short video drinking Coca-Cola</span>
 
-              <div className="task__status accepted">In progress</div>
-            </div>
+                <span className="option__price">
+                  Earn 100
+                  <img src={starsIcon} alt="Telegram Stars Icon" />
+                </span>
+              </div>
 
-            <div className="option__content">
-              <img src={verifiedCheckIcon} alt="Chat Line Icon" />
-
-              <span>Take photo of store front</span>
-
-              <div className="task__status accepted">Delivered</div>
-            </div>
-
-            <div className="option__content">
-              <img src={bluetoothIcon} alt="Chat Line Icon" />
-
-              <span>
-                Lorem ipsum dolor sit amet consectetur adipisicing elit. Rerum
-                cum ipsa voluptas autem, officiis, laboriosam molestiae a
-                aperiam deleniti unde, id inventore molestias facilis aliquam
-                illum. Pariatur perspiciatis amet quas?
-              </span>
-
-              <div className="task__status accepted">Delivered</div>
+              <button className="option__task-button">Details</button>
             </div>
           </div>
+
+          <button className="specials_button">Load more</button>
         </div>
       </div>
 
