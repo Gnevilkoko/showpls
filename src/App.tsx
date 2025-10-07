@@ -5,7 +5,7 @@ import useUserTg from './shared/hooks/useUserTg';
 import Home from './pages/Home';
 import Navigation from './shared/components/Navigation';
 import DevPage from './pages/DevPage';
-import Discover from './pages/Discover';
+import Tasks from './pages/Tasks';
 
 function App() {
   const user = useUserTg();
@@ -29,8 +29,12 @@ function App() {
           element={user ? <Home /> : <Navigate to="/" replace />}
         />
         <Route
-          path="/discover"
-          element={user ? <Discover /> : <Navigate to="/" replace />}
+          path="/tasks"
+          element={user ? <Tasks /> : <Navigate to="/" replace />}
+        />
+        <Route
+          path="/chats"
+          element={user ? <DevPage /> : <Navigate to="/" replace />}
         />
         <Route
           path="/wallet"
@@ -48,7 +52,8 @@ function App() {
       <Routes>
         <Route path="/" element={<AccessGate />} />
         <Route path="/home" element={<Home />} />
-        <Route path="/discover" element={<Discover />} />
+        <Route path="/tasks" element={<Tasks />} />
+        <Route path="/chats" element={<DevPage />} />
         <Route path="/wallet" element={<DevPage />} />
         <Route path="/profile" element={<DevPage />} />
       </Routes> */}

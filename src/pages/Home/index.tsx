@@ -12,15 +12,20 @@ import Header from '../../shared/components/Header';
 const Home = () => {
   const navigate = useNavigate();
 
-  // удалить - эта логика только для демонстрации
-  const [isRequests, setIsRequests] = useState(true);
+  const [activeSection, setActiveSection] = useState<'missions' | 'on scene'>(
+    'missions'
+  );
 
-  const handleClickOption = (bool: boolean) => {
-    setIsRequests(bool);
+  const handleClickOption = (val: 'missions' | 'on scene') => {
+    setActiveSection(val);
+  };
+
+  const handleClickCreateTask = () => {
+    navigate('/tasks', { state: { mode: 'createTask' } });
   };
 
   const handleClickFindTask = () => {
-    navigate('/discover');
+    navigate('/tasks', { state: { mode: 'findTask' } });
   };
 
   return (
@@ -28,7 +33,7 @@ const Home = () => {
       <Header />
 
       <div className="home__actions-container">
-        <div className="action-banner green">
+        <div className="action-banner green" onClick={handleClickCreateTask}>
           <img
             src={plusActionBannerIcon}
             alt="Create Request Icon"
@@ -115,15 +120,19 @@ const Home = () => {
         <div className="specials__container">
           <div className="specials__options">
             <button
-              className={`option ${isRequests ? 'active' : ''} `}
-              onClick={() => handleClickOption(true)}
+              className={`specials__option ${
+                activeSection === 'missions' ? 'active' : ''
+              } `}
+              onClick={() => handleClickOption('missions')}
             >
               Missions
             </button>
 
             <button
-              className={`option ${!isRequests ? 'active' : ''} `}
-              onClick={() => handleClickOption(false)}
+              className={`specials__option ${
+                activeSection === 'on scene' ? 'active' : ''
+              } `}
+              onClick={() => handleClickOption('on scene')}
             >
               On Scene
             </button>

@@ -3,6 +3,8 @@ import homeWhiteIcon from '../../assets/home-white.svg';
 import homeIcon from '../../assets/home.svg';
 import globalWhiteIcon from '../../assets/global-white.svg';
 import globalIcon from '../../assets/global.svg';
+import chatsWhiteIcon from '../../assets/chats-white.svg';
+import chatsIcon from '../../assets/chats.svg';
 import walletWhiteIcon from '../../assets/wallet-white.svg';
 import walletIcon from '../../assets/wallet.svg';
 import userWhiteIcon from '../../assets/user-white.svg';
@@ -40,17 +42,32 @@ const Navigation = () => {
 
       <button
         className={`nav-button ${
-          location.pathname === '/discover' ? 'active' : ''
+          location.pathname === '/tasks' ? 'active' : ''
         }`}
-        onClick={() => handleClick('/discover')}
+        onClick={() => handleClick('/tasks')}
       >
         <img
-          src={location.pathname === '/discover' ? globalWhiteIcon : globalIcon}
-          alt="Home Icon"
+          src={location.pathname === '/tasks' ? globalWhiteIcon : globalIcon}
+          alt="Discover Icon"
           className="nav-button__icon"
         />
 
-        <span>Discover</span>
+        <span>Tasks</span>
+      </button>
+
+      <button
+        className={`nav-button ${
+          location.pathname === '/chats' ? 'active' : ''
+        }`}
+        onClick={() => handleClick('/chats')}
+      >
+        <img
+          src={location.pathname === '/chats' ? chatsWhiteIcon : chatsIcon}
+          alt="Chats Icon"
+          className="nav-button__icon"
+        />
+
+        <span>Chats</span>
       </button>
 
       <button
@@ -61,7 +78,7 @@ const Navigation = () => {
       >
         <img
           src={location.pathname === '/wallet' ? walletWhiteIcon : walletIcon}
-          alt="Home Icon"
+          alt="Wallet Icon"
           className="nav-button__icon"
         />
 
@@ -76,7 +93,7 @@ const Navigation = () => {
       >
         <img
           src={location.pathname === '/profile' ? userWhiteIcon : userIcon}
-          alt="Home Icon"
+          alt="Profile Icon"
           className="nav-button__icon"
         />
 

@@ -1,6 +1,6 @@
 import { useNavigate } from 'react-router-dom';
 import useUserTg from '../hooks/useUserTg';
-import logo from '../../assets/logo.png';
+import logo from '../../assets/logo.svg';
 import checkIcon from '../../assets/check-icon.svg';
 import userIcon from '../../assets/user.svg';
 

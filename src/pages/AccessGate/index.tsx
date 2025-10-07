@@ -1,5 +1,5 @@
 import background from '../../assets/access-gate-bg.webp';
-import logo from '../../assets/logo.png';
+import logo from '../../assets/logo.svg';
 import OpenTelegramButton from './OpenTelegramButton';
 
 const AccessGate = () => {
