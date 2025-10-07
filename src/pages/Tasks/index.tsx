@@ -263,7 +263,8 @@ e.g. take a photo of a new street art mural downtown`}
             </div>
 
             <input
-              type="text"
+              type="number"
+              inputMode="numeric" // открывает цифровую клавиатуру на мобилках
               placeholder="Enter amount in stars"
               className="budget-input"
             />

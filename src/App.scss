@@ -628,6 +628,7 @@ $max-width-all-content: 450px;
 }
 
 .customer-banner__description-container {
+  justify-content: space-between;
   display: flex;
   gap: 12px;
 }
@@ -670,6 +671,7 @@ $max-width-all-content: 450px;
 }
 
 .customer-banner__description {
+  flex: 1;
   display: flex;
   flex-direction: column;
   gap: 4px;
@@ -870,6 +872,12 @@ $max-width-all-content: 450px;
 
 .budget-input::placeholder {
   color: #a8b0ba;
+}
+
+.budget-input::-webkit-outer-spin-button,
+.budget-input::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
 }
 
 .customer__btn {
