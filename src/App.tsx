@@ -6,58 +6,61 @@ import Home from './pages/Home';
 import Navigation from './shared/components/Navigation';
 import DevPage from './pages/DevPage';
 import Tasks from './pages/Tasks';
+import MapProvider from './shared/providers/MapProvider';
 
 function App() {
   const user = useUserTg();
 
   return (
-    <div className="app">
-      {/* если нет юзера - навигацию не отрисовываем */}
-      {user && <Navigation />}
+    <MapProvider>
+      <div className="app">
+        {/* если нет юзера - навигацию не отрисовываем */}
+        {user && <Navigation />}
 
-      <Routes>
-        {/* Если user нет → открываем AccessGate,
+        <Routes>
+          {/* Если user нет → открываем AccessGate,
         иначе редиректим на /home */}
-        <Route
-          path="/"
-          element={user ? <Navigate to="/home" replace /> : <AccessGate />}
-        />
+          <Route
+            path="/"
+            element={user ? <Navigate to="/home" replace /> : <AccessGate />}
+          />
 
-        {/* Закрытый роут: если user нет – редирект на "/" */}
-        <Route
-          path="/home"
-          element={user ? <Home /> : <Navigate to="/" replace />}
-        />
-        <Route
-          path="/tasks"
-          element={user ? <Tasks /> : <Navigate to="/" replace />}
-        />
-        <Route
-          path="/chats"
-          element={user ? <DevPage /> : <Navigate to="/" replace />}
-        />
-        <Route
-          path="/wallet"
-          element={user ? <DevPage /> : <Navigate to="/" replace />}
-        />
-        <Route
-          path="/profile"
-          element={user ? <DevPage /> : <Navigate to="/" replace />}
-        />
-      </Routes>
+          {/* Закрытый роут: если user нет – редирект на "/" */}
+          <Route
+            path="/home"
+            element={user ? <Home /> : <Navigate to="/" replace />}
+          />
+          <Route
+            path="/tasks"
+            element={user ? <Tasks /> : <Navigate to="/" replace />}
+          />
+          <Route
+            path="/chats"
+            element={user ? <DevPage /> : <Navigate to="/" replace />}
+          />
+          <Route
+            path="/wallet"
+            element={user ? <DevPage /> : <Navigate to="/" replace />}
+          />
+          <Route
+            path="/profile"
+            element={user ? <DevPage /> : <Navigate to="/" replace />}
+          />
+        </Routes>
 
-      {/* dev mode */}
-      {/* <Navigation />
+        {/* dev mode */}
+        {/* <Navigation />
 
-      <Routes>
-        <Route path="/" element={<AccessGate />} />
-        <Route path="/home" element={<Home />} />
-        <Route path="/tasks" element={<Tasks />} />
-        <Route path="/chats" element={<DevPage />} />
-        <Route path="/wallet" element={<DevPage />} />
-        <Route path="/profile" element={<DevPage />} />
-      </Routes> */}
-    </div>
+        <Routes>
+          <Route path="/" element={<AccessGate />} />
+          <Route path="/home" element={<Home />} />
+          <Route path="/tasks" element={<Tasks />} />
+          <Route path="/chats" element={<DevPage />} />
+          <Route path="/wallet" element={<DevPage />} />
+          <Route path="/profile" element={<DevPage />} />
+        </Routes> */}
+      </div>
+    </MapProvider>
   );
 }
 

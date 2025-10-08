@@ -1,21 +1,23 @@
-import { GoogleMap, useJsApiLoader } from '@react-google-maps/api';
+import { GoogleMap } from '@react-google-maps/api';
 import { memo } from 'react';
-import { API_KEY_MAPS, MAP_ID } from '../../constants';
+// import { MAP_ID } from '../../constants';
 import pinIcon from '../../assets/pin.svg'; // своя иконка
+import { useMapLoaded } from '../../shared/providers/MapContext';
 
 const centerMap = { lat: 37.75296, lng: -122.467844 };
 
 const mapOptions: google.maps.MapOptions = {
   disableDefaultUI: true,
-  mapId: MAP_ID,
+  // поставил случайную строку, ибо что то с mapID в гугл клауде
+  // если не надо кастомизировать карту - то оставляем как есть
+  mapId: 'MAP_ID',
   gestureHandling: 'greedy',
 };
 
 const MiniMapContainer = memo(() => {
-  const { isLoaded } = useJsApiLoader({
-    id: 'google-map-script',
-    googleMapsApiKey: API_KEY_MAPS as string,
-  });
+  const isLoaded = useMapLoaded();
+
+  if (!isLoaded) return <p>Loading map…</p>;
 
   // const [map, setMap] = useState<google.maps.Map | null>(null);
 
@@ -41,7 +43,7 @@ const MiniMapContainer = memo(() => {
   //   }
   // };
 
-  return isLoaded ? (
+  return (
     <div className="mini-map-wrapper">
       <GoogleMap
         mapContainerClassName="mini-map"
@@ -61,8 +63,6 @@ const MiniMapContainer = memo(() => {
         Get Address
       </button> */}
     </div>
-  ) : (
-    <p>Loading map…</p>
   );
 });
 
