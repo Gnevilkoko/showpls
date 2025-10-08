@@ -99,6 +99,8 @@ const Tasks = () => {
 
   const [isUrgent, setIsUrgent] = useState(true);
 
+  const [address, setAddress] = useState('');
+
   return (
     <div className="page tasks">
       <Header />
@@ -188,13 +190,15 @@ e.g. take a photo of a new street art mural downtown`}
             <input
               type="text"
               className="input-location"
+              value={address}
+              onChange={(e) => setAddress(e.target.value)}
               placeholder="Enter address manually"
             />
 
             <p className="customer-banner__paragraph">or mark it on the map</p>
 
             <div className="customer-banner__mini-map">
-              <MiniMapContainer />
+              <MiniMapContainer address={address} />
             </div>
           </div>
 
