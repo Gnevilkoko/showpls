@@ -8,6 +8,7 @@ const centerMap = { lat: 37.75296, lng: -122.467844 };
 const mapOptions: google.maps.MapOptions = {
   disableDefaultUI: true,
   mapId: MAP_ID,
+  gestureHandling: 'greedy',
 };
 
 const MiniMapContainer = memo(() => {
