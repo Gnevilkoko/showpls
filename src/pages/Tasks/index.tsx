@@ -100,7 +100,6 @@ const Tasks = () => {
   const [isUrgent, setIsUrgent] = useState(true);
 
   const [address, setAddress] = useState('');
-
   return (
     <div className="page tasks">
       <Header />
@@ -197,9 +196,7 @@ e.g. take a photo of a new street art mural downtown`}
 
             <p className="customer-banner__paragraph">or mark it on the map</p>
 
-            <div className="customer-banner__mini-map">
-              <MiniMapContainer address={address} />
-            </div>
+            <MiniMapContainer address={address} />
           </div>
 
           <div className="customer-banner">

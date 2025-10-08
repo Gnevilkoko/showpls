@@ -7,6 +7,7 @@ import Navigation from './shared/components/Navigation';
 import DevPage from './pages/DevPage';
 import Tasks from './pages/Tasks';
 import MapProvider from './shared/providers/MapProvider';
+import Wallet from './pages/Wallet';
 
 function App() {
   const user = useUserTg();
@@ -40,7 +41,7 @@ function App() {
           />
           <Route
             path="/wallet"
-            element={user ? <DevPage /> : <Navigate to="/" replace />}
+            element={user ? <Wallet /> : <Navigate to="/" replace />}
           />
           <Route
             path="/profile"
@@ -56,7 +57,7 @@ function App() {
           <Route path="/home" element={<Home />} />
           <Route path="/tasks" element={<Tasks />} />
           <Route path="/chats" element={<DevPage />} />
-          <Route path="/wallet" element={<DevPage />} />
+          <Route path="/wallet" element={<Wallet />} />
           <Route path="/profile" element={<DevPage />} />
         </Routes> */}
       </div>

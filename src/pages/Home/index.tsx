@@ -1,6 +1,5 @@
 import plusActionBannerIcon from '../../assets/plus-action-banner.svg';
 import searchActionBannerIcon from '../../assets/search-action-banner.svg';
-import walletIcon from '../../assets/wallet-new.svg';
 import starsIcon from '../../assets/stars.svg';
 import logoSpecials from '../../assets/logo-specials.png';
 import partnerNikeLogo from '../../assets/partnerNikeLogo.png';
@@ -26,6 +25,10 @@ const Home = () => {
 
   const handleClickFindTask = () => {
     navigate('/tasks', { state: { mode: 'findTask' } });
+  };
+
+  const handleClickWallet = () => {
+    navigate('/wallet');
   };
 
   return (
@@ -62,30 +65,10 @@ const Home = () => {
         </div>
       </div>
 
-      <div className="home__wallet">
+      <div className="wallet-mini-container" onClick={handleClickWallet}>
         <div className="wallet__header">
-          <div className="wallet__header__title">
-            <img src={walletIcon} alt="Wallet Icon" />
-
-            <span>Wallet</span>
-          </div>
-
-          <div className="wallet__stars-status">
-            <span className="count-hold-stars">40</span>
-
-            <img
-              src={starsIcon}
-              alt="Telegram Stars Icon"
-              // className="tg-stars-icon-status"
-            />
-
-            <span className="stars-status">on hold</span>
-          </div>
-        </div>
-
-        <div className="content-container">
           <div className="wallet-content__wrapper">
-            <span className="wallet-content__available">Available</span>
+            <span className="wallet-content__available">Available funds</span>
 
             <div className="wallet-content">
               <span className="count-stars">120</span>
@@ -100,10 +83,12 @@ const Home = () => {
             </div>
           </div>
 
-          <div className="wallet-content__buttons-container">
-            <button className="wallet-content__button green">Top-up</button>
+          <div className="wallet__stars-status">
+            <span className="count-hold-stars">40</span>
 
-            <button className="wallet-content__button blue">Payout</button>
+            <img src={starsIcon} alt="Telegram Stars Icon" />
+
+            <span className="stars-status">on hold</span>
           </div>
         </div>
       </div>

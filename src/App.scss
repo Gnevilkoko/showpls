@@ -290,7 +290,7 @@ $max-width-all-content: 450px;
   color: #ffffff;
 }
 
-.home__wallet {
+.wallet-mini-container {
   width: 100%;
   display: flex;
   flex-direction: column;
@@ -299,6 +299,7 @@ $max-width-all-content: 450px;
   border-radius: 20px;
   padding: 16px;
   box-sizing: border-box;
+  cursor: pointer;
 
   box-shadow: 0px 2px 5px 0px #262b3108, 0px 10px 10px 0px #262b3105,
     0px 22px 13px 0px #262b3103, 0px 40px 16px 0px #262b3100,
@@ -309,7 +310,6 @@ $max-width-all-content: 450px;
   width: 100%;
   display: flex;
   justify-content: space-between;
-  align-items: center;
 }
 
 .wallet__header__title {
@@ -322,6 +322,7 @@ $max-width-all-content: 450px;
 }
 
 .wallet__stars-status {
+  max-height: max-content;
   border: 1px solid #dfeaf0;
   border-radius: 16px;
   padding: 7px 10px 7px 10px;
@@ -348,7 +349,7 @@ $max-width-all-content: 450px;
   color: #3c454c;
 }
 
-.content-container {
+.wallet-content__container {
   display: flex;
   flex-direction: column;
   gap: 10px;
@@ -385,7 +386,7 @@ $max-width-all-content: 450px;
 .tg-stars-icon__container {
   display: flex;
   align-items: center;
-  width: 30px;
+  width: 26px;
   padding-bottom: 8px;
 }
 
@@ -719,7 +720,12 @@ $max-width-all-content: 450px;
 .mini-map-wrapper {
   position: relative;
   width: 100%;
-  height: 100%;
+  height: 140px;
+  transition: height 0.3s ease;
+
+  &.focus {
+    height: 300px;
+  }
 }
 
 .mini-map {
@@ -742,11 +748,6 @@ $max-width-all-content: 450px;
 .mini-map__center-marker img {
   width: 40px;
   height: 40px;
-}
-
-.customer-banner__mini-map {
-  width: 100%;
-  height: 140px;
 }
 
 .dropdown-wrapper {
@@ -935,7 +936,6 @@ $max-width-all-content: 450px;
 .performer__container {
   position: relative;
   display: flex;
-  min-height: 80vh;
   flex-direction: column;
   gap: 12px;
   width: 100%;
@@ -1090,6 +1090,12 @@ $max-width-all-content: 450px;
 
 // =========== map ===========
 
+.map-wrapper {
+  position: relative;
+  width: 100%;
+  height: 80vh;
+}
+
 .map {
   flex: 1;
   width: 100%;
@@ -1233,4 +1239,129 @@ $max-width-all-content: 450px;
     background: linear-gradient(180deg, #8dceff 0%, #3995da 100%);
     box-shadow: 0px 5vw 4vw -2vw #0061a74d;
   }
+}
+
+// // =========== Wallet ===========
+
+.wallet-header {
+  all: unset;
+  margin-top: 15px;
+  margin-bottom: 12px;
+  font-weight: 700;
+  font-size: 24px;
+  line-height: 100%;
+  color: #3c454c;
+}
+
+.wallet-container {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  background-color: #ffffff;
+  border-radius: 20px;
+  padding: 16px;
+  box-sizing: border-box;
+
+  box-shadow: 0px 2px 5px 0px #262b3108, 0px 10px 10px 0px #262b3105,
+    0px 22px 13px 0px #262b3103, 0px 40px 16px 0px #262b3100,
+    0px 62px 17px 0px #262b3100;
+}
+
+.transaction-container {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+
+  h2 {
+    all: unset;
+    margin-top: 22px;
+    font-weight: 700;
+    font-size: 24px;
+    line-height: 100%;
+    color: #3c454c;
+  }
+}
+
+.wallet-clue {
+  width: 100%;
+  display: flex;
+  box-sizing: border-box;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 14px 6px 14px;
+  margin-top: 7px;
+  margin-bottom: 7px;
+  background-color: #e0f7f5;
+  border: 1px solid #2cd896;
+  border-radius: 100px;
+
+  font-family: Poppins;
+  font-weight: 500;
+  font-size: 15px;
+  color: #26c588;
+}
+
+.transaction_item {
+  display: flex;
+  align-items: center;
+  padding: 8px;
+  padding-right: 16px;
+  border-radius: 14px;
+  gap: 12px;
+  background-color: #ffffff;
+  box-shadow: 0px 2px 5px 0px #262b3108, 0px 10px 10px 0px #262b3105,
+    0px 22px 13px 0px #262b3103, 0px 40px 16px 0px #262b3100,
+    0px 62px 17px 0px #262b3100;
+}
+
+.trans-status-icon {
+  width: 32px;
+  height: 32px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  border-radius: 8px;
+
+  &.green {
+    background-color: #00de8f;
+
+    img {
+      width: 28px;
+    }
+  }
+
+  &.gold {
+    background-color: #fe9b29;
+
+    img {
+      width: 20px;
+    }
+  }
+}
+
+.transaction_item-content {
+  flex: 1;
+  display: flex;
+  gap: 5px;
+  align-items: center;
+  font-family: Inter;
+  font-weight: 600;
+  font-size: 17px;
+  line-height: 100%;
+  color: #3c454c;
+
+  img {
+    width: 16px;
+  }
+}
+
+.trans-date {
+  font-family: Inter;
+  font-weight: 400;
+  font-size: 14px;
+  line-height: 100%;
+  letter-spacing: 0px;
+  color: #3c454c;
 }

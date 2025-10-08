@@ -38,7 +38,7 @@ const MapContainer = memo(
     if (!isLoaded) return <p>Loading map…</p>;
 
     return (
-      <>
+      <div className="map-wrapper">
         <GoogleMap
           mapContainerClassName="map"
           center={activeTask ? activeTask.position : centerMap}
@@ -53,7 +53,7 @@ const MapContainer = memo(
             setActiveTaskId={setActiveTaskId}
           />
         )}
-      </>
+      </div>
     );
   }
 );
