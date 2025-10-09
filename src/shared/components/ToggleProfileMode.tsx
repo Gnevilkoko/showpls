@@ -10,14 +10,15 @@ const ToggleProfileMode = ({
   isProfile = false,
 }: ToggleProfileModeProps) => {
   return (
-    <div className="toggle-profile-mode">
+    <div className={`toggle-profile-mode ${isProfile ? 'gray' : ''}`}>
       <button
         className={`prof-mode__toggle ${
           activeMode === 'customer' ? 'active green' : ''
         }`}
         onClick={() => callback('customer')}
       >
-        {isProfile === true ? "I'm customer" : 'Customer'}
+        {/* {isProfile === true ? "I'm customer" : 'Customer'} */}
+        Customer
       </button>
 
       <button
@@ -26,7 +27,8 @@ const ToggleProfileMode = ({
         }`}
         onClick={() => callback('performer')}
       >
-        {isProfile === true ? "I'm performer" : 'Performer'}
+        {/* {isProfile === true ? "I'm performer" : 'Performer'} */}
+        Performer
       </button>
     </div>
   );

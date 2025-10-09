@@ -115,7 +115,7 @@ const Wallet = () => {
         </div>
 
         {transactionList.map((item: Transaction) => (
-          <div className="transaction_item">
+          <div className="transaction_item" key={item.id}>
             <div
               className={`trans-status-icon ${
                 item.status === 'verified' ? 'green' : 'gold'

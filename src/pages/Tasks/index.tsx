@@ -240,7 +240,7 @@ e.g. take a photo of a new street art mural downtown`}
               <div className="customer-banner__description">
                 <div className="description__title">Urgent</div>
 
-                <div>The cost will automatically increase by 30 percent.</div>
+                <span>The cost will automatically increase by 30 percent.</span>
               </div>
 
               <div>
