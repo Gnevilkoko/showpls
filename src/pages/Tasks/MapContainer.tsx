@@ -22,18 +22,17 @@ const mapOptions: google.maps.MapOptions = {
 
 const MapContainer = memo(
   ({ activeTaskId, setActiveTaskId }: MapContainerProps) => {
+    const [map, setMap] = useState<google.maps.Map | null>(null);
     const isLoaded = useMapLoaded();
+
+    const handleLoad = useCallback((mapInstance: google.maps.Map) => {
+      setMap(mapInstance);
+    }, []);
 
     // ищем позицию активной таски
     const activeTask = activeTaskId
       ? TasksList.find((task) => task.id === activeTaskId)
       : null;
-
-    const [map, setMap] = useState<google.maps.Map | null>(null);
-
-    const handleLoad = useCallback((mapInstance: google.maps.Map) => {
-      setMap(mapInstance);
-    }, []);
 
     if (!isLoaded) return <p>Loading map…</p>;
 

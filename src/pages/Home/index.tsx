@@ -8,6 +8,7 @@ import { useNavigate } from 'react-router-dom';
 import { useState } from 'react';
 import Header from '../../shared/components/Header';
 import MiniWallet from '../../shared/components/MiniWallet';
+import { useTranslation } from 'react-i18next';
 
 const Home = () => {
   const navigate = useNavigate();
@@ -15,6 +16,8 @@ const Home = () => {
   const [activeSection, setActiveSection] = useState<'missions' | 'on scene'>(
     'missions'
   );
+
+  const { t } = useTranslation();
 
   const handleClickOption = (val: 'missions' | 'on scene') => {
     setActiveSection(val);
@@ -41,9 +44,13 @@ const Home = () => {
           />
 
           <div className="action-banner-container">
-            <p className="action-banner__header">I want to see</p>
+            <p className="action-banner__header">
+              {t('homePage.actions.firstTitle')}
+            </p>
 
-            <p className="action-banner__content">Post a reqiest</p>
+            <p className="action-banner__content">
+              {t('homePage.actions.firstDescription')}
+            </p>
           </div>
         </div>
 
@@ -55,9 +62,13 @@ const Home = () => {
           />
 
           <div className="action-banner-container">
-            <p className="action-banner__header">I can show</p>
+            <p className="action-banner__header">
+              {t('homePage.actions.secondTitle')}
+            </p>
 
-            <p className="action-banner__content">Browse tasks to earn</p>
+            <p className="action-banner__content">
+              {t('homePage.actions.secondDescription')}
+            </p>
           </div>
         </div>
       </div>
@@ -81,7 +92,7 @@ const Home = () => {
               } `}
               onClick={() => handleClickOption('missions')}
             >
-              Missions
+              {t('homePage.options.first')}
             </button>
 
             <button
@@ -90,7 +101,7 @@ const Home = () => {
               } `}
               onClick={() => handleClickOption('on scene')}
             >
-              On Scene
+              {t('homePage.options.second')}
             </button>
           </div>
 
@@ -106,12 +117,14 @@ const Home = () => {
                 <span>Take photo with Nike shoes</span>
 
                 <span className="option__price">
-                  Earn 50
+                  {t('homePage.options.earn', { stars: 50 })}
                   <img src={starsIcon} alt="Telegram Stars Icon" />
                 </span>
               </div>
 
-              <button className="option__task-button">Details</button>
+              <button className="option__task-button">
+                {t('homePage.options.btnDetails')}
+              </button>
             </div>
 
             <div className="option__wrapper">
@@ -125,16 +138,18 @@ const Home = () => {
                 <span>Film short video drinking Coca-Cola</span>
 
                 <span className="option__price">
-                  Earn 100
+                  {t('homePage.options.earn', { stars: 100 })}
                   <img src={starsIcon} alt="Telegram Stars Icon" />
                 </span>
               </div>
 
-              <button className="option__task-button">Details</button>
+              <button className="option__task-button">
+                {t('homePage.options.btnDetails')}
+              </button>
             </div>
           </div>
 
-          <button className="specials_button">Load more</button>
+          <button className="specials_button">{t('homePage.loadMore')}</button>
         </div>
       </div>
 

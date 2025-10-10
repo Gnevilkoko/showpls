@@ -3,26 +3,31 @@ import { createRoot } from 'react-dom/client';
 import type { Root } from 'react-dom/client';
 import starsWhiteIcon from '../../assets/stars-white.svg';
 import { TasksList, type TaskType } from './tasks';
+import { useTranslation } from 'react-i18next';
 
 interface MarkerContentProps {
   task: TaskType;
   isActive: boolean;
 }
 
-const MarkerContent = ({ task, isActive }: MarkerContentProps) => (
-  <div className="custom-marker__content">
-    {isActive ? (
-      <span>{task.variant.toUpperCase()}</span>
-    ) : (
-      <>
-        {task.price}
-        <span>
-          <img src={starsWhiteIcon} alt="Stars Icon" />
-        </span>
-      </>
-    )}
-  </div>
-);
+const MarkerContent = ({ task, isActive }: MarkerContentProps) => {
+  const { t } = useTranslation();
+
+  return (
+    <div className="custom-marker__content">
+      {isActive ? (
+        <span>{t(`tasksPage.${task.variant}`)}</span>
+      ) : (
+        <>
+          {task.price}
+          <span>
+            <img src={starsWhiteIcon} alt="Stars Icon" />
+          </span>
+        </>
+      )}
+    </div>
+  );
+};
 
 interface MarkersLayerProps {
   map: google.maps.Map;

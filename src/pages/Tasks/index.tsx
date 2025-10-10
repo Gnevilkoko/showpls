@@ -15,6 +15,7 @@ import { TasksList } from './tasks';
 import ToggleProfileMode from '../../shared/components/ToggleProfileMode';
 import MiniMapContainer from './MiniMapContainer';
 import { TIME_LIMITS } from '../../constants';
+import { useTranslation } from 'react-i18next';
 
 interface UploadedImage {
   file: File;
@@ -24,6 +25,7 @@ interface UploadedImage {
 const Tasks = () => {
   const location = useLocation();
   const locationState = location.state;
+  const { t } = useTranslation();
 
   const [activeMode, setActiveMode] = useState<'customer' | 'performer'>(
     locationState?.mode === 'createTask' ? 'customer' : 'performer'
@@ -48,7 +50,6 @@ const Tasks = () => {
   // При выборе таски из списка
   const handleTaskClick = (taskId: string) => {
     setActiveTaskId(taskId); // отметить активную таску
-    setActiveSection('map'); // переключить вкладку на карту
   };
 
   // Прокрутка к активной таске в горизонтальном списке под картой
@@ -106,8 +107,8 @@ const Tasks = () => {
 
       <h1 className="tasks-page-title">
         {activeMode === 'customer'
-          ? 'What do you want to see?'
-          : 'Find what you can show!'}
+          ? t('tasksPage.customerTitlePage')
+          : t('tasksPage.performerTitlePage')}
       </h1>
 
       <ToggleProfileMode
@@ -122,13 +123,12 @@ const Tasks = () => {
               <div className="customer-banner__title">
                 <img src={pencilIcon} alt="Pencil Icon" />
 
-                <span>Describe task</span>
+                <span>{t('tasksPage.describeTask')}</span>
               </div>
 
               <textarea
                 className="describe__input"
-                placeholder={`Share details about what you need 
-e.g. take a photo of a new street art mural downtown`}
+                placeholder={t('tasksPage.placeholderTask')}
               />
             </div>
 
@@ -168,12 +168,11 @@ e.g. take a photo of a new street art mural downtown`}
 
               {images.length === 0 && (
                 <div className="customer-banner__description">
-                  <div className="description__title">Add files</div>
-
-                  <div>
-                    Can attach photos, videos or documents info to help the
-                    performer solve task
+                  <div className="description__title">
+                    {t('tasksPage.addFiles')}
                   </div>
+
+                  <span>{t('tasksPage.filesDescription')}</span>
                 </div>
               )}
             </div>
@@ -183,7 +182,7 @@ e.g. take a photo of a new street art mural downtown`}
             <div className="customer-banner__title">
               <img src={locationIcon} alt="Location Icon" />
 
-              <span>Location</span>
+              <span>{t('tasksPage.location')}</span>
             </div>
 
             <input
@@ -191,10 +190,12 @@ e.g. take a photo of a new street art mural downtown`}
               className="input-location"
               value={address}
               onChange={(e) => setAddress(e.target.value)}
-              placeholder="Enter address manually"
+              placeholder={t('tasksPage.locationPlaceholder')}
             />
 
-            <p className="customer-banner__paragraph">or mark it on the map</p>
+            <p className="customer-banner__paragraph">
+              {t('tasksPage.orMarkMap')}
+            </p>
 
             <MiniMapContainer address={address} />
           </div>
@@ -203,7 +204,7 @@ e.g. take a photo of a new street art mural downtown`}
             <div className="customer-banner__title">
               <img src={clockIcon} alt="Location Icon" />
 
-              <span>Time limit</span>
+              <span>{t('tasksPage.timeLimit')}</span>
             </div>
 
             <div className="dropdown-wrapper">
@@ -216,7 +217,7 @@ e.g. take a photo of a new street art mural downtown`}
                 onClick={() => setIsOpenDropdown((val) => !val)}
                 onBlur={() => setTimeout(() => setIsOpenDropdown(false), 100)}
                 onChange={(e) => setTimeLimit(e.target.value)}
-                placeholder="Add duration"
+                placeholder={t('tasksPage.addDuration')}
                 className="dropdown-input"
                 readOnly // только выбор из списка, чтобы нельзя было писать вручную
               />
@@ -229,7 +230,9 @@ e.g. take a photo of a new street art mural downtown`}
                       onMouseDown={() => handleSelectDropdown(num)}
                       className="dropdown-item"
                     >
-                      {num === 1 ? `${num} hour` : `${num} hours`}
+                      {num === 1
+                        ? `${num} ${t('tasksPage.hour')}`
+                        : `${num} ${t('tasksPage.hours')}`}
                     </li>
                   ))}
                 </ul>
@@ -238,9 +241,11 @@ e.g. take a photo of a new street art mural downtown`}
 
             <div className="customer-banner__description-container">
               <div className="customer-banner__description">
-                <div className="description__title">Urgent</div>
+                <span className="description__title">
+                  {t('tasksPage.urgent')}
+                </span>
 
-                <span>The cost will automatically increase by 30 percent.</span>
+                <span>{t('tasksPage.urgentDescription')}</span>
               </div>
 
               <div>
@@ -260,13 +265,13 @@ e.g. take a photo of a new street art mural downtown`}
             <div className="customer-banner__title">
               <img src={coinsIcon} alt="Location Icon" />
 
-              <span>Budget</span>
+              <span>{t('tasksPage.budget')}</span>
             </div>
 
             <input
               type="number"
               inputMode="numeric" // открывает цифровую клавиатуру на мобилках
-              placeholder="Enter amount in stars"
+              placeholder={t('tasksPage.budgetPlaceholder')}
               className="budget-input"
             />
           </div>
@@ -278,7 +283,7 @@ e.g. take a photo of a new street art mural downtown`}
               className="action-banner__icon"
             />
 
-            <span>Publish request</span>
+            <span>{t('tasksPage.publishRequest')}</span>
           </button>
 
           <button className="customer__btn blue">
@@ -289,9 +294,9 @@ e.g. take a photo of a new street art mural downtown`}
             />
 
             <div className="customer__btn__content">
-              <span>Find performer on map</span>
+              <span>{t('tasksPage.findPerformer')}</span>
 
-              <p>Send the direct offer</p>
+              <p>{t('tasksPage.sendDirect')}</p>
             </div>
           </button>
         </>
@@ -306,7 +311,7 @@ e.g. take a photo of a new street art mural downtown`}
               } `}
               onClick={() => handleClickOption('list')}
             >
-              List
+              {t('tasksPage.list')}
             </button>
 
             <button
@@ -315,7 +320,7 @@ e.g. take a photo of a new street art mural downtown`}
               } `}
               onClick={() => handleClickOption('map')}
             >
-              Map
+              {t('tasksPage.map')}
             </button>
           </div>
 
@@ -343,7 +348,12 @@ e.g. take a photo of a new street art mural downtown`}
                               key={index}
                               className={`tag badge ${tag.color}`}
                             >
-                              {tag.label}
+                              {tag.label === 'Urgent'
+                                ? t('tasksPage.urgent')
+                                : ''}
+                              {tag.label === 'Remote'
+                                ? t('tasksPage.remote')
+                                : ''}
                             </div>
                           );
                         }
@@ -359,10 +369,18 @@ e.g. take a photo of a new street art mural downtown`}
                           );
                         }
 
-                        if (tag.type === 'text') {
+                        if (tag.type === 'hLeft') {
                           return (
                             <div key={index} className="tag">
-                              {tag.label}
+                              {t('tasksPage.hLeft', { count: tag.count })}
+                            </div>
+                          );
+                        }
+
+                        if (tag.type === 'km') {
+                          return (
+                            <div key={index} className="tag">
+                              {t('tasksPage.km', { count: tag.count })}
                             </div>
                           );
                         }
@@ -374,11 +392,8 @@ e.g. take a photo of a new street art mural downtown`}
                     <span>{task.description}</span>
                   </div>
 
-                  <button
-                    className="task__button"
-                    onClick={() => handleTaskClick(task.id)}
-                  >
-                    View details
+                  <button className="task__button">
+                    {t('tasksPage.viewDetails')}
                   </button>
                 </div>
               </div>
@@ -417,10 +432,16 @@ e.g. take a photo of a new street art mural downtown`}
                                     key={index}
                                     className={`tag badge ${tag.color}`}
                                   >
-                                    {tag.label}
+                                    {tag.label === 'Urgent'
+                                      ? t('tasksPage.urgent')
+                                      : ''}
+                                    {tag.label === 'Remote'
+                                      ? t('tasksPage.remote')
+                                      : ''}
                                   </div>
                                 );
                               }
+
                               if (tag.type === 'stars') {
                                 return (
                                   <div key={index} className="tag stars">
@@ -434,13 +455,23 @@ e.g. take a photo of a new street art mural downtown`}
                                   </div>
                                 );
                               }
-                              if (tag.type === 'text') {
+
+                              if (tag.type === 'hLeft') {
                                 return (
                                   <div key={index} className="tag">
-                                    {tag.label}
+                                    {t('tasksPage.hLeft', { count: tag.count })}
                                   </div>
                                 );
                               }
+
+                              if (tag.type === 'km') {
+                                return (
+                                  <div key={index} className="tag">
+                                    {t('tasksPage.km', { count: tag.count })}
+                                  </div>
+                                );
+                              }
+
                               return null;
                             })}
                           </div>

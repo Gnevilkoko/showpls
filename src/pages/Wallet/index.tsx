@@ -4,10 +4,12 @@ import lockIcon from '../../assets/lock.svg';
 import checkMarkWhiteIcon from '../../assets/check-mark-white.svg';
 import lockKeyholeWhiteIcon from '../../assets/lock-keyhole-white.svg';
 import NavigationSkeleton from '../../shared/components/NavigationSkeleton';
+import { useTranslation } from 'react-i18next';
 
 type Transaction = {
   id: string;
-  title: string;
+  type: 'founded' | 'escrowHold' | 'releasedExecutor' | 'refundedCustomer';
+  stars?: number;
   status: 'hold' | 'verified';
   isStars: boolean;
   date: string;
@@ -16,42 +18,46 @@ type Transaction = {
 const transactionList: Transaction[] = [
   {
     id: '1',
-    title: 'Founded 200',
+    type: 'founded',
+    stars: 200,
     status: 'verified',
     isStars: true,
     date: '10 Apr',
   },
   {
     id: '2',
-    title: 'Escrow hold 120',
+    type: 'escrowHold',
+    stars: 120,
     status: 'hold',
     isStars: true,
     date: '9 Apr',
   },
   {
     id: '3',
-    title: 'Released to Executor',
+    type: 'releasedExecutor',
     status: 'verified',
     isStars: false,
     date: '8 Apr',
   },
   {
     id: '4',
-    title: 'Refunded to Customer',
+    type: 'refundedCustomer',
     status: 'verified',
     isStars: false,
     date: '7 Apr',
   },
   {
     id: '5',
-    title: 'Founded 200',
+    type: 'founded',
+    stars: 200,
     status: 'verified',
     isStars: true,
     date: '6 Apr',
   },
   {
     id: '6',
-    title: 'Escrow hold 120',
+    type: 'escrowHold',
+    stars: 120,
     status: 'hold',
     isStars: true,
     date: '5 Apr',
@@ -59,16 +65,18 @@ const transactionList: Transaction[] = [
 ];
 
 const Wallet = () => {
+  const { t } = useTranslation();
+
   return (
     <div className="page wallet">
-      <h1 className="wallet-header">Wallet</h1>
+      <h1 className="wallet-header">{t('wallet')}</h1>
 
       <div className="wallet-container">
         <div className="wallet__header">
           <div className="wallet__header__title">
             <img src={walletIcon} alt="Wallet Icon" />
 
-            <span>Wallet</span>
+            <span>{t('wallet')}</span>
           </div>
 
           <div className="wallet__stars-status">
@@ -76,13 +84,15 @@ const Wallet = () => {
 
             <img src={starsIcon} alt="Telegram Stars Icon" />
 
-            <span className="stars-status">on hold</span>
+            <span className="stars-status">{t('miniWallet.onHold')}</span>
           </div>
         </div>
 
         <div className="wallet-content__container">
           <div className="wallet-content__wrapper">
-            <span className="wallet-content__available">Available</span>
+            <span className="wallet-content__available">
+              {t('miniWallet.available')}
+            </span>
 
             <div className="wallet-content">
               <span className="count-stars">120</span>
@@ -98,20 +108,24 @@ const Wallet = () => {
           </div>
 
           <div className="wallet-content__buttons-container">
-            <button className="wallet-content__button green">Top-up</button>
+            <button className="wallet-content__button green">
+              {t('topUp')}
+            </button>
 
-            <button className="wallet-content__button blue">Payout</button>
+            <button className="wallet-content__button blue">
+              {t('payout')}
+            </button>
           </div>
         </div>
       </div>
 
       <div className="transaction-container">
-        <h2>Transaction History</h2>
+        <h2>{t('transHistory')}</h2>
 
         <div className="wallet-clue">
           <img src={lockIcon} alt="Lock Icon" />
 
-          <span>Escrow ensures safety of every deal.</span>
+          <span>{t('escrowClue')}</span>
         </div>
 
         {transactionList.map((item: Transaction) => (
@@ -132,7 +146,7 @@ const Wallet = () => {
             </div>
 
             <div className="transaction_item-content">
-              <span>{item.title}</span>
+              <span>{t(item.type, { count: item.stars })}</span>
 
               {item.isStars && (
                 <img src={starsIcon} alt="Telegram Stars Icon" />

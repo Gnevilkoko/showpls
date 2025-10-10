@@ -9,12 +9,15 @@ import walletWhiteIcon from '../../assets/wallet-white.svg';
 import walletIcon from '../../assets/wallet.svg';
 import userWhiteIcon from '../../assets/user-white.svg';
 import userIcon from '../../assets/user.svg';
+import { useTranslation } from 'react-i18next';
 
 const Navigation = () => {
   // отслеживаем какая страница сейчас активна
   // на основе этого подменяем иконки и стили
   const location = useLocation();
   const navigate = useNavigate();
+
+  const { t } = useTranslation();
 
   const handleClick = (patchName: string) => {
     // при нажатии на кнопку - переходим на другую страницу
@@ -37,7 +40,7 @@ const Navigation = () => {
           className="nav-button__icon"
         />
 
-        <span>Home</span>
+        <span>{t('home')}</span>
       </button>
 
       <button
@@ -52,7 +55,7 @@ const Navigation = () => {
           className="nav-button__icon"
         />
 
-        <span>Tasks</span>
+        <span>{t('tasks')}</span>
       </button>
 
       <button
@@ -67,7 +70,7 @@ const Navigation = () => {
           className="nav-button__icon"
         />
 
-        <span>Chats</span>
+        <span>{t('chats')}</span>
       </button>
 
       <button
@@ -82,7 +85,7 @@ const Navigation = () => {
           className="nav-button__icon"
         />
 
-        <span>Wallet</span>
+        <span>{t('wallet')}</span>
       </button>
 
       <button
@@ -97,7 +100,7 @@ const Navigation = () => {
           className="nav-button__icon"
         />
 
-        <span>Profile</span>
+        <span>{t('profile')}</span>
       </button>
     </nav>
   );

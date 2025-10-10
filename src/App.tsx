@@ -1,17 +1,34 @@
 import './App.scss';
+import './i18n';
 import AccessGate from './pages/AccessGate';
 import { Navigate, Route, Routes } from 'react-router-dom';
-import useUserTg from './shared/hooks/useUserTg';
 import Home from './pages/Home';
 import Navigation from './shared/components/Navigation';
 import DevPage from './pages/DevPage';
 import Tasks from './pages/Tasks';
 import MapProvider from './shared/providers/MapProvider';
 import Wallet from './pages/Wallet';
-import Profile from './pages/profile';
+import Profile from './pages/Profile';
+import { useAppDispatch, useAppSelector } from './store';
+import { useEffect } from 'react';
+import { initUserTg } from './store/userSlice';
+import { initLanguageFromTg } from './store/languageSlice';
 
 function App() {
-  const user = useUserTg();
+  const dispatch = useAppDispatch();
+  const user = useAppSelector((state) => state.user.tgData);
+
+  // инициализируем данные юзера
+  useEffect(() => {
+    if (window.Telegram?.WebApp) {
+      dispatch(initUserTg());
+    }
+  }, [dispatch]);
+
+  // Подхватываем язык из tgData если localStorage пуст
+  useEffect(() => {
+    dispatch(initLanguageFromTg(user || null));
+  }, [user, dispatch]);
 
   return (
     <MapProvider>

@@ -1,3 +1,5 @@
+import { useTranslation } from 'react-i18next';
+
 interface ToggleProfileModeProps {
   activeMode: 'customer' | 'performer';
   callback: (val: 'customer' | 'performer') => void;
@@ -9,6 +11,8 @@ const ToggleProfileMode = ({
   callback,
   isProfile = false,
 }: ToggleProfileModeProps) => {
+  const { t } = useTranslation();
+
   return (
     <div className={`toggle-profile-mode ${isProfile ? 'gray' : ''}`}>
       <button
@@ -18,7 +22,7 @@ const ToggleProfileMode = ({
         onClick={() => callback('customer')}
       >
         {/* {isProfile === true ? "I'm customer" : 'Customer'} */}
-        Customer
+        {t('customerBtn')}
       </button>
 
       <button
@@ -28,7 +32,7 @@ const ToggleProfileMode = ({
         onClick={() => callback('performer')}
       >
         {/* {isProfile === true ? "I'm performer" : 'Performer'} */}
-        Performer
+        {t('performerBtn')}
       </button>
     </div>
   );

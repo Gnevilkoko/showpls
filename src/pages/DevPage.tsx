@@ -1,7 +1,7 @@
-import useUserTg from '../shared/hooks/useUserTg';
+import { useAppSelector } from '../store';
 
 const DevPage = () => {
-  const user = useUserTg();
+  const user = useAppSelector((state) => state.user.tgData);
 
   if (!user) {
     return <div>Вы не авторизованы</div>;

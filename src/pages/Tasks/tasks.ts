@@ -9,7 +9,8 @@ export type TaskType = {
   price: number;
   position: google.maps.LatLngLiteral;
   tags: {
-    type: 'badge' | 'stars' | 'text';
+    type: 'badge' | 'stars' | 'hLeft' | 'km';
+    count?: number;
     label?: string;
     color?: string;
     value?: number;
@@ -28,9 +29,9 @@ export const TasksList: TaskType[] = [
     position: { lat: 37.758749, lng: -122.461771 },
     tags: [
       { type: 'badge', label: 'Urgent', color: 'green' },
-      { type: 'stars' },
-      { type: 'text', label: '2h left' },
-      { type: 'text', label: '1.2 km' },
+      { type: 'stars', count: 20 },
+      { type: 'hLeft', count: 2 },
+      { type: 'km', count: 1.2 },
     ],
     icon: cameraIcon,
   },
@@ -44,8 +45,8 @@ export const TasksList: TaskType[] = [
     position: { lat: 37.75254, lng: -122.472629 },
     tags: [
       { type: 'badge', label: 'Urgent', color: 'green' },
-      { type: 'stars' },
-      { type: 'text', label: '1.2 km' },
+      { type: 'stars', count: 35 },
+      { type: 'km', count: 1.2, label: 'km' },
     ],
     icon: verifiedCheckIcon,
   },
@@ -59,8 +60,8 @@ export const TasksList: TaskType[] = [
     position: { lat: 37.749859, lng: -122.465076 },
     tags: [
       { type: 'badge', label: 'Remote', color: 'blue' },
-      { type: 'stars' },
-      { type: 'text', label: '1.2 km' },
+      { type: 'stars', count: 50 },
+      { type: 'km', count: 1.2, label: 'km' },
     ],
     icon: verifiedCheckIcon,
   },

@@ -1,5 +1,4 @@
 import profileBg from '../../assets/profile-bg.webp';
-import useUserTg from '../../shared/hooks/useUserTg';
 import userIcon from '../../assets/user.svg';
 import locationGreenIcon from '../../assets/location-green.svg';
 import statsStarWhiteIcon from '../../assets/stats-star-white.svg';
@@ -15,12 +14,15 @@ import supportIcon from '../../assets/support.svg';
 import documentTextIcon from '../../assets/document-text.svg';
 import messageQuestionIcon from '../../assets/message-question.svg';
 import arrowRightIcon from '../../assets/arrow-right-white.svg';
-// import type { TgUser } from '../../types/telegram';
 import { useState } from 'react';
 import MiniWallet from '../../shared/components/MiniWallet';
 import ToggleProfileMode from '../../shared/components/ToggleProfileMode';
 import NavigationSkeleton from '../../shared/components/NavigationSkeleton';
 import { useNavigate } from 'react-router-dom';
+import { useAppDispatch, useAppSelector } from '../../store';
+import { useTranslation } from 'react-i18next';
+// import type { TgUser } from '../../shared/types/telegram';
+import { AVAILABLE_LANGUAGES, setLanguage } from '../../store/languageSlice';
 
 // const userTest: TgUser = {
 //   id: 1111111,
@@ -34,15 +36,26 @@ import { useNavigate } from 'react-router-dom';
 
 const Profile = () => {
   const navigate = useNavigate();
-  const user = useUserTg();
-  // const userFromTg = useUserTg();
+  const dispatch = useAppDispatch();
+
+  const selectedLang = useAppSelector((state) => state.language);
+  const { t } = useTranslation();
+
+  const user = useAppSelector((state) => state.user.tgData);
+  // const userFromTg = useAppSelector((state) => state.user.tgData);
   // const [user, setUser] = useState(userFromTg || userTest);
 
   const [isReady, setIsReady] = useState(true);
+  const [isOpenLang, setIsOpenLang] = useState<boolean>(false);
 
   const [activeMode, setActiveMode] = useState<'customer' | 'performer'>(
     'performer'
   );
+
+  const handleSelectDropdown = (lng: string) => {
+    dispatch(setLanguage(lng));
+    setIsOpenLang(false);
+  };
 
   if (!user) {
     return <div>Вы не авторизованы</div>;
@@ -79,7 +92,7 @@ const Profile = () => {
           </div>
 
           <span className="profile__status-profession">
-            freelancer photographer
+            {t('freelancer')} {t('photographer')}
           </span>
         </div>
       </div>
@@ -88,20 +101,20 @@ const Profile = () => {
         <button className="profile-actions__button">
           <img src={penIcon} alt="Pen Icon" />
 
-          <span>Edit</span>
+          <span>{t('edit')}</span>
         </button>
 
         <button className="profile-actions__button">
           <img src={forwardIcon} alt="Forward Icon" />
 
-          <span>Share</span>
+          <span>{t('share')}</span>
         </button>
       </div>
 
       <button className="profile-actions__button">
         <img src={likeTagIcon} alt="Like Tag Icon" />
 
-        <span>Reviews</span>
+        <span>{t('reviews')}</span>
       </button>
 
       <MiniWallet />
@@ -116,12 +129,9 @@ const Profile = () => {
         {activeMode === 'performer' && (
           <div className="profile-mode__description-container">
             <div className="profile-mode__description">
-              <div className="description__title">Ready to work</div>
+              <div className="description__title">{t('readyWork')}</div>
 
-              <span>
-                When enabled, your profile appears on the global map of
-                available performers near your location.
-              </span>
+              <span>{t('readyWorkDescription')}</span>
             </div>
 
             <div>
@@ -140,97 +150,122 @@ const Profile = () => {
         <div className="profile__options-wrapper">
           <div className="dash" />
 
-          <div className="profile__option" onClick={() => navigate('/wallet')}>
+          <button
+            className="profile__option"
+            onClick={() => navigate('/wallet')}
+          >
             <div className="profile__option-content">
               <img src={walletIcon} alt="Wallet Icon" />
 
-              <span>Wallet</span>
+              <span>{t('wallet')}</span>
             </div>
 
             <img src={arrowRightIcon} alt="Arrow Right Icon" />
-          </div>
+          </button>
 
-          <div className="profile__option">
+          <button className="profile__option">
             <div className="profile__option-content">
               <img src={boxIcon} alt="Box Icon" />
 
-              <span>My orders</span>
+              <span>{t('myOrders')}</span>
             </div>
 
             <img src={arrowRightIcon} alt="Arrow Right Icon" />
-          </div>
+          </button>
 
-          <div className="profile__option">
+          <button className="profile__option">
             <div className="profile__option-content">
               <img src={securitySafeIcon} alt="Security Safe Icon" />
 
-              <span>Verification</span>
+              <span>{t('verification')}</span>
             </div>
 
             <img src={arrowRightIcon} alt="Arrow Right Icon" />
-          </div>
+          </button>
 
-          <div className="profile__option">
+          <button className="profile__option">
             <div className="profile__option-content">
               <img src={notificationIcon} alt="Security Safe Icon" />
 
-              <span>Notitfications</span>
+              <span>{t('notitfications')}</span>
             </div>
 
             <div className="profile__option-count">2</div>
 
             <img src={arrowRightIcon} alt="Arrow Right Icon" />
-          </div>
+          </button>
 
           <div className="dash" />
 
-          <div className="profile__option">
+          <button
+            className="profile__option"
+            onClick={() => setIsOpenLang((val: boolean) => !val)}
+            onBlur={() => setIsOpenLang(false)}
+          >
             <div className="profile__option-content">
               <img src={globalLangIcon} alt="Global Lang Icon" />
 
-              <span>Language</span>
+              <span>{t('language')}</span>
             </div>
 
-            <div className="profile__option-value">en</div>
+            <div className="profile__option-value">{selectedLang}</div>
+
+            <ul
+              className={`translate-dropdown-menu ${
+                isOpenLang ? 'visible' : ''
+              }`}
+            >
+              {AVAILABLE_LANGUAGES.map((lng) => (
+                <li key={lng} onMouseDown={() => handleSelectDropdown(lng)}>
+                  {lng}
+
+                  <div
+                    className={`trans-option-status ${
+                      selectedLang === lng ? 'active' : ''
+                    }`}
+                  />
+                </li>
+              ))}
+            </ul>
 
             <img src={arrowRightIcon} alt="Arrow Right Icon" />
-          </div>
+          </button>
 
-          <div className="profile__option">
+          <button className="profile__option">
             <div className="profile__option-content">
               <img src={supportIcon} alt="Support Icon" />
 
-              <span>Support</span>
+              <span>{t('support')}</span>
             </div>
 
             <img src={arrowRightIcon} alt="Arrow Right Icon" />
-          </div>
+          </button>
 
-          <div className="profile__option">
+          <button className="profile__option">
             <div className="profile__option-content">
               <img src={messageQuestionIcon} alt="Support Icon" />
 
-              <span>About</span>
+              <span>{t('about')}</span>
             </div>
 
             <img src={arrowRightIcon} alt="Arrow Right Icon" />
-          </div>
+          </button>
 
           <div className="dash" />
 
-          <div className="profile__option">
+          <button className="profile__option">
             <div className="profile__option-content">
               <img src={documentTextIcon} alt="Support Icon" />
 
-              <span>Privacy & Security</span>
+              <span>{t('privacySecurity')}</span>
             </div>
 
             <img src={arrowRightIcon} alt="Arrow Right Icon" />
-          </div>
+          </button>
         </div>
       </div>
 
-      <button className="specials_button">Log out</button>
+      <button className="specials_button">{t('logOut')}</button>
 
       <NavigationSkeleton />
     </div>

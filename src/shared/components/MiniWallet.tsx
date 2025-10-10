@@ -1,8 +1,10 @@
 import { useNavigate } from 'react-router-dom';
 import starsIcon from '../../assets/stars.svg';
+import { useTranslation } from 'react-i18next';
 
 const MiniWallet = () => {
   const navigate = useNavigate();
+  const { t } = useTranslation();
 
   const handleClickWallet = () => {
     navigate('/wallet');
@@ -12,7 +14,9 @@ const MiniWallet = () => {
     <div className="wallet-mini-container" onClick={handleClickWallet}>
       <div className="wallet__header">
         <div className="wallet-content__wrapper">
-          <span className="wallet-content__available">Available funds</span>
+          <span className="wallet-content__available">
+            {t('miniWallet.availableFunds')}
+          </span>
 
           <div className="wallet-content">
             <span className="count-stars">120</span>
@@ -32,7 +36,7 @@ const MiniWallet = () => {
 
           <img src={starsIcon} alt="Telegram Stars Icon" />
 
-          <span className="stars-status">on hold</span>
+          <span className="stars-status">{t('miniWallet.onHold')}</span>
         </div>
       </div>
     </div>
