@@ -1,6 +1,7 @@
 import background from '../../assets/access-gate-bg.webp';
-import logo from '../../assets/logo.svg';
+import logoAnimation from '../../assets/logo-animation.json';
 import OpenTelegramButton from './OpenTelegramButton';
+import Lottie from 'lottie-react';
 
 const AccessGate = () => {
   return (
@@ -12,7 +13,9 @@ const AccessGate = () => {
         className="access-gate__background"
       />
 
-      <img className="access-gate__logo" src={logo} alt="Showpls Logo" />
+      <div className="access-gate__logo">
+        <Lottie animationData={logoAnimation} />
+      </div>
 
       <div className="access-gate__container">
         <div className="access-gate__content">
