@@ -46,6 +46,21 @@ $max-width-all-content: 450px;
   z-index: 0;
 }
 
+.access-gate::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 300px;
+  background: linear-gradient(
+    to bottom,
+    rgba(255, 255, 255, 0.6),
+    rgba(0, 0, 0, 0)
+  );
+  pointer-events: none;
+}
+
 .access-gate__logo {
   max-width: 320px;
   z-index: 1;
