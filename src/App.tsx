@@ -11,59 +11,65 @@ import Wallet from './pages/Wallet';
 import Profile from './pages/Profile';
 import { useAppDispatch, useAppSelector } from './store';
 import { useEffect } from 'react';
-import { initUserTg } from './store/userSlice';
 import { initLanguageFromTg } from './store/languageSlice';
+import { tgService } from './services/webApp';
+import { setUserTg } from './store/userSlice';
 
 function App() {
   const dispatch = useAppDispatch();
   const user = useAppSelector((state) => state.user.tgData);
 
-  // инициализируем данные юзера
+  const isDev = import.meta.env.MODE === 'development';
+
   useEffect(() => {
+    tgService.init(); // инициализация WebApp и вызов expand()
     if (window.Telegram?.WebApp) {
-      dispatch(initUserTg());
+      // обновляем стор пользователя если инициализировались
+      dispatch(setUserTg(tgService.user));
     }
   }, [dispatch]);
 
   // Подхватываем язык из tgData если localStorage пуст
   useEffect(() => {
-    dispatch(initLanguageFromTg(user || null));
+    dispatch(initLanguageFromTg(user));
   }, [user, dispatch]);
 
   return (
     <MapProvider>
       <div className="app">
         {/* если нет юзера - навигацию не отрисовываем */}
-        {user && <Navigation />}
+        {(user || isDev) && <Navigation />}
 
         <Routes>
           {/* Если user нет → открываем AccessGate,
         иначе редиректим на /home */}
+          {/* <Route path="/" element={<AccessGate />} /> */}
+
           <Route
             path="/"
-            element={user ? <Navigate to="/home" replace /> : <AccessGate />}
+            element={
+              user || isDev ? <Navigate to="/home" replace /> : <AccessGate />
+            }
           />
-
-          {/* Закрытый роут: если user нет – редирект на "/" */}
           <Route
             path="/home"
-            element={user ? <Home /> : <Navigate to="/" replace />}
+            element={user || isDev ? <Home /> : <Navigate to="/" replace />}
           />
           <Route
             path="/tasks"
-            element={user ? <Tasks /> : <Navigate to="/" replace />}
+            element={user || isDev ? <Tasks /> : <Navigate to="/" replace />}
           />
           <Route
             path="/chats"
-            element={user ? <DevPage /> : <Navigate to="/" replace />}
+            element={user || isDev ? <DevPage /> : <Navigate to="/" replace />}
           />
           <Route
             path="/wallet"
-            element={user ? <Wallet /> : <Navigate to="/" replace />}
+            element={user || isDev ? <Wallet /> : <Navigate to="/" replace />}
           />
           <Route
             path="/profile"
-            element={user ? <Profile /> : <Navigate to="/" replace />}
+            element={user || isDev ? <Profile /> : <Navigate to="/" replace />}
           />
         </Routes>
 

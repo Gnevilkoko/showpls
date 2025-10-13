@@ -514,6 +514,7 @@ $max-width-all-content: 450px;
 .wallet-content__button {
   all: unset;
   width: 100%;
+  box-sizing: border-box;
   text-align: center;
   border-radius: 100px;
   padding: 18px;
@@ -569,6 +570,7 @@ $max-width-all-content: 450px;
 }
 
 .specials__options {
+  width: 100%;
   display: flex;
 }
 
@@ -1487,6 +1489,42 @@ $max-width-all-content: 450px;
   line-height: 100%;
   letter-spacing: 0px;
   color: #3c454c;
+}
+
+.modal-top-up__wrapper {
+  position: fixed;
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background-color: rgba(0, 0, 0, 0.5);
+  backdrop-filter: blur(1px);
+  z-index: 20;
+
+  opacity: 0;
+  visibility: hidden;
+  transition: opacity 0.3s ease, visibility 0.3s ease;
+  touch-action: none;
+
+  &.active {
+    opacity: 1;
+    visibility: visible;
+  }
+}
+
+.modal-top-up {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 15px;
+  background-color: #ffffff;
+  width: 90%;
+  height: max-content;
+  padding: 20px;
+  box-sizing: border-box;
+  border-radius: 20px;
 }
 
 // =========== Profile ===========

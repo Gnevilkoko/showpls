@@ -5,6 +5,9 @@ import checkMarkWhiteIcon from '../../assets/check-mark-white.svg';
 import lockKeyholeWhiteIcon from '../../assets/lock-keyhole-white.svg';
 import NavigationSkeleton from '../../shared/components/NavigationSkeleton';
 import { useTranslation } from 'react-i18next';
+import { useState } from 'react';
+import { tgService } from '../../services/webApp';
+import { URL_TOPUP_STARS } from '../../constants';
 
 type Transaction = {
   id: string;
@@ -66,6 +69,49 @@ const transactionList: Transaction[] = [
 
 const Wallet = () => {
   const { t } = useTranslation();
+  const [isOpenModalTopUp, setIsOpenModalTopUp] = useState(false);
+  const [activeSection, setActiveSection] = useState<'stars' | 'ton'>('stars');
+  const [stars, setStars] = useState<number>(1);
+
+  const handleClickOption = (val: 'stars' | 'ton') => {
+    setActiveSection(val);
+  };
+
+  const handleClickTopUp = () => {
+    setIsOpenModalTopUp(true);
+  };
+
+  const handleTopUpStars = async () => {
+    const webApp = tgService.webApp;
+
+    if (!webApp) {
+      return;
+    }
+
+    const res = await fetch(URL_TOPUP_STARS, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ stars }),
+    });
+    const data = await res.json();
+
+    // Открываем окно оплаты
+    webApp.openInvoice(data.invoiceUrl, (status) => {
+      switch (status) {
+        case 'paid':
+          webApp.showAlert('Оплата успешно завершена!');
+          setIsOpenModalTopUp(false);
+          break;
+        case 'cancelled':
+          webApp.showAlert('Оплата была отменена.');
+          break;
+        case 'failed':
+        default:
+          webApp.showAlert('Ошибка при оплате. Попробуйте ещё раз.');
+          break;
+      }
+    });
+  };
 
   return (
     <div className="page wallet">
@@ -108,7 +154,10 @@ const Wallet = () => {
           </div>
 
           <div className="wallet-content__buttons-container">
-            <button className="wallet-content__button green">
+            <button
+              className="wallet-content__button green"
+              onClick={handleClickTopUp}
+            >
               {t('topUp')}
             </button>
 
@@ -156,6 +205,66 @@ const Wallet = () => {
             <div className="trans-date">{item.date}</div>
           </div>
         ))}
+      </div>
+
+      <div
+        className={`modal-top-up__wrapper ${isOpenModalTopUp ? 'active' : ''}`}
+        onClick={() => setIsOpenModalTopUp(false)}
+      >
+        <div className="modal-top-up" onClick={(e) => e.stopPropagation()}>
+          <h2 className="wallet-header">{t('topUp')}</h2>
+
+          <div className="specials__options">
+            <button
+              className={`specials__option ${
+                activeSection === 'stars' ? 'active' : ''
+              } `}
+              onClick={() => handleClickOption('stars')}
+            >
+              Stars
+            </button>
+
+            <button
+              className={`specials__option ${
+                activeSection === 'ton' ? 'active' : ''
+              } `}
+              onClick={() => handleClickOption('ton')}
+            >
+              TON Wallet
+            </button>
+          </div>
+
+          <input
+            type="number"
+            value={stars}
+            onChange={(e) => {
+              let val = Number(e.target.value);
+
+              if (isNaN(val) || val < 1) val = 1;
+              if (val > 10000) val = 10000;
+
+              setStars(val);
+            }}
+            inputMode="numeric" // открывает цифровую клавиатуру на мобилках
+            placeholder={t('tasksPage.budgetPlaceholder')}
+            className="budget-input"
+          />
+
+          {activeSection === 'stars' && (
+            <button
+              className="wallet-content__button green"
+              onClick={handleTopUpStars}
+            >
+              {t('topUpStars')}
+            </button>
+          )}
+
+          {activeSection === 'ton' && (
+            <button className="wallet-content__button blue">
+              {t('topUpTON')}
+            </button>
+          )}
+        </div>
       </div>
 
       <NavigationSkeleton />
