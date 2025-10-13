@@ -8,6 +8,7 @@ import { useTranslation } from 'react-i18next';
 import { useState } from 'react';
 import { tgService } from '../../services/webApp';
 import { URL_TOPUP_STARS } from '../../constants';
+import TonWalletConnect from './TonWalletConnect';
 
 type Transaction = {
   id: string;
@@ -234,36 +235,34 @@ const Wallet = () => {
             </button>
           </div>
 
-          <input
-            type="number"
-            value={stars}
-            onChange={(e) => {
-              let val = Number(e.target.value);
-
-              if (isNaN(val) || val < 1) val = 1;
-              if (val > 10000) val = 10000;
-
-              setStars(val);
-            }}
-            inputMode="numeric" // открывает цифровую клавиатуру на мобилках
-            placeholder={t('tasksPage.budgetPlaceholder')}
-            className="budget-input"
-          />
-
           {activeSection === 'stars' && (
-            <button
-              className="wallet-content__button green"
-              onClick={handleTopUpStars}
-            >
-              {t('topUpStars')}
-            </button>
+            <>
+              <input
+                type="number"
+                value={stars}
+                onChange={(e) => {
+                  let val = Number(e.target.value);
+
+                  if (isNaN(val) || val < 1) val = 1;
+                  if (val > 10000) val = 10000;
+
+                  setStars(val);
+                }}
+                inputMode="numeric" // открывает цифровую клавиатуру на мобилках
+                placeholder={t('tasksPage.budgetPlaceholder')}
+                className="budget-input"
+              />
+
+              <button
+                className="wallet-content__button green"
+                onClick={handleTopUpStars}
+              >
+                {t('topUpStars')}
+              </button>
+            </>
           )}
 
-          {activeSection === 'ton' && (
-            <button className="wallet-content__button blue">
-              {t('topUpTON')}
-            </button>
-          )}
+          {activeSection === 'ton' && <TonWalletConnect />}
         </div>
       </div>
 

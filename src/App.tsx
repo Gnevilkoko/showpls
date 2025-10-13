@@ -14,6 +14,7 @@ import { useEffect } from 'react';
 import { initLanguageFromTg } from './store/languageSlice';
 import { tgService } from './services/webApp';
 import { setUserTg } from './store/userSlice';
+import { TonConnectUIProvider } from '@tonconnect/ui-react';
 
 function App() {
   const dispatch = useAppDispatch();
@@ -35,46 +36,51 @@ function App() {
   }, [user, dispatch]);
 
   return (
-    <MapProvider>
-      <div className="app">
-        {/* если нет юзера - навигацию не отрисовываем */}
-        {(user || isDev) && <Navigation />}
+    <TonConnectUIProvider manifestUrl="https://showpls.vercel.app/tonconnect-manifest.json">
+      <MapProvider>
+        <div className="app">
+          {/* если нет юзера - навигацию не отрисовываем */}
+          {(user || isDev) && <Navigation />}
 
-        <Routes>
-          {/* Если user нет → открываем AccessGate,
+          <Routes>
+            {/* Если user нет → открываем AccessGate,
         иначе редиректим на /home */}
-          {/* <Route path="/" element={<AccessGate />} /> */}
+            {/* <Route path="/" element={<AccessGate />} /> */}
 
-          <Route
-            path="/"
-            element={
-              user || isDev ? <Navigate to="/home" replace /> : <AccessGate />
-            }
-          />
-          <Route
-            path="/home"
-            element={user || isDev ? <Home /> : <Navigate to="/" replace />}
-          />
-          <Route
-            path="/tasks"
-            element={user || isDev ? <Tasks /> : <Navigate to="/" replace />}
-          />
-          <Route
-            path="/chats"
-            element={user || isDev ? <DevPage /> : <Navigate to="/" replace />}
-          />
-          <Route
-            path="/wallet"
-            element={user || isDev ? <Wallet /> : <Navigate to="/" replace />}
-          />
-          <Route
-            path="/profile"
-            element={user || isDev ? <Profile /> : <Navigate to="/" replace />}
-          />
-        </Routes>
+            <Route
+              path="/"
+              element={
+                user || isDev ? <Navigate to="/home" replace /> : <AccessGate />
+              }
+            />
+            <Route
+              path="/home"
+              element={user || isDev ? <Home /> : <Navigate to="/" replace />}
+            />
+            <Route
+              path="/tasks"
+              element={user || isDev ? <Tasks /> : <Navigate to="/" replace />}
+            />
+            <Route
+              path="/chats"
+              element={
+                user || isDev ? <DevPage /> : <Navigate to="/" replace />
+              }
+            />
+            <Route
+              path="/wallet"
+              element={user || isDev ? <Wallet /> : <Navigate to="/" replace />}
+            />
+            <Route
+              path="/profile"
+              element={
+                user || isDev ? <Profile /> : <Navigate to="/" replace />
+              }
+            />
+          </Routes>
 
-        {/* dev mode */}
-        {/* <Navigation />
+          {/* dev mode */}
+          {/* <Navigation />
 
         <Routes>
           <Route path="/" element={<AccessGate />} />
@@ -84,8 +90,9 @@ function App() {
           <Route path="/wallet" element={<Wallet />} />
           <Route path="/profile" element={<Profile />} />
         </Routes> */}
-      </div>
-    </MapProvider>
+        </div>
+      </MapProvider>
+    </TonConnectUIProvider>
   );
 }
 
