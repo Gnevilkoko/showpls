@@ -89,6 +89,10 @@ const resources = {
       readyWorkDescription:
         'When enabled, your profile appears on the global map of available performers near your location',
       logOut: 'Log out',
+      search: 'Search',
+      favorites: 'Favorites',
+      zeroChats: "You don't have any chats yet",
+      noChatsFound: 'No chats found',
     },
   },
   ru: {
@@ -178,6 +182,10 @@ const resources = {
       readyWorkDescription:
         'При включении ваш профиль появится на глобальной карте доступных исполнителей рядом с вашим местоположением',
       logOut: 'Выйти',
+      search: 'Поиск',
+      favorites: 'Избранные',
+      zeroChats: 'У вас пока нет чатов',
+      noChatsFound: 'Чаты не найдены',
     },
   },
 };

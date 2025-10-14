@@ -4,7 +4,7 @@ import AccessGate from './pages/AccessGate';
 import { Navigate, Route, Routes } from 'react-router-dom';
 import Home from './pages/Home';
 import Navigation from './shared/components/Navigation';
-import DevPage from './pages/DevPage';
+// import DevPage from './pages/DevPage';
 import Tasks from './pages/Tasks';
 import MapProvider from './shared/providers/MapProvider';
 import Wallet from './pages/Wallet';
@@ -16,6 +16,7 @@ import { tgService } from './services/webApp';
 import { setUserTg } from './store/userSlice';
 import { TonConnectUIProvider } from '@tonconnect/ui-react';
 import { TonWalletProvider } from './shared/providers/TonWalletProvider';
+import Chats from './pages/Chats';
 
 function App() {
   const dispatch = useAppDispatch();
@@ -72,7 +73,7 @@ function App() {
               <Route
                 path="/chats"
                 element={
-                  user || isDev ? <DevPage /> : <Navigate to="/" replace />
+                  user || isDev ? <Chats /> : <Navigate to="/" replace />
                 }
               />
               <Route

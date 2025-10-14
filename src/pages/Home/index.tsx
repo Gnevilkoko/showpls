@@ -7,8 +7,9 @@ import NavigationSkeleton from '../../shared/components/NavigationSkeleton';
 import { useNavigate } from 'react-router-dom';
 import { useState } from 'react';
 import Header from '../../shared/components/Header';
-import MiniWallet from '../../shared/components/MiniWallet';
+import testnetBannerAnimation from '../../assets/testnet-banner-animation.json';
 import { useTranslation } from 'react-i18next';
+import Lottie from 'lottie-react';
 
 const Home = () => {
   const navigate = useNavigate();
@@ -73,7 +74,9 @@ const Home = () => {
         </div>
       </div>
 
-      <MiniWallet />
+      <div className="home__banner-testnet">
+        <Lottie animationData={testnetBannerAnimation} />
+      </div>
 
       <div className="home__specials-banner">
         <div className="specials-banner__header">
