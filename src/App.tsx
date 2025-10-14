@@ -37,7 +37,7 @@ function App() {
   }, [user, dispatch]);
 
   return (
-    <TonConnectUIProvider manifestUrl="https://showpls.vercel.app/tonconnect-manifest.json">
+    <TonConnectUIProvider manifestUrl="https://showpls-tumandev.vercel.app/tonconnect-manifest.json">
       <TonWalletProvider>
         <MapProvider>
           <div className="app">
