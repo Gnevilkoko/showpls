@@ -14,36 +14,36 @@ import supportIcon from '../../assets/support.svg';
 import documentTextIcon from '../../assets/document-text.svg';
 import messageQuestionIcon from '../../assets/message-question.svg';
 import arrowRightIcon from '../../assets/arrow-right-white.svg';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import MiniWallet from '../../shared/components/MiniWallet';
 import ToggleProfileMode from '../../shared/components/ToggleProfileMode';
 import NavigationSkeleton from '../../shared/components/NavigationSkeleton';
 import { useNavigate } from 'react-router-dom';
 import { useAppDispatch, useAppSelector } from '../../store';
 import { useTranslation } from 'react-i18next';
-// import type { TgUser } from '../../shared/types/telegram';
 import { AVAILABLE_LANGUAGES, setLanguage } from '../../store/languageSlice';
+import type { TgUserType } from '../../shared/types';
 
-// const userTest: TgUser = {
-//   id: 1111111,
-//   first_name: 'Alexandra',
-//   last_name: 'Johnson',
-//   username: '@test123',
-//   language_code: 'ru',
-//   photo_url:
-//     'https://t.me/i/userpic/320/q4sKbvOxAfs1GzG1BvCxGsS2dLs62WaTHYUrqguxs_M.svg',
-// };
+const userTest: TgUserType = {
+  id: 1111111,
+  first_name: 'Test User',
+};
 
 const Profile = () => {
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const dispatch = useAppDispatch();
 
   const selectedLang = useAppSelector((state) => state.language);
-  const { t } = useTranslation();
 
-  const user = useAppSelector((state) => state.user.tgData);
-  // const userFromTg = useAppSelector((state) => state.user.tgData);
-  // const [user, setUser] = useState(userFromTg || userTest);
+  const isDev = import.meta.env.MODE === 'development';
+
+  const tgUser = useAppSelector((state) => state.user.tgData);
+  const [user, setUser] = useState(isDev ? userTest : tgUser);
+
+  useEffect(() => {
+    if (tgUser) setUser(tgUser);
+  }, [tgUser]);
 
   const [isReady, setIsReady] = useState(true);
   const [isOpenLang, setIsOpenLang] = useState<boolean>(false);

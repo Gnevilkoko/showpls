@@ -1,8 +1,8 @@
 import { createSlice, type PayloadAction } from '@reduxjs/toolkit';
-import type { TgUser } from '../shared/types/telegram';
+import type { TgUserType } from '../shared/types';
 
 interface UserState {
-  tgData: TgUser | null;
+  tgData: TgUserType | null;
 }
 
 const initialState: UserState = { tgData: null };
@@ -11,7 +11,7 @@ const userSlice = createSlice({
   name: 'user',
   initialState,
   reducers: {
-    setUserTg: (state, action: PayloadAction<TgUser | null>) => {
+    setUserTg: (state, action: PayloadAction<TgUserType | null>) => {
       state.tgData = action.payload;
     },
   },

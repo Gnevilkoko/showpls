@@ -1,22 +1,6 @@
 import cameraIcon from '../../assets/camera.svg';
 import verifiedCheckIcon from '../../assets/verified-check.svg';
-
-export type TaskType = {
-  id: string;
-  title: string;
-  description: string;
-  variant: 'urgent' | 'remote';
-  price: number;
-  position: google.maps.LatLngLiteral;
-  tags: {
-    type: 'badge' | 'stars' | 'hLeft' | 'km';
-    count?: number;
-    label?: string;
-    color?: string;
-    value?: number;
-  }[];
-  icon: string;
-};
+import type { TaskType } from '../../shared/types';
 
 export const TasksList: TaskType[] = [
   {

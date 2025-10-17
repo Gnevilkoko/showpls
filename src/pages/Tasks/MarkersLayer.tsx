@@ -2,8 +2,9 @@ import { useEffect, useRef } from 'react';
 import { createRoot } from 'react-dom/client';
 import type { Root } from 'react-dom/client';
 import starsWhiteIcon from '../../assets/stars-white.svg';
-import { TasksList, type TaskType } from './tasks';
+import { TasksList } from './tasks';
 import { useTranslation } from 'react-i18next';
+import type { TaskType } from '../../shared/types';
 
 interface MarkerContentProps {
   task: TaskType;

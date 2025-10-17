@@ -93,6 +93,10 @@ const resources = {
       favorites: 'Favorites',
       zeroChats: "You don't have any chats yet",
       noChatsFound: 'No chats found',
+      loadingChats: 'Loading chats...',
+      somethingWentWrong: 'Something went wrong, please try again later',
+      message: 'Message...',
+      wasOnline: 'Was online in',
     },
   },
   ru: {
@@ -186,6 +190,10 @@ const resources = {
       favorites: 'Избранные',
       zeroChats: 'У вас пока нет чатов',
       noChatsFound: 'Чаты не найдены',
+      loadingChats: 'Загрузка чатов...',
+      somethingWentWrong: 'Что-то пошло не так, попробуйте позже',
+      message: 'Сообщение...',
+      wasOnline: 'Был онлайн в ',
     },
   },
 };

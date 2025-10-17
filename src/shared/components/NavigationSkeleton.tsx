@@ -1,6 +1,6 @@
-import { useEffect, useState } from 'react';
+import { memo, useEffect, useState } from 'react';
 
-const NavigationSkeleton = () => {
+const NavigationSkeleton = memo(() => {
   const [size, setSize] = useState<{ height: string }>({
     height: '0px',
   });
@@ -26,6 +26,6 @@ const NavigationSkeleton = () => {
       }}
     />
   );
-};
+});
 
 export default NavigationSkeleton;

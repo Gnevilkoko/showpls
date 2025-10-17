@@ -1,6 +1,6 @@
 import { createSlice, type PayloadAction } from '@reduxjs/toolkit';
 import i18n from '../i18n';
-import type { TgUser } from '../shared/types/telegram';
+import type { TgUserType } from '../shared/types';
 
 // Получаем список всех доступных языков из i18n
 export const AVAILABLE_LANGUAGES = Object.keys(i18n.options.resources || {});
@@ -27,7 +27,7 @@ const languageSlice = createSlice({
       i18n.changeLanguage(lang);
       return lang;
     },
-    initLanguageFromTg: (_state, action: PayloadAction<TgUser | null>) => {
+    initLanguageFromTg: (_state, action: PayloadAction<TgUserType | null>) => {
       if (localLang) return localLang; // уже выбран
 
       const tgLang = action.payload?.language_code;

@@ -9,17 +9,9 @@ import { useState } from 'react';
 import { tgService } from '../../services/webApp';
 import { URL_TOPUP_STARS } from '../../constants';
 import TonWalletConnect from './TonWalletConnect';
+import type { TransactionType } from '../../shared/types';
 
-type Transaction = {
-  id: string;
-  type: 'founded' | 'escrowHold' | 'releasedExecutor' | 'refundedCustomer';
-  stars?: number;
-  status: 'hold' | 'verified';
-  isStars: boolean;
-  date: string;
-};
-
-const transactionList: Transaction[] = [
+const transactionList: TransactionType[] = [
   {
     id: '1',
     type: 'founded',
@@ -178,7 +170,7 @@ const Wallet = () => {
           <span>{t('escrowClue')}</span>
         </div>
 
-        {transactionList.map((item: Transaction) => (
+        {transactionList.map((item: TransactionType) => (
           <div className="transaction_item" key={item.id}>
             <div
               className={`trans-status-icon ${
