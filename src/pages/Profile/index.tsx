@@ -17,12 +17,12 @@ import arrowRightIcon from '../../assets/arrow-right-white.svg';
 import { useEffect, useState } from 'react';
 import MiniWallet from '../../shared/components/MiniWallet';
 import ToggleProfileMode from '../../shared/components/ToggleProfileMode';
-import NavigationSkeleton from '../../shared/components/NavigationSkeleton';
 import { useNavigate } from 'react-router-dom';
 import { useAppDispatch, useAppSelector } from '../../store';
 import { useTranslation } from 'react-i18next';
 import { AVAILABLE_LANGUAGES, setLanguage } from '../../store/languageSlice';
 import type { TgUserType } from '../../shared/types';
+import Navigation from '../../shared/components/Navigation';
 
 const userTest: TgUserType = {
   id: 1111111,
@@ -267,7 +267,7 @@ const Profile = () => {
 
       <button className="specials_button">{t('logOut')}</button>
 
-      <NavigationSkeleton />
+      <Navigation />
     </div>
   );
 };

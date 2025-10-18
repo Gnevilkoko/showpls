@@ -18,6 +18,8 @@ export const TasksList: TaskType[] = [
       { type: 'km', count: 1.2 },
     ],
     icon: cameraIcon,
+    customer_id: 100,
+    performer_id: 200,
   },
   {
     id: '2',
@@ -33,6 +35,8 @@ export const TasksList: TaskType[] = [
       { type: 'km', count: 1.2, label: 'km' },
     ],
     icon: verifiedCheckIcon,
+    customer_id: 200,
+    performer_id: 100,
   },
   {
     id: '3',
@@ -48,5 +52,7 @@ export const TasksList: TaskType[] = [
       { type: 'km', count: 1.2, label: 'km' },
     ],
     icon: verifiedCheckIcon,
+    customer_id: 200,
+    performer_id: 100,
   },
 ];

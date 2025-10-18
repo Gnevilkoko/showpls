@@ -3,13 +3,13 @@ import searchActionBannerIcon from '../../assets/search-action-banner.svg';
 import starsIcon from '../../assets/stars.svg';
 import logoSpecials from '../../assets/logo-specials.png';
 import partnerNikeLogo from '../../assets/partnerNikeLogo.png';
-import NavigationSkeleton from '../../shared/components/NavigationSkeleton';
 import { useNavigate } from 'react-router-dom';
 import { useState } from 'react';
 import Header from '../../shared/components/Header';
 import testnetBannerAnimation from '../../assets/testnet-banner-animation.json';
 import { useTranslation } from 'react-i18next';
 import Lottie from 'lottie-react';
+import Navigation from '../../shared/components/Navigation';
 
 const Home = () => {
   const navigate = useNavigate();
@@ -156,7 +156,7 @@ const Home = () => {
         </div>
       </div>
 
-      <NavigationSkeleton />
+      <Navigation />
     </div>
   );
 };

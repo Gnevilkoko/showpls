@@ -97,6 +97,11 @@ const resources = {
       somethingWentWrong: 'Something went wrong, please try again later',
       message: 'Message...',
       wasOnline: 'Was online in',
+      taskDetails: 'Task Details',
+      show: 'Show',
+      hide: 'Hide',
+      acceptJob: 'Accept job',
+      upload: 'Upload',
     },
   },
   ru: {
@@ -194,6 +199,11 @@ const resources = {
       somethingWentWrong: 'Что-то пошло не так, попробуйте позже',
       message: 'Сообщение...',
       wasOnline: 'Был онлайн в ',
+      taskDetails: 'Детали Задачи',
+      show: 'Показать',
+      hide: 'Скрыть',
+      acceptJob: 'Принять работу',
+      upload: 'Загрузить',
     },
   },
 };

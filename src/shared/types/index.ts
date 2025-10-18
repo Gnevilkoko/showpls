@@ -7,6 +7,7 @@ export type ChatType = {
   last_update: number;
   is_favorite: boolean;
   is_active_order: boolean;
+  order: TaskType | null;
   is_read: boolean;
   count_unread: number | null;
 };
@@ -25,8 +26,6 @@ export type Message = {
 
 export type DataMessages = {
   chat_id: number;
-  customer: number;
-  executor: number;
   messages: Message[];
   has_more: boolean;
 };
@@ -70,10 +69,13 @@ export type TaskType = {
     value?: number;
   }[];
   icon: string;
+  customer_id: number;
+  performer_id: number | null;
 };
 
 export type UserFromBackType = {
   telegram_data: TgUserType;
+  user_id: number;
   first_name: string;
   last_name: string | null;
   language_code: string;
@@ -88,7 +90,7 @@ export type UserFromBackType = {
   balance_hold: number;
   chats: ChatsDataType;
   transactions: TransactionType[];
-  tasks: {
+  orders: {
     customer: TaskType[];
     performer: TaskType[];
   };

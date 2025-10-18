@@ -10,96 +10,89 @@ import walletIcon from '../../assets/wallet.svg';
 import userWhiteIcon from '../../assets/user-white.svg';
 import userIcon from '../../assets/user.svg';
 import { useTranslation } from 'react-i18next';
+import { useEffect, useState } from 'react';
 
 const Navigation = () => {
-  // отслеживаем какая страница сейчас активна
-  // на основе этого подменяем иконки и стили
   const location = useLocation();
   const navigate = useNavigate();
-
   const { t } = useTranslation();
 
-  const handleClick = (patchName: string) => {
-    // при нажатии на кнопку - переходим на другую страницу
-    if (patchName !== location.pathname) {
-      navigate(patchName);
+  // локальное состояние для плавного включения active после загрузки страницы
+  const [activePath, setActivePath] = useState<string | null>(null);
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setActivePath(location.pathname);
+    }, 0); // 0 мс задержка что бы отработала анимация появления активной кнопки
+
+    return () => clearTimeout(timer);
+  }, [location.pathname]);
+
+  const handleClick = (pathName: string) => {
+    if (pathName !== location.pathname) {
+      navigate(pathName);
     }
   };
 
   return (
     <nav className="navigation">
       <button
-        className={`nav-button ${
-          location.pathname === '/home' ? 'active' : ''
-        }`}
+        className={`nav-button ${activePath === '/home' ? 'active' : ''}`}
         onClick={() => handleClick('/home')}
       >
         <img
-          src={location.pathname === '/home' ? homeWhiteIcon : homeIcon}
+          src={activePath === '/home' ? homeWhiteIcon : homeIcon}
           alt="Home Icon"
           className="nav-button__icon"
         />
-
         <span>{t('home')}</span>
       </button>
 
       <button
-        className={`nav-button ${
-          location.pathname === '/tasks' ? 'active' : ''
-        }`}
+        className={`nav-button ${activePath === '/tasks' ? 'active' : ''}`}
         onClick={() => handleClick('/tasks')}
       >
         <img
-          src={location.pathname === '/tasks' ? globalWhiteIcon : globalIcon}
-          alt="Discover Icon"
+          src={activePath === '/tasks' ? globalWhiteIcon : globalIcon}
+          alt="Tasks Icon"
           className="nav-button__icon"
         />
-
         <span>{t('tasks')}</span>
       </button>
 
       <button
-        className={`nav-button ${
-          location.pathname === '/chats' ? 'active' : ''
-        }`}
+        className={`nav-button ${activePath === '/chats' ? 'active' : ''}`}
         onClick={() => handleClick('/chats')}
       >
         <img
-          src={location.pathname === '/chats' ? chatsWhiteIcon : chatsIcon}
+          src={activePath === '/chats' ? chatsWhiteIcon : chatsIcon}
           alt="Chats Icon"
           className="nav-button__icon"
         />
-
         <span>{t('chats')}</span>
       </button>
 
       <button
-        className={`nav-button ${
-          location.pathname === '/wallet' ? 'active' : ''
-        }`}
+        className={`nav-button ${activePath === '/wallet' ? 'active' : ''}`}
         onClick={() => handleClick('/wallet')}
       >
         <img
-          src={location.pathname === '/wallet' ? walletWhiteIcon : walletIcon}
+          src={activePath === '/wallet' ? walletWhiteIcon : walletIcon}
           alt="Wallet Icon"
           className="nav-button__icon"
         />
-
         <span>{t('wallet')}</span>
       </button>
 
       <button
-        className={`nav-button ${
-          location.pathname === '/profile' ? 'active' : ''
-        }`}
+        className={`nav-button ${activePath === '/profile' ? 'active' : ''}`}
         onClick={() => handleClick('/profile')}
       >
         <img
-          src={location.pathname === '/profile' ? userWhiteIcon : userIcon}
+          src={activePath === '/profile' ? userWhiteIcon : userIcon}
           alt="Profile Icon"
           className="nav-button__icon"
         />
-
         <span>{t('profile')}</span>
       </button>
     </nav>

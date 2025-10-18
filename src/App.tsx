@@ -3,8 +3,6 @@ import './i18n';
 import AccessGate from './pages/AccessGate';
 import { Navigate, Route, Routes } from 'react-router-dom';
 import Home from './pages/Home';
-import Navigation from './shared/components/Navigation';
-// import DevPage from './pages/DevPage';
 import Tasks from './pages/Tasks';
 import MapProvider from './shared/providers/MapProvider';
 import Wallet from './pages/Wallet';
@@ -17,6 +15,7 @@ import { setUserTg } from './store/userSlice';
 import { TonConnectUIProvider } from '@tonconnect/ui-react';
 import { TonWalletProvider } from './shared/providers/TonWalletProvider';
 import Chats from './pages/Chats';
+import ScrollToTop from './shared/components/ScrollToTop';
 
 function App() {
   const dispatch = useAppDispatch();
@@ -42,9 +41,7 @@ function App() {
       <TonWalletProvider>
         <MapProvider>
           <div className="app">
-            {/* если нет юзера - навигацию не отрисовываем */}
-            {(user || isDev) && <Navigation />}
-
+            <ScrollToTop />
             <Routes>
               {/* Если user нет → открываем AccessGate,
         иначе редиректим на /home */}
@@ -89,18 +86,6 @@ function App() {
                 }
               />
             </Routes>
-
-            {/* dev mode */}
-            {/* <Navigation />
-
-        <Routes>
-          <Route path="/" element={<AccessGate />} />
-          <Route path="/home" element={<Home />} />
-          <Route path="/tasks" element={<Tasks />} />
-          <Route path="/chats" element={<DevPage />} />
-          <Route path="/wallet" element={<Wallet />} />
-          <Route path="/profile" element={<Profile />} />
-        </Routes> */}
           </div>
         </MapProvider>
       </TonWalletProvider>

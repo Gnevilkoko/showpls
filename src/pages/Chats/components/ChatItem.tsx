@@ -1,8 +1,9 @@
-import type { ChatType } from '../../shared/types';
-import userIcon from '../../assets/user.svg';
-import checkReadIcon from '../../assets/check-read.svg';
-import starBlankIcon from '../../assets/star-blank.svg';
-import starFilledIcon from '../../assets/star-filled.svg';
+import type { ChatType } from '../../../shared/types';
+import userIcon from '../../../assets/user.svg';
+import checkReadIcon from '../../../assets/check-read.svg';
+import starBlankIcon from '../../../assets/star-blank.svg';
+import starFilledIcon from '../../../assets/star-filled.svg';
+import { formatTimeFromEpochMs } from '../../../shared/format';
 
 interface ChatPrevItemProps {
   chat: ChatType;
@@ -10,10 +11,7 @@ interface ChatPrevItemProps {
 }
 
 const ChatItem = ({ chat, callbackOpenChat }: ChatPrevItemProps) => {
-  const date = new Date(chat.last_update);
-  const hours = String(date.getHours()).padStart(2, '0');
-  const minutes = String(date.getMinutes()).padStart(2, '0');
-  const formattedTime = `${hours}:${minutes}`;
+  const time = formatTimeFromEpochMs(chat.last_update);
 
   return (
     <div
@@ -37,7 +35,7 @@ const ChatItem = ({ chat, callbackOpenChat }: ChatPrevItemProps) => {
           <div className="prev-chat__info">
             {chat.is_read && <img src={checkReadIcon} alt="Check Read Icon" />}
 
-            <span>{formattedTime}</span>
+            <span>{time}</span>
 
             <button className="prev-chat__favorite-btn">
               <img

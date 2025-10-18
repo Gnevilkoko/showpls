@@ -8,7 +8,6 @@ import clockIcon from '../../assets/clock.svg';
 import coinsIcon from '../../assets/coins.svg';
 import plusActionBannerIcon from '../../assets/plus-action-banner.svg';
 import searchActionBannerIcon from '../../assets/search-action-banner.svg';
-import NavigationSkeleton from '../../shared/components/NavigationSkeleton';
 import { useLocation } from 'react-router-dom';
 import MapContainer from './MapContainer';
 import { TasksList } from './tasks';
@@ -16,6 +15,7 @@ import ToggleProfileMode from '../../shared/components/ToggleProfileMode';
 import MiniMapContainer from './MiniMapContainer';
 import { TIME_LIMITS } from '../../constants';
 import { useTranslation } from 'react-i18next';
+import Navigation from '../../shared/components/Navigation';
 
 interface UploadedImage {
   file: File;
@@ -480,14 +480,13 @@ const Tasks = () => {
                     </div>
                   ))}
                 </div>
-                {/* <NavigationSkeleton /> */}
               </div>
             </>
           )}
         </div>
       )}
 
-      <NavigationSkeleton />
+      <Navigation />
     </div>
   );
 };

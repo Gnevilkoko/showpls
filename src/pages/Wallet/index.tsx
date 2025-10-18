@@ -3,13 +3,13 @@ import starsIcon from '../../assets/stars.svg';
 import lockIcon from '../../assets/lock.svg';
 import checkMarkWhiteIcon from '../../assets/check-mark-white.svg';
 import lockKeyholeWhiteIcon from '../../assets/lock-keyhole-white.svg';
-import NavigationSkeleton from '../../shared/components/NavigationSkeleton';
 import { useTranslation } from 'react-i18next';
 import { useState } from 'react';
 import { tgService } from '../../services/webApp';
 import { URL_TOPUP_STARS } from '../../constants';
 import TonWalletConnect from './TonWalletConnect';
 import type { TransactionType } from '../../shared/types';
+import Navigation from '../../shared/components/Navigation';
 
 const transactionList: TransactionType[] = [
   {
@@ -258,7 +258,7 @@ const Wallet = () => {
         </div>
       </div>
 
-      <NavigationSkeleton />
+      <Navigation />
     </div>
   );
 };
