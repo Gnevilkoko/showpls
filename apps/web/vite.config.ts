@@ -1,43 +1,12 @@
-/// <reference types='vitest' />
-import { defineConfig } from 'vite';
-import react from '@vitejs/plugin-react';
-import { nxViteTsPaths } from '@nx/vite/plugins/nx-tsconfig-paths.plugin';
-import { nxCopyAssetsPlugin } from '@nx/vite/plugins/nx-copy-assets.plugin';
+import { defineConfig } from "vite"
+import react from "@vitejs/plugin-react"
 
-export default defineConfig(() => ({
-  root: __dirname,
-  cacheDir: '../../node_modules/.vite/web',
-  server: {
-    port: 3000,
-    host: '0.0.0.0',
-  },
-  preview: {
-    port: 3000,
-    host: '0.0.0.0',
-  },
-  plugins: [react(), nxViteTsPaths(), nxCopyAssetsPlugin(['*.md'])],
-  // Uncomment this if you are using workers.
-  // worker: {
-  //  plugins: [ nxViteTsPaths() ],
-  // },
+// https://vite.dev/config/
+export default defineConfig({
+  plugins: [react()],
+  root: ".",
   build: {
-    outDir: '../../dist/web',
+    outDir: "../../dist/apps/web",
     emptyOutDir: true,
-    reportCompressedSize: true,
-    commonjsOptions: {
-      transformMixedEsModules: true,
-    },
   },
-  test: {
-    name: 'web',
-    watch: false,
-    globals: true,
-    environment: 'jsdom',
-    include: ['{src,tests}/**/*.{test,spec}.{js,mjs,cjs,ts,mts,cts,jsx,tsx}'],
-    reporters: ['default'],
-    coverage: {
-      reportsDirectory: '../../coverage/web',
-      provider: 'v8' as const,
-    },
-  },
-}));
+})
