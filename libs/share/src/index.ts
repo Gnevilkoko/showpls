@@ -1,1 +1,1 @@
-export * from './lib/share';
+export * from './lib/role.enum';
