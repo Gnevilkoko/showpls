@@ -1,0 +1,129 @@
+{
+  "name": "api",
+  "$schema": "../../node_modules/nx/schemas/project-schema.json",
+  "sourceRoot": "apps/api/src",
+  "projectType": "application",
+  "tags": [
+	"scope:api"
+  ],
+  "targets": {
+	"build": {
+	  "executor": "nx:run-commands",
+	  "options": {
+		"command": "webpack-cli build",
+		"args": [
+		  "node-env=production"
+		]
+	  },
+	  "configurations": {
+		"development": {
+		  "args": [
+			"node-env=development"
+		  ]
+		}
+	  }
+	},
+	"dev": {
+	  "executor": "@nx/js:node",
+	  "defaultConfiguration": "development",
+	  "dependsOn": [
+		"build"
+	  ],
+	  "options": {
+		"buildTarget": "api:build",
+		"watch": false,
+		"runBuildTargetDependencies": false
+	  },
+	  "configurations": {
+		"development": {
+		  "buildTarget": "api:build:development"
+		},
+		"production": {
+		  "buildTarget": "api:build:production"
+		}
+	  }
+	},
+	"test": {
+	  "options": {
+		"passWithNoTests": true
+	  }
+	},
+	"typeorm": {
+	  "executor": "nx:run-commands",
+	  "outputs": [],
+	  "options": {
+		"commands": [
+		  {
+			"command": "ts-node -r tsconfig-paths/register --project apps/api/tsconfig.app.json node_modules/typeorm/cli"
+		  }
+		]
+	  }
+	},
+	"migration:create": {
+	  "executor": "nx:run-commands",
+	  "outputs": [],
+	  "options": {
+		"commands": [
+		  {
+			"command": "nx run api:typeorm migration:create apps/api/src/db/migrations/{args.name}"
+		  }
+		]
+	  }
+	},
+	"migration:generate": {
+	  "executor": "nx:run-commands",
+	  "outputs": [],
+	  "options": {
+		"commands": [
+		  {
+			"command": "nx run api:schema:drop && nx run api:migration:run && nx run api:typeorm migration:generate apps/api/src/db/migrations/{args.name} --dataSource apps/api/src/db/data-source.ts"
+		  }
+		]
+	  }
+	},
+	"migration:run": {
+	  "executor": "nx:run-commands",
+	  "outputs": [],
+	  "options": {
+		"commands": [
+		  {
+			"command": "nx run api:typeorm migration:run --dataSource apps/api/src/db/data-source.ts"
+		  }
+		]
+	  }
+	},
+	"migration:revert": {
+	  "executor": "nx:run-commands",
+	  "outputs": [],
+	  "options": {
+		"commands": [
+		  {
+			"command": "nx run api:typeorm migration:revert --dataSource apps/api/src/db/data-source.ts"
+		  }
+		]
+	  }
+	},
+	"migration:show": {
+	  "executor": "nx:run-commands",
+	  "outputs": [],
+	  "options": {
+		"commands": [
+		  {
+			"command": "nx run api:typeorm migration:show --dataSource apps/api/src/db/data-source.ts"
+		  }
+		]
+	  }
+	},
+	"schema:drop": {
+	  "executor": "nx:run-commands",
+	  "outputs": [],
+	  "options": {
+		"commands": [
+		  {
+			"command": "nx run api:typeorm schema:drop --dataSource apps/api/src/db/data-source.ts"
+		  }
+		]
+	  }
+	}
+  }
+}
