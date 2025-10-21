@@ -1,5 +1,6 @@
 import { format, LoggerOptions, transports } from "winston"
-import {colorize} from 'json-colorizer';
+import {colorize, color} from 'json-colorizer';
+import { ConfigService } from "./config"
 
 const jsonColorFormat = format.printf(({ level, message, timestamp, context, data, ...meta }) => {
   const logObject = {
@@ -14,15 +15,15 @@ const jsonColorFormat = format.printf(({ level, message, timestamp, context, dat
   return colorize(
    logObject,
     {
-      pretty: true,
+      indent: 2,
       colors: {
-        STRING_KEY: 'cyan',
-        STRING_LITERAL: 'green',
-        NUMBER_LITERAL: 'yellow',
-        NULL_LITERAL: 'gray',
-        BOOLEAN_LITERAL: 'magenta',
-      },
-    } as any
+        StringKey: color.magenta,
+        StringLiteral: color.yellow,
+        NumberLiteral: color.blue,
+        NullLiteral: color.blue,
+        BooleanLiteral: color.blue,
+      } as any ,
+    }
   );
 });
 
@@ -35,7 +36,7 @@ export function getWinstonOptions(): LoggerOptions {
         format: `dd.MM.YYYY HH:mm:ss.SSS`,
         // format: `YYYY-MM-DD HH:mm:ss.SSS`,
       }),
-      jsonColorFormat,
+      ...(ConfigService.isDevelopment()  ? [jsonColorFormat] : []),
     ),
     transports: [new transports.Console()],
   }

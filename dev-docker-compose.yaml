@@ -1,0 +1,93 @@
+services:
+
+  traefik:
+    image: traefik:v3.1.0
+    command:
+      - "--log.level=DEBUG"
+      - "--providers.docker=true"
+      - "--providers.docker.exposedByDefault=false"
+      - "--entrypoints.web.address=:80"
+
+    volumes:
+      - "/var/run/docker.sock:/var/run/docker.sock:ro"
+      - "letsencrypt:/letsencrypt"
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    network_mode: host
+    labels:
+      - "traefik.enable=true"
+
+      - "traefik.http.routers.backend.rule=PathPrefix(`/api`) ||  PathPrefix(`/socket.io`)"
+      - "traefik.http.routers.backend.priority=10"
+      - "traefik.http.routers.backend.service=backend"
+      - "traefik.http.services.backend.loadbalancer.server.url=http://host.docker.internal:8000"
+      - "traefik.http.services.backend.loadbalancer.server.port=8000"
+
+
+      - "traefik.http.routers.http-frontend.rule=PathPrefix(`/`)"
+      - "traefik.http.routers.http-frontend.priority=1"
+      - "traefik.http.routers.http-frontend.service=http-frontend"
+      - "traefik.http.services.http-frontend.loadbalancer.server.url=http://host.docker.internal:3000"
+      - "traefik.http.services.http-frontend.loadbalancer.server.port=3000"
+      - "traefik.http.routers.frontend.entrypoints=web"
+
+    environment:
+      TZ: "Europe/Moscow"
+
+
+  postgres:
+    image: postgres:17-alpine
+    env_file:
+      - '.env.development'
+    ports:
+      - "127.0.0.1:5432:5432"
+    environment:
+      PGDATA: /var/lib/postgresql/data/pgdata
+      TZ: "Europe/Moscow"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data/pgdata
+
+
+  redis:
+    image: redis:7.4.2-alpine
+    env_file:
+      - '.env.development'
+    ports:
+      - "127.0.0.1:6379:6379"
+    volumes:
+      - redis_data:/data
+
+    environment:
+      TZ: "Europe/Moscow"
+
+
+
+  nginx:
+    image: nginx:latest
+    user: root
+    networks:
+      - mainnet
+
+    volumes:
+      - ./deployment/nginx.conf:/etc/nginx/nginx.conf:rw
+      - ./media:/app/media:ro
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.nginx.rule=PathPrefix(`/media`)"
+      - "traefik.http.routers.nginx.service=nginx"
+      - "traefik.http.routers.nginx.priority=10"
+      - "traefik.http.services.nginx.loadbalancer.server.port=80"
+
+    environment:
+      TZ: "Europe/Moscow"
+
+volumes:
+  postgres_data:
+  redis_data:
+  rabbitmq_data:
+  letsencrypt:
+
+networks:
+  mainnet:
+
+

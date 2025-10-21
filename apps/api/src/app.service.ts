@@ -11,12 +11,16 @@ export class AppService {
   constructor(
     @InjectLogger() protected logger: Logger
   ) {
-    this.logger.info({
-      message: "Test",
-      data: {
-        id: 1
-      }
-    })
+    // this.logger.info({
+    //   message: "Test",
+    //   data: {
+    //     id: 1,
+    //     nullable: null,
+    //     foo: "bar",
+    //     arr: [1, 2, 3],
+    //     test: true,
+    //   }
+    // })
   }
 
 
