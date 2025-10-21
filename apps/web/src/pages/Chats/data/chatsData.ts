@@ -1,13 +1,13 @@
-import type { ChatsDataType, ChatType } from '../../../shared/types';
-import { TasksList } from '../../Tasks/tasks';
+import type { ChatsDataType, ChatType } from "../../../shared/types"
+import { TasksList } from "../../Tasks/tasks"
 
 export const chatList: ChatType[] = [
   {
     chat_id: 2,
     avatar: null,
-    first_name: 'Name no surname',
+    first_name: "Name no surname",
     last_name: null,
-    last_message: 'Lorem ipsum dolor sit amet consectetur',
+    last_message: "Lorem ipsum dolor sit amet consectetur",
     last_update: 1760453955290,
     is_favorite: true,
     is_active_order: true,
@@ -16,13 +16,26 @@ export const chatList: ChatType[] = [
     is_read: false,
   },
   {
-    chat_id: 3,
-    avatar:
-      'https://t.me/i/userpic/320/q4sKbvOxAfs1GzG1BvCxGsS2dLs62WaTHYUrqguxs_M.svg',
-    first_name: 'Name',
-    last_name: 'Surname',
+    chat_id: 8,
+    avatar: null,
+    first_name: "Name",
+    last_name: "Surname",
     last_message:
-      'Lorem ipsum dolor sit amet consectetur adipiscing elit Ut et massa mi. Aliquam in hendrerit urna. Pellentesque sit amet sapien.',
+      "Lorem ipsum dolor sit amet consectetur adipiscing elit Ut et massa mi. Aliquam in hendrerit urna. Pellentesque sit amet sapien.",
+    last_update: 1760453955290,
+    is_favorite: false,
+    is_active_order: false,
+    order: null,
+    count_unread: 4,
+    is_read: false,
+  },
+  {
+    chat_id: 3,
+    avatar: "https://t.me/i/userpic/320/q4sKbvOxAfs1GzG1BvCxGsS2dLs62WaTHYUrqguxs_M.svg",
+    first_name: "Name",
+    last_name: "Surname",
+    last_message:
+      "Lorem ipsum dolor sit amet consectetur adipiscing elit Ut et massa mi. Aliquam in hendrerit urna. Pellentesque sit amet sapien.",
     last_update: 1760453955290,
     is_favorite: false,
     is_active_order: false,
@@ -33,9 +46,9 @@ export const chatList: ChatType[] = [
   {
     chat_id: 4,
     avatar: null,
-    first_name: 'Name',
-    last_name: 'Surname',
-    last_message: 'Lorem ipsum dolor sit amet consectetur',
+    first_name: "Name",
+    last_name: "Surname",
+    last_message: "Lorem ipsum dolor sit amet consectetur",
     last_update: 1760453955290,
     is_favorite: true,
     is_active_order: true,
@@ -46,10 +59,10 @@ export const chatList: ChatType[] = [
   {
     chat_id: 5,
     avatar: null,
-    first_name: 'Name',
-    last_name: 'Surname',
+    first_name: "Name",
+    last_name: "Surname",
     last_message:
-      'Lorem ipsum dolor sit amet consectetur adipiscing elit Ut et massa mi. Aliquam in hendrerit urna. Pellentesque sit amet sapien.',
+      "Lorem ipsum dolor sit amet consectetur adipiscing elit Ut et massa mi. Aliquam in hendrerit urna. Pellentesque sit amet sapien.",
     last_update: 1760453955290,
     is_favorite: false,
     is_active_order: true,
@@ -60,10 +73,10 @@ export const chatList: ChatType[] = [
   {
     chat_id: 6,
     avatar: null,
-    first_name: 'Name',
-    last_name: 'Surname',
+    first_name: "Name",
+    last_name: "Surname",
     last_message:
-      'Lorem ipsum dolor sit amet consectetur adipiscing elit Ut et massa mi. Aliquam in hendrerit urna. Pellentesque sit amet sapien.',
+      "Lorem ipsum dolor sit amet consectetur adipiscing elit Ut et massa mi. Aliquam in hendrerit urna. Pellentesque sit amet sapien.",
     last_update: 1760453955290,
     is_favorite: false,
     is_active_order: false,
@@ -74,10 +87,10 @@ export const chatList: ChatType[] = [
   {
     chat_id: 7,
     avatar: null,
-    first_name: 'Name',
-    last_name: 'Surname',
+    first_name: "Name",
+    last_name: "Surname",
     last_message:
-      'Lorem ipsum dolor sit amet consectetur adipiscing elit Ut et massa mi. Aliquam in hendrerit urna. Pellentesque sit amet sapien.',
+      "Lorem ipsum dolor sit amet consectetur adipiscing elit Ut et massa mi. Aliquam in hendrerit urna. Pellentesque sit amet sapien.",
     last_update: 1760453955290,
     is_favorite: true,
     is_active_order: false,
@@ -86,26 +99,12 @@ export const chatList: ChatType[] = [
     count_unread: null,
   },
   {
-    chat_id: 8,
-    avatar: null,
-    first_name: 'Name',
-    last_name: 'Surname',
-    last_message:
-      'Lorem ipsum dolor sit amet consectetur adipiscing elit Ut et massa mi. Aliquam in hendrerit urna. Pellentesque sit amet sapien.',
-    last_update: 1760453955290,
-    is_favorite: false,
-    is_active_order: false,
-    order: null,
-    count_unread: 4,
-    is_read: false,
-  },
-  {
     chat_id: 9,
     avatar: null,
-    first_name: 'Name',
-    last_name: 'Surname',
+    first_name: "Name",
+    last_name: "Surname",
     last_message:
-      'Lorem ipsum dolor sit amet consectetur adipiscing elit Ut et massa mi. Aliquam in hendrerit urna. Pellentesque sit amet sapien.',
+      "Lorem ipsum dolor sit amet consectetur adipiscing elit Ut et massa mi. Aliquam in hendrerit urna. Pellentesque sit amet sapien.",
     last_update: 1760453955290,
     is_favorite: false,
     is_active_order: false,
@@ -116,10 +115,10 @@ export const chatList: ChatType[] = [
   {
     chat_id: 10,
     avatar: null,
-    first_name: 'Name',
-    last_name: 'Surname',
+    first_name: "Name",
+    last_name: "Surname",
     last_message:
-      'Lorem ipsum dolor sit amet consectetur adipiscing elit Ut et massa mi. Aliquam in hendrerit urna. Pellentesque sit amet sapien.',
+      "Lorem ipsum dolor sit amet consectetur adipiscing elit Ut et massa mi. Aliquam in hendrerit urna. Pellentesque sit amet sapien.",
     last_update: 1760453955290,
     is_favorite: false,
     is_active_order: false,
@@ -127,10 +126,10 @@ export const chatList: ChatType[] = [
     is_read: true,
     count_unread: null,
   },
-];
+]
 
 export const chatsData: ChatsDataType = {
   count_unread: 3,
   count_unread_favorite: 1,
   chat_list: chatList,
-};
+}

@@ -16,6 +16,7 @@ import MiniMapContainer from "./MiniMapContainer"
 import { TIME_LIMITS } from "../../constants"
 import { useTranslation } from "react-i18next"
 import Navigation from "../../shared/components/Navigation"
+import ImageViewer from "../../shared/components/ImageViewer"
 
 interface UploadedImage {
   file: File
@@ -73,6 +74,7 @@ const Tasks = () => {
   }, [activeSection, activeTaskId])
 
   const [images, setImages] = useState<UploadedImage[]>([])
+  const [selectedImageIndex, setSelectedImageIndex] = useState<number | null>(null)
 
   const handleUpload = (e: ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files
@@ -88,6 +90,14 @@ const Tasks = () => {
 
   const handleRemove = (url: string) => {
     setImages((prev) => prev.filter((img) => img.url !== url))
+  }
+
+  const handleImageClick = (index: number) => {
+    setSelectedImageIndex(index)
+  }
+
+  const handleCloseImageViewer = () => {
+    setSelectedImageIndex(null)
   }
 
   const [timeLimit, setTimeLimit] = useState<string>("")
@@ -134,17 +144,15 @@ const Tasks = () => {
 
               {/* Превью изображений */}
               {images.length !== 0 && (
-                <div className="describe__preview-container">
+                <div className="task__attachments">
                   {images.map((img, idx) => (
-                    <>
-                      <div key={idx} className="preview-item">
-                        <img src={img.url} alt={`preview-${idx}`} />
+                    <div key={idx} className="preview-attachments">
+                      <img src={img.url} alt={`preview-${idx}`} onClick={() => handleImageClick(idx)} />
 
-                        <button className="btn-remove-img" onClick={() => handleRemove(img.url)}>
-                          x
-                        </button>
-                      </div>
-                    </>
+                      <button className="btn-remove-img" onClick={() => handleRemove(img.url)}>
+                        x
+                      </button>
+                    </div>
                   ))}
                 </div>
               )}
@@ -188,14 +196,14 @@ const Tasks = () => {
 
             <div className="dropdown-wrapper">
               <input
-                type="text"
-                value={timeLimit && `${timeLimit} ${timeLimit === "1" ? "hour" : "hours"}`}
+                type="number"
+                value={timeLimit}
                 onClick={() => setIsOpenDropdown((val) => !val)}
                 onBlur={() => setTimeout(() => setIsOpenDropdown(false), 100)}
                 onChange={(e) => setTimeLimit(e.target.value)}
                 placeholder={t("tasksPage.addDuration")}
                 className="dropdown-input"
-                readOnly // только выбор из списка, чтобы нельзя было писать вручную
+                inputMode="numeric"
               />
 
               {isOpenDropdown && (
@@ -285,35 +293,22 @@ const Tasks = () => {
                   listTaskRefs.current[task.id] = el
                 }}
               >
-                <div className="task__header">
-                  <img src={task.icon} alt="Task Icon" />
-                  <span>{task.title}</span>
-                </div>
+                <span className="task__header">{task.title}</span>
 
                 <div className="task__container">
                   <div className="task__content">
                     <div className="task__tags-container">
+                      {task.isUrgent && <div className="tag badge">{t("urgent")}</div>}
+
+                      <div className="tag stars">
+                        {task.price}
+
+                        <span>
+                          <img src={starsWhiteIcon} alt="Stars Icon" />
+                        </span>
+                      </div>
+
                       {task.tags.map((tag, index) => {
-                        if (tag.type === "badge") {
-                          return (
-                            <div key={index} className={`tag badge ${tag.color}`}>
-                              {tag.label === "Urgent" ? t("tasksPage.urgent") : ""}
-                              {tag.label === "Remote" ? t("tasksPage.remote") : ""}
-                            </div>
-                          )
-                        }
-
-                        if (tag.type === "stars") {
-                          return (
-                            <div key={index} className="tag stars">
-                              {task.price}
-                              <span>
-                                <img src={starsWhiteIcon} alt="Stars Icon" />
-                              </span>
-                            </div>
-                          )
-                        }
-
                         if (tag.type === "hLeft") {
                           return (
                             <div key={index} className="tag">
@@ -360,35 +355,22 @@ const Tasks = () => {
                       }}
                       onClick={() => handleTaskClick(task.id)}
                     >
-                      <div className="task__header">
-                        <img src={task.icon} alt="Task Icon" />
-                        <span>{task.title}</span>
-                      </div>
+                      <span className="task__header">{task.title}</span>
 
                       <div className="task__container">
                         <div className="task__content">
                           <div className="task__tags-container">
+                            {task.isUrgent && <div className="tag badge">{t("urgent")}</div>}
+
+                            <div className="tag stars">
+                              {task.price}
+
+                              <span>
+                                <img src={starsWhiteIcon} alt="Stars Icon" />
+                              </span>
+                            </div>
+
                             {task.tags.map((tag, index) => {
-                              if (tag.type === "badge") {
-                                return (
-                                  <div key={index} className={`tag badge ${tag.color}`}>
-                                    {tag.label === "Urgent" ? t("tasksPage.urgent") : ""}
-                                    {tag.label === "Remote" ? t("tasksPage.remote") : ""}
-                                  </div>
-                                )
-                              }
-
-                              if (tag.type === "stars") {
-                                return (
-                                  <div key={index} className="tag stars">
-                                    {task.price}
-                                    <span>
-                                      <img src={starsWhiteIcon} alt="Stars Icon" />
-                                    </span>
-                                  </div>
-                                )
-                              }
-
                               if (tag.type === "hLeft") {
                                 return (
                                   <div key={index} className="tag">
@@ -420,6 +402,15 @@ const Tasks = () => {
       )}
 
       <Navigation />
+
+      {/* Image Viewer Modal */}
+      {selectedImageIndex !== null && (
+        <ImageViewer
+          images={images.map((img) => img.url)}
+          currentImageIndex={selectedImageIndex}
+          onClose={handleCloseImageViewer}
+        />
+      )}
     </div>
   )
 }

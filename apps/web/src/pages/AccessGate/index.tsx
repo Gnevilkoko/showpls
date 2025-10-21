@@ -2,8 +2,35 @@ import background from "../../assets/images/access-gate-bg.webp"
 import logoAnimation from "../../assets/animations/logo-animation.json"
 import OpenTelegramButton from "./OpenTelegramButton"
 import Lottie from "lottie-react"
+import { LoginButton } from "@telegram-auth/react"
+import { BOT_USERNAME } from "../../constants"
+
+interface TelegramAuthData {
+  id: number
+  first_name: string
+  last_name?: string
+  username?: string
+  photo_url?: string
+  auth_date: number
+  hash: string
+}
 
 const AccessGate = () => {
+  const handleAuthCallback = (data: TelegramAuthData) => {
+    alert(`Получил: $${data.first_name}`)
+
+    // fetch('/api/auth/sign-in', {
+    //   method: 'POST',
+    //   headers: {
+    //     'Content-Type': 'application/json',
+    //   },
+    //   body: JSON.stringify({
+    //     type: 'tg-login-widget',
+    //     payload: data
+    //   })
+    // });
+  }
+
   return (
     <div className="page access-gate">
       <img src={background} alt="Background" fetchPriority="high" className="access-gate__background" />
@@ -23,6 +50,15 @@ const AccessGate = () => {
           </p>
 
           <OpenTelegramButton />
+
+          <LoginButton
+            botUsername={BOT_USERNAME}
+            onAuthCallback={handleAuthCallback}
+            buttonSize="large"
+            cornerRadius={5}
+            showAvatar={true}
+            lang="en"
+          />
         </div>
 
         <footer className="access-gate__footer">

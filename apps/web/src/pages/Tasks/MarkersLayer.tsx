@@ -16,8 +16,8 @@ const MarkerContent = ({ task, isActive }: MarkerContentProps) => {
 
   return (
     <div className="custom-marker__content">
-      {isActive ? (
-        <span>{t(`tasksPage.${task.variant}`)}</span>
+      {isActive && task.isUrgent ? (
+        <span>{t(`urgent`)}</span>
       ) : (
         <>
           {task.price}
@@ -51,7 +51,7 @@ const MarkersLayer = ({ map, activeTaskId, setActiveTaskId }: MarkersLayerProps)
         if (markersRef.current.has(task.id)) return
 
         const content = document.createElement("div")
-        content.className = `custom-marker ${task.variant} ${activeTaskId === task.id ? "active" : ""}`
+        content.className = `custom-marker ${task.isUrgent ? "urgent" : ""} ${activeTaskId === task.id ? "active" : ""}`
 
         const root = createRoot(content)
         root.render(<MarkerContent task={task} isActive={activeTaskId === task.id} />)
@@ -82,7 +82,7 @@ const MarkersLayer = ({ map, activeTaskId, setActiveTaskId }: MarkersLayerProps)
       if (!task) return
 
       const content = marker.content as HTMLElement
-      content.className = `custom-marker ${task.variant} ${activeTaskId === id ? "active" : ""}`
+      content.className = `custom-marker ${task.isUrgent ? "urgent" : ""} ${activeTaskId === id ? "active" : ""}`
       root.render(<MarkerContent task={task} isActive={activeTaskId === id} />)
 
       // Если маркер активен, центрируем карту на нём

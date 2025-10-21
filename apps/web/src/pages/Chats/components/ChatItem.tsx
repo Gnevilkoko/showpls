@@ -15,7 +15,7 @@ const ChatItem = ({ chat, callbackOpenChat }: ChatPrevItemProps) => {
 
   return (
     <div
-      className={`chats__prev-chat ${chat.is_active_order ? "active-order" : ""}`}
+      className={`chats__prev-chat ${chat.count_unread ? "unread" : ""} ${chat.is_active_order ? "active-order" : ""}`}
       onClick={() => callbackOpenChat(chat)}
     >
       <img src={chat.avatar ? chat.avatar : userIcon} alt="User Avatar" className="prev-chat__avatar" />
