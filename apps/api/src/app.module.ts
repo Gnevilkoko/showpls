@@ -11,7 +11,7 @@ import { DataSource, DataSourceOptions } from "typeorm"
 import { AuthModule } from "./modules/auth/auth.module"
 import path from "path"
 import { AcceptLanguageResolver, HeaderResolver, I18nModule } from "nestjs-i18n"
-import { LanguageCode } from "@share"
+import { FallbackLanguageCode, LanguageCode } from "@share"
 
 
 @Module({
@@ -69,7 +69,7 @@ import { LanguageCode } from "@share"
     }),
     I18nModule.forRoot({
       logging: false,
-      fallbackLanguage: LanguageCode.EN,
+      fallbackLanguage: FallbackLanguageCode,
       loaderOptions: {
         path: path.join(__dirname, "/assets/i18n/"),
         watch: false,

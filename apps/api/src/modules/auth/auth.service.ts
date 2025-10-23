@@ -14,7 +14,8 @@ import { TGUser } from "./auth.types"
 import { retryWithExponentialBackoff } from "@share/utils"
 import { DbHelpers } from "../../db"
 import { omit } from "lodash"
-import { LanguageCode, Role } from "@share"
+import { FallbackLanguageCode, LanguageCode, Role } from "@share"
+import { z } from "zod"
 
 @Injectable()
 export class AuthService {
@@ -51,7 +52,7 @@ export class AuthService {
                 tgId: tgUser.id.toString(),
                 role: Role.Normal,
                 avatar: null,
-                languageCode: tgUser.languageCode as LanguageCode
+                languageCode: z.enum(LanguageCode).safeParse(tgUser.languageCode).success ? tgUser.languageCode as LanguageCode : FallbackLanguageCode
               },
               manager
             )
@@ -91,13 +92,7 @@ export class AuthService {
 
     const user = JSON.parse(rawData.user as any)
 
-    return AuthService.recursiveToCamel(user) as {
-      id: number
-      username?: string
-      firstName: string
-      lastName?: string
-      languageCode?: string
-    }
+    return AuthService.recursiveToCamel(user) as TGUser
   }
 
   protected async verifyTelegramLoginWidgetData(data: Record<string, any>, botToken: string) {
@@ -105,17 +100,15 @@ export class AuthService {
     try {
       const user = await validator.validate(objectToAuthDataMap(data))
 
-      return AuthService.recursiveToCamel(user) as {
-        id: number
-        username?: string
-        firstName: string
-        lastName?: string
-        languageCode?: string
-      }
+      return AuthService.recursiveToCamel(user) as TGUser
+
+
     } catch (e) {
       throw new AuthExceptions.CredentialsAreInvalid(undefined, {cause: e})
     }
   }
+
+
 
   protected static recursiveToCamel = (item: unknown): unknown => {
     if (Array.isArray(item)) {
