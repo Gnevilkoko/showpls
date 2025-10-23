@@ -20,7 +20,7 @@
       "@share/*": ["libs/share/src/lib/*"],
       "@server": ["libs/server/src/index.ts"],
       "@server/*": ["libs/server/src/lib/*"],
-      "@api/*": ["apps/api/src/*"],
+//      "@api/*": ["apps/api/src/*"],
     }
   },
   "exclude": ["node_modules", "tmp"]

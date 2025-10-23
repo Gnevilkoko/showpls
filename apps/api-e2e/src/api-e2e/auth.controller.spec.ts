@@ -2,17 +2,15 @@ import { INestApplication } from "@nestjs/common"
 import { Test, TestingModule } from "@nestjs/testing"
 import axios, { AxiosInstance } from "axios"
 import { DataSource, Repository } from "typeorm"
-import { TestingService } from "@api/testing"
-import { AppModule } from "@api/app.module"
 import { getDataSourceToken, getRepositoryToken } from "@nestjs/typeorm"
 import ms from "ms"
-import { AuthService } from "@api/modules/auth/auth.service"
 import { User } from "@share/entities"
-import { UserService } from "@api/modules/user/user.service"
-import { getWinstonOptions } from "@api/get-winston-options"
 import { WinstonModule } from "nest-winston"
-import { CookieJar } from "tough-cookie"
-import { wrapper } from "axios-cookiejar-support"
+import { TestingService } from "../../../api/src/testing"
+import { AppModule } from "../../../api/src/app.module"
+import { AuthService } from "../../../api/src/modules/auth/auth.service"
+import { UserService } from "../../../api/src/modules/user/user.service"
+
 
 jest.setTimeout(ms("1m"))
 describe("AuthController", () => {
@@ -23,7 +21,6 @@ describe("AuthController", () => {
   let dataSource: DataSource
 
   beforeEach(async () => {
-    const jar = new CookieJar()
     await TestingService.dropDataSources()
     module = await Test.createTestingModule({
       imports: [AppModule],
@@ -48,12 +45,11 @@ describe("AuthController", () => {
       .compile()
     app = await TestingService.getApp(module)
     // url = await app.getUrl()
-    instance = wrapper(
+    instance =
       axios.create({
         baseURL: `${url}/api/auth`,
         withCredentials: true,
-        jar,
-      } as any)
+      }
     )
     dataSource = module.get(getDataSourceToken())
   })

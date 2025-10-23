@@ -4,7 +4,6 @@ import { INestApplication } from "@nestjs/common"
 import { DataSource } from "typeorm"
 import { DatabaseConfig, RedisConfig } from "../config"
 import Redis from "ioredis"
-import { getWinstonOptions } from "@api/get-winston-options"
 import { WinstonModule } from "nest-winston"
 
 export class TestingService {

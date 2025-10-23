@@ -15,7 +15,7 @@ import { ErrorCode } from "@share"
 import { InjectRepository } from "@nestjs/typeorm"
 import { Repository } from "typeorm"
 import AuthExceptions from "./auth.exceptions"
-import UserExceptions from "../user/user.exceptions"
+import { RateLimit } from "../../common/rate-limit"
 
 @ApiExtraModels(User)
 @ApiTags("Auth")
@@ -54,6 +54,10 @@ export class AuthController {
       },
     },
   })
+  @RateLimit({
+    limit: 10,
+    ttl: ms("1m"),
+  })
   @Post("sign-in")
   async signIn(@Body(new ValidationPipe(SignInSchema)) dto: SignInDto, @Req() req: Request) {
     try {
@@ -69,7 +73,6 @@ export class AuthController {
         role: user.role,
       }
 
-
       req.session.save()
 
       return {
@@ -81,7 +84,7 @@ export class AuthController {
         throw new APIException(ErrorCode.UNAUTHORIZED, `Credentials are invalid`)
       }
       if (e instanceof AuthExceptions.IsBanned) {
-         throw new APIException(ErrorCode.UNAUTHORIZED,  `You are banned`)
+        throw new APIException(ErrorCode.UNAUTHORIZED, `You are banned`)
       }
       throw e
     }
@@ -96,12 +99,14 @@ export class AuthController {
       },
     },
   })
+  @RateLimit({
+    limit: 10,
+    ttl: ms("1m"),
+  })
   @Post("refresh-token")
   async refreshToken(@Req() req: Request) {
     const expireAt = get(req.session, "refreshToken.expireAt", undefined)
     const userId = get(req.session, "user.id", undefined)
-
-
 
     if (!expireAt || !userId) {
       throw new APIException(ErrorCode.UNAUTHORIZED, `Session not exists`)
