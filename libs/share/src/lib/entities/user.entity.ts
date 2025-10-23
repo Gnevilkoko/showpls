@@ -2,6 +2,7 @@ import { Column, CreateDateColumn, Entity, PrimaryGeneratedColumn } from "typeor
 import { Role } from "../role.enum"
 import { ApiProperty } from "@nestjs/swagger"
 import { LanguageCode } from "../language-code.enum"
+import { Token } from "../token.enum"
 
 @Entity()
 export class User {
@@ -14,6 +15,9 @@ export class User {
     enum: Role,
   })
   role: Role
+
+  @Column("jsonb")
+  balances: Record<Token, string>
 
   @ApiProperty({ type: "string" })
   @Column("bigint")

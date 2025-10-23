@@ -6,6 +6,7 @@ import { DocumentBuilder, SwaggerModule } from "@nestjs/swagger"
 import { cleanupOpenApiDoc } from "nestjs-zod"
 import { ConfigService } from "./config"
 import { AppService } from "./app.service"
+import { APIExceptionResponse } from "@server/api"
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule, {
@@ -17,9 +18,21 @@ async function bootstrap() {
   if (ConfigService.isDevelopment()) {
     const document = SwaggerModule.createDocument(
       app,
-      new DocumentBuilder().setTitle("Showpls API").setDescription("Showpls API description").setVersion("1.0").build(),
+      new DocumentBuilder()
+        .setTitle("Showpls API")
+        .setDescription("Showpls API description")
+        .setVersion("1.0")
+        .addBearerAuth(
+          {
+            type: "http",
+            scheme: "bearer",
+            bearerFormat: "JWT",
+          },
+          "jwt-auth"
+        )
+        .build(),
       {
-        extraModels: [],
+        extraModels: [APIExceptionResponse],
       }
     )
     SwaggerModule.setup("api/swagger", app, cleanupOpenApiDoc(document))

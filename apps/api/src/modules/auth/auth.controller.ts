@@ -4,7 +4,7 @@ import { SignInDto, SignInSchema } from "./dto/sign-in.dto"
 import { AuthService } from "./auth.service"
 import { ConfigService, SessionConfig } from "../../config"
 import ms from "ms"
-import { get, omit, pick } from "lodash"
+import { get, omit } from "lodash"
 import { ApiBody, ApiExtraModels, ApiOkResponse, ApiTags, getSchemaPath } from "@nestjs/swagger"
 import { User } from "@share/entities"
 import { Request } from "express"
@@ -75,16 +75,19 @@ export class AuthController {
 
       req.session.save()
 
+      await this.repository.update({ id: user.id }, { lastSeenAt: new Date() })
+      const plainUser = omit(instanceToPlain(user), [])
+
       return {
-        user: omit(instanceToPlain(user), []),
-        accessToken: AuthService.generateToken(pick(user), this.accessTokenLifetime),
+        user: plainUser,
+        accessToken: AuthService.generateToken(plainUser, this.accessTokenLifetime),
       }
     } catch (e) {
       if (e instanceof AuthExceptions.CredentialsAreInvalid) {
         throw new APIException(ErrorCode.UNAUTHORIZED, `Credentials are invalid`)
       }
       if (e instanceof AuthExceptions.IsBanned) {
-        throw new APIException(ErrorCode.UNAUTHORIZED, `You are banned`)
+        throw new APIException(ErrorCode.ACCESS_DENIED, `You are banned`)
       }
       throw e
     }
@@ -128,15 +131,18 @@ export class AuthController {
       await this.service.checkPolitics(user)
     } catch (e) {
       if (e instanceof AuthExceptions.IsBanned) {
-        throw new APIException(ErrorCode.UNAUTHORIZED, `You are banned`)
+        throw new APIException(ErrorCode.ACCESS_DENIED, `You are banned`)
       }
       throw new APIException(ErrorCode.UNAUTHORIZED, `Cannot update access token`)
     }
 
-    // this.logger.debug(`Пользователь(${user.id}) обновил access токен`);
+    await this.repository.update({ id: user.id }, { lastSeenAt: new Date() })
+
+    const plainUser = omit(instanceToPlain(user), [])
+
     return {
-      user: omit(instanceToPlain(user as User), []),
-      accessToken: AuthService.generateToken(pick(user, ["id", "role"]), this.accessTokenLifetime),
+      user: plainUser,
+      accessToken: AuthService.generateToken(plainUser, this.accessTokenLifetime),
     }
   }
 }

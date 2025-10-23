@@ -4,9 +4,12 @@ import { InjectLogger } from "@server/logging"
 import { EntityManager, Repository } from "typeorm"
 import { User } from "@share/entities"
 import { Logger } from "winston"
-import { LanguageCode, Role } from "@share"
+import { LanguageCode, Role, Token } from "@share"
 import { DbHelpers } from "../../db"
 import UserExceptions from "./user.exceptions"
+import { NotImplemented } from "@share/errors"
+import { UserListDto } from "./dto/user-list.dto"
+import { paginate } from "nestjs-typeorm-paginate"
 
 @Injectable()
 export class UserService {
@@ -18,7 +21,7 @@ export class UserService {
     })
   }
 
-  async create(params: CreateUserParams, manager?: EntityManager | undefined) {
+  async create({ balances, ...params }: CreateUserParams, manager?: EntityManager | undefined) {
     try {
       const insertResult = await (manager || this.repository.manager)
         .createQueryBuilder()
@@ -27,6 +30,11 @@ export class UserService {
         .values({
           ...params,
           lastName: params.lastName || null,
+          balances: !balances
+            ? {
+                [Token.XTR]: "0",
+              }
+            : balances,
           banned: false,
           lastSeenAt: new Date(),
         })
@@ -43,7 +51,38 @@ export class UserService {
     }
   }
 
+  async retrieve(id: string) {
+    return await this.repository.findOneOrFail({
+      where: {
+        id,
+      },
+    })
+  }
 
+  async update() {
+    throw new NotImplemented()
+  }
+
+  async delete() {
+    throw new NotImplemented()
+  }
+
+  async list({ page, limit, filter, sort }: UserListDto) {
+    return paginate(
+      this.repository,
+      { page, limit },
+      {
+        where: {
+          id: filter.id,
+          tgId: filter.tgId,
+          role: filter.role,
+        },
+        order: {
+          createdAt: sort.createdAt,
+        },
+      }
+    )
+  }
 }
 
 export type CreateUserParams = {
@@ -54,4 +93,5 @@ export type CreateUserParams = {
   lastName?: string | null
   avatar?: string | null
   languageCode: LanguageCode
+  balances?: Record<Token, string>
 }

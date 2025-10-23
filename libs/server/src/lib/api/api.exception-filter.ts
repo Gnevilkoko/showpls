@@ -1,7 +1,7 @@
 import { ArgumentsHost, Catch, HttpException } from "@nestjs/common"
 import { InjectLogger } from "@server/logging"
 import { Request, Response } from "express"
-import { APIException, ApiExceptionResponseData } from "@server/api/api.exception"
+import { APIException, APIExceptionResponse } from "@server/api/api.exception"
 import { Logger } from "winston"
 import { ErrorCode } from "@share"
 import { CRUDExceptions } from "./crud.exceptions"
@@ -28,14 +28,14 @@ export class APIExceptionFilter {
     let isUnexpectedError: boolean = true
 
 
-    let exceptionResponseData: ApiExceptionResponseData = {
+    let exceptionResponseData: APIExceptionResponse = {
       statusCode: 500,
       errorCode: ErrorCode.INTERNAL_SERVER_ERROR,
       message: "Server error",
     }
 
     if (e instanceof APIException) {
-      exceptionResponseData = e.getResponse() as ApiExceptionResponseData
+      exceptionResponseData = e.getResponse() as APIExceptionResponse
       isUnexpectedError = false
     } else if (e instanceof HttpException) {
       exceptionResponseData = {

@@ -23,7 +23,7 @@ import { UserService } from "../user/user.service"
     UserController
   ],
   exports: [
-
+    UserService
   ]
 })
 export class AuthModule implements NestModule {
