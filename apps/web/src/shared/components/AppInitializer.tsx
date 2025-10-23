@@ -26,25 +26,43 @@ const AppInitializer = ({ children }: AppInitializerProps) => {
         }
 
         const initData = window.Telegram?.WebApp.initData
+
         if (initData) {
-          await signIn({
-            type: "tg-mini-app",
-            payload: initData,
-          })
-            .unwrap()
-            .then((result) => {
-              if (result.accessToken && result.user) {
-                dispatch(
-                  setAuthData({
-                    accessToken: result.accessToken,
-                    userData: result.user,
-                  })
-                )
+          try {
+            const result = await signIn({
+              type: "tg-mini-app",
+              payload: initData,
+            }).unwrap()
+
+            if (result.accessToken && result.user) {
+              dispatch(
+                setAuthData({
+                  accessToken: result.accessToken,
+                  userData: result.user,
+                })
+              )
+            }
+          } catch {
+            // Fallback to Telegram user data - убрать когда будет развернут бек
+            if (userFromTg) {
+              const tempUser = {
+                id: userFromTg.id,
+                firstName: userFromTg.first_name,
+                lastName: userFromTg.last_name,
+                username: userFromTg.username,
+                languageСode: userFromTg.language_code,
+                photoUrl: userFromTg.photo_url,
+                authDate: Date.now(),
               }
-            })
-            .catch((error) => {
-              console.error("Auth error:", error)
-            })
+
+              dispatch(
+                setAuthData({
+                  accessToken: "temp-token",
+                  userData: tempUser,
+                })
+              )
+            }
+          }
         } else if (userFromTg) {
           // если нет initData, то используем userFromTg - убрать когда будет развернут бек
           const tempUser = {
