@@ -57,7 +57,7 @@ const Header = () => {
       </div>
 
       <div className="avatar-container" onClick={handleClickAvatar}>
-        <img src={userData?.photoUrl || userIcon} alt="" className="avatar" />
+        <img src={userData?.avatar || userIcon} alt="" className="avatar" />
 
         <img src={checkIcon} alt="Check Icon" className="avatar__check" />
       </div>

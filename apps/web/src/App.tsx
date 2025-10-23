@@ -13,6 +13,8 @@ import { TonConnectUIProvider } from "@tonconnect/ui-react"
 import { TonWalletProvider } from "./shared/providers/TonWalletProvider"
 import Chats from "./pages/Chats"
 import ScrollToTop from "./shared/components/ScrollToTop"
+import { ToastContainer } from "react-toastify"
+import "react-toastify/dist/ReactToastify.css"
 
 function App() {
   const userData = useAppSelector((state) => state.user.userData)
@@ -33,6 +35,18 @@ function App() {
                 <Route path="/wallet" element={userData ? <Wallet /> : <Navigate to="/" replace />} />
                 <Route path="/profile" element={userData ? <Profile /> : <Navigate to="/" replace />} />
               </Routes>
+              <ToastContainer
+                position="top-center"
+                autoClose={3000}
+                hideProgressBar={false}
+                newestOnTop={false}
+                closeOnClick
+                rtl={false}
+                pauseOnFocusLoss
+                draggable
+                pauseOnHover
+                theme="light"
+              />
             </div>
           </MapProvider>
         </TonWalletProvider>

@@ -1,5 +1,6 @@
 import { createApi, fetchBaseQuery } from "@reduxjs/toolkit/query/react"
 import type { UserDataType } from "../shared/types"
+import { NotificationHandler } from "../shared/utils/notificationHandler"
 
 export interface AuthRequest {
   type: "tg-mini-app" | "tg-login-widget"
@@ -25,6 +26,14 @@ export const authApi = createApi({
         body,
       }),
       invalidatesTags: ["Auth"],
+      // Обработка ошибок на уровне мутации
+      async onQueryStarted(_, { queryFulfilled }) {
+        try {
+          await queryFulfilled
+        } catch (error) {
+          NotificationHandler.handleError(error)
+        }
+      },
     }),
   }),
 })
