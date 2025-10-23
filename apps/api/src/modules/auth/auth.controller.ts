@@ -16,14 +16,23 @@ import { InjectRepository } from "@nestjs/typeorm"
 import { Repository } from "typeorm"
 import AuthExceptions from "./auth.exceptions"
 import { RateLimit } from "../../common/rate-limit"
+import { InjectLogger } from "@server/logging"
+import { Logger } from "winston"
 
 @ApiExtraModels(User)
 @ApiTags("Auth")
 @Controller("auth")
 export class AuthController {
+  protected logger: Logger
   protected accessTokenLifetime = ConfigService.isDevelopment() ? ms("72h") : ms("15m")
 
-  constructor(protected service: AuthService, @InjectRepository(User) protected repository: Repository<User>) {}
+  constructor(
+    @InjectLogger() logger: Logger,
+    protected service: AuthService,
+    @InjectRepository(User) protected repository: Repository<User>
+  ) {
+    this.logger = logger.child({context: AuthController.name})
+}
 
   @ApiBody({
     schema: {
@@ -148,5 +157,15 @@ export class AuthController {
       user: plainUser,
       accessToken: AuthService.generateToken(plainUser, this.accessTokenLifetime),
     }
+  }
+
+  @Post('sign-out')
+  async signOut(
+    @Req() req: Request
+  ) {
+    req.session.destroy((e) => {
+      this.logger.error(e)
+    })
+
   }
 }

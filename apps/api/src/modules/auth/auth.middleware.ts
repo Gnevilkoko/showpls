@@ -4,9 +4,16 @@ import { APIException } from "@server/api"
 import { ErrorCode } from "@share"
 import { JsonWebTokenError, TokenExpiredError } from "jsonwebtoken"
 import { AuthService } from "./auth.service"
+import { InjectLogger } from "@server/logging"
+import { Logger } from "winston"
 
 @Injectable()
 export class AuthMiddleware implements NestMiddleware {
+
+  constructor(
+    @InjectLogger() protected logger: Logger
+  ) {}
+
   async use(req: Request, res: Response, next: NextFunction) {
     if (req.url === "/api/auth/sign-in" || req.url === "/api/auth/refresh-token") {
       next()
@@ -31,6 +38,7 @@ export class AuthMiddleware implements NestMiddleware {
           throw new APIException(ErrorCode.UNAUTHORIZED, "Invalid signature or invalid token format")
         }
 
+        this.logger.error(e)
         throw new APIException(ErrorCode.UNAUTHORIZED, e.message ? e.message : "Something wrong with the access token")
       }
     } catch (e) {

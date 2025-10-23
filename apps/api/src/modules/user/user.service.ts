@@ -33,6 +33,8 @@ export class UserService {
           balances: !balances
             ? {
                 [Token.XTR]: "0",
+                [Token.TON]: "0",
+                [Token.USDT]: "0",
               }
             : balances,
           banned: false,
