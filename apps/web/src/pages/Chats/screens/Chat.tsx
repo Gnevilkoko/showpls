@@ -6,7 +6,7 @@ import MessageItem from "../components/MessageItem"
 import MessageInput from "../components/MessageInput"
 import arrowDownGreenIcon from "../../../assets/icons/ui/arrow-down-green.svg"
 import { chatData } from "../data/chatData"
-import MiniMapContainer from "../../Tasks/MiniMapContainer"
+import ChatMap from "../components/ChatMap"
 import checkWhiteIcon from "../../../assets/icons/status/check-white.svg"
 import cameraWhiteIcon from "../../../assets/icons/actions/camera-white.svg"
 import menuDotsIcon from "../../../assets/icons/ui/menu-dots.svg"
@@ -112,7 +112,7 @@ const Chat = ({ chat, handleOpenChat }: ChatProps) => {
                 </div>
               )}
 
-              <MiniMapContainer address={""} />
+              <ChatMap coordinates={chat.order.position} />
 
               <div className="chat__task__actions">
                 <button className="chat__task__first-action-btn">

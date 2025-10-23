@@ -1,3 +1,37 @@
+export type TelegramAuthDataType = {
+  id: number
+  first_name: string
+  last_name?: string
+  username?: string
+  photo_url?: string
+  auth_date: number
+  hash: string
+}
+
+export type TelegramWebAppUserType = {
+  id: number
+  first_name: string
+  last_name?: string
+  username?: string
+  photo_url?: string
+  language_code?: string
+}
+
+export type UserType = {
+  accessToken: string
+  userData: UserDataType
+}
+
+export type UserDataType = {
+  id: number
+  firstName: string
+  lastName?: string
+  username?: string
+  languageCode?: string
+  photoUrl?: string
+  authDate: number
+}
+
 export type ChatType = {
   chat_id: number
   avatar: string | null
@@ -36,15 +70,6 @@ export type ChatsDataType = {
   chat_list: ChatType[]
 }
 
-export type TgUserType = {
-  id: number
-  first_name: string
-  last_name?: string
-  username?: string
-  language_code?: string
-  photo_url?: string
-}
-
 export type TransactionType = {
   id: string
   type: "founded" | "escrowHold" | "releasedExecutor" | "refundedCustomer"
@@ -70,25 +95,25 @@ export type TaskType = {
   performer_id: number | null
 }
 
-export type UserFromBackType = {
-  telegram_data: TgUserType
-  user_id: number
-  first_name: string
-  last_name: string | null
-  language_code: string
-  avatar: string | null
-  rating: number
-  profession: string
-  work_status: boolean
-  online_status: boolean
-  last_online: number
-  location: string | null
-  balance: number
-  balance_hold: number
-  chats: ChatsDataType
-  transactions: TransactionType[]
-  orders: {
-    customer: TaskType[]
-    performer: TaskType[]
-  }
-}
+// export type UserFromBackType = {
+//   telegram_data: TgUserType
+//   user_id: number
+//   first_name: string
+//   last_name: string | null
+//   language_code: string
+//   avatar: string | null
+//   rating: number
+//   profession: string
+//   work_status: boolean
+//   online_status: boolean
+//   last_online: number
+//   location: string | null
+//   balance: number
+//   balance_hold: number
+//   chats: ChatsDataType
+//   transactions: TransactionType[]
+//   orders: {
+//     customer: TaskType[]
+//     performer: TaskType[]
+//   }
+// }

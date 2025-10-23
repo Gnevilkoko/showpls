@@ -1,34 +1,38 @@
 import background from "../../assets/images/access-gate-bg.webp"
 import logoAnimation from "../../assets/animations/logo-animation.json"
 import OpenTelegramButton from "./OpenTelegramButton"
+import TelegramLoginButton from "./TelegramLoginButton"
 import Lottie from "lottie-react"
-import { LoginButton } from "@telegram-auth/react"
-import { BOT_USERNAME } from "../../constants"
-
-interface TelegramAuthData {
-  id: number
-  first_name: string
-  last_name?: string
-  username?: string
-  photo_url?: string
-  auth_date: number
-  hash: string
-}
+import { BOT_ID } from "../../constants"
+import type { TelegramAuthDataType } from "../../shared/types"
+import { useAppDispatch } from "../../store"
+import { setAuthData } from "../../store/userSlice"
+import { useSignInMutation } from "../../store/authApi"
 
 const AccessGate = () => {
-  const handleAuthCallback = (data: TelegramAuthData) => {
-    alert(`Получил: $${data.first_name}`)
+  const dispatch = useAppDispatch()
+  const [signIn] = useSignInMutation()
 
-    // fetch('/api/auth/sign-in', {
-    //   method: 'POST',
-    //   headers: {
-    //     'Content-Type': 'application/json',
-    //   },
-    //   body: JSON.stringify({
-    //     type: 'tg-login-widget',
-    //     payload: data
-    //   })
-    // });
+  const handleAuthCallback = (data: TelegramAuthDataType) => {
+    // Обрабатываем авторизацию
+    signIn({
+      type: "tg-login-widget",
+      payload: data,
+    })
+      .unwrap()
+      .then((result) => {
+        if (result.accessToken && result.user) {
+          dispatch(
+            setAuthData({
+              accessToken: result.accessToken,
+              userData: result.user,
+            })
+          )
+        }
+      })
+      .catch((error) => {
+        console.error("Auth error:", error)
+      })
   }
 
   return (
@@ -51,14 +55,7 @@ const AccessGate = () => {
 
           <OpenTelegramButton />
 
-          <LoginButton
-            botUsername={BOT_USERNAME}
-            onAuthCallback={handleAuthCallback}
-            buttonSize="large"
-            cornerRadius={5}
-            showAvatar={true}
-            lang="en"
-          />
+          <TelegramLoginButton botId={BOT_ID} onAuthCallback={handleAuthCallback} />
         </div>
 
         <footer className="access-gate__footer">

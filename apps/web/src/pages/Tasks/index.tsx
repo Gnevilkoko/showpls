@@ -13,10 +13,10 @@ import MapContainer from "./MapContainer"
 import { TasksList } from "./tasks"
 import ToggleProfileMode from "../../shared/components/ToggleProfileMode"
 import MiniMapContainer from "./MiniMapContainer"
-import { TIME_LIMITS } from "../../constants"
 import { useTranslation } from "react-i18next"
 import Navigation from "../../shared/components/Navigation"
 import ImageViewer from "../../shared/components/ImageViewer"
+import ValidationIcon from "../../shared/components/ValidationIcon"
 
 interface UploadedImage {
   file: File
@@ -43,10 +43,6 @@ const Tasks = () => {
   // Создаём ref для каждой таски в списке и на карте
   const listTaskRefs = useRef<Record<string, HTMLDivElement | null>>({})
   const mapTaskRefs = useRef<Record<string, HTMLDivElement | null>>({})
-
-  // const handleToggle = (val: 'list' | 'map') => {
-  //   setActiveSection(val);
-  // };
 
   // При выборе таски из списка
   const handleTaskClick = (taskId: string) => {
@@ -76,6 +72,18 @@ const Tasks = () => {
   const [images, setImages] = useState<UploadedImage[]>([])
   const [selectedImageIndex, setSelectedImageIndex] = useState<number | null>(null)
 
+  // Состояния для валидации инпутов
+  const [taskDescription, setTaskDescription] = useState("")
+  const [address, setAddress] = useState("")
+  const [timeHours, setTimeHours] = useState("")
+  const [timeMinutes, setTimeMinutes] = useState("")
+  const [budget, setBudget] = useState("")
+  const [isHoursDropdownOpen, setIsHoursDropdownOpen] = useState(false)
+  const [isMinutesDropdownOpen, setIsMinutesDropdownOpen] = useState(false)
+
+  // Состояние для координат с карты
+  const [mapCoordinates, setMapCoordinates] = useState<{ lat: number; lng: number } | null>(null)
+
   const handleUpload = (e: ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files
     if (!files) return
@@ -100,17 +108,45 @@ const Tasks = () => {
     setSelectedImageIndex(null)
   }
 
-  const [timeLimit, setTimeLimit] = useState<string>("")
-  const [isOpenDropdown, setIsOpenDropdown] = useState(false)
+  // Генерируем массивы для часов и минут (минуты с шагом 10)
+  const hoursOptions = Array.from({ length: 24 }, (_, i) => i)
+  const minutesOptions = Array.from({ length: 6 }, (_, i) => i * 10) // 0, 10, 20, 30, 40, 50
 
-  const handleSelectDropdown = (val: number) => {
-    setTimeLimit(val.toString())
-    setIsOpenDropdown(false)
+  const handleHoursSelect = (hour: number) => {
+    setTimeHours(hour.toString())
+    setIsHoursDropdownOpen(false)
   }
 
-  const [isUrgent, setIsUrgent] = useState(true)
+  const handleMinutesSelect = (minute: number) => {
+    setTimeMinutes(minute.toString())
+    setIsMinutesDropdownOpen(false)
+  }
 
-  const [address, setAddress] = useState("")
+  // Закрытие выпадающих меню при клике вне их
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      const target = event.target as HTMLElement
+      if (!target.closest(".time-selector")) {
+        setIsHoursDropdownOpen(false)
+        setIsMinutesDropdownOpen(false)
+      }
+    }
+
+    document.addEventListener("mousedown", handleClickOutside)
+    return () => document.removeEventListener("mousedown", handleClickOutside)
+  }, [])
+
+  const [isUrgent, setIsUrgent] = useState(false)
+
+  // Очищаем время когда toggle выключается
+  useEffect(() => {
+    if (!isUrgent) {
+      setTimeHours("")
+      setTimeMinutes("")
+      setIsHoursDropdownOpen(false)
+      setIsMinutesDropdownOpen(false)
+    }
+  }, [isUrgent])
   return (
     <div className="page tasks">
       <Header />
@@ -125,13 +161,22 @@ const Tasks = () => {
         <>
           <div className="customer-banner">
             <div className="describe__content">
-              <div className="customer-banner__title">
-                <img src={pencilIcon} alt="Pencil Icon" />
+              <div className="customer-banner__title-wrapper">
+                <div className="customer-banner__title">
+                  <img src={pencilIcon} alt="Pencil Icon" />
 
-                <span>{t("tasksPage.describeTask")}</span>
+                  <span>{t("tasksPage.describeTask")}</span>
+                </div>
+
+                <ValidationIcon isValid={taskDescription.trim().length > 10} />
               </div>
 
-              <textarea className="describe__input" placeholder={t("tasksPage.placeholderTask")} />
+              <textarea
+                className="describe__input"
+                placeholder={t("tasksPage.placeholderTask")}
+                value={taskDescription}
+                onChange={(e) => setTaskDescription(e.target.value)}
+              />
             </div>
 
             <div className="customer-banner__description-container">
@@ -168,10 +213,14 @@ const Tasks = () => {
           </div>
 
           <div className="customer-banner">
-            <div className="customer-banner__title">
-              <img src={locationIcon} alt="Location Icon" />
+            <div className="customer-banner__title-wrapper">
+              <div className="customer-banner__title">
+                <img src={locationIcon} alt="Location Icon" />
 
-              <span>{t("tasksPage.location")}</span>
+                <span>{t("tasksPage.location")}</span>
+              </div>
+
+              <ValidationIcon isValid={mapCoordinates !== null} />
             </div>
 
             <input
@@ -184,38 +233,96 @@ const Tasks = () => {
 
             <p className="customer-banner__paragraph">{t("tasksPage.orMarkMap")}</p>
 
-            <MiniMapContainer address={address} />
+            <MiniMapContainer address={address} onCoordinatesChange={setMapCoordinates} />
           </div>
 
           <div className="customer-banner">
-            <div className="customer-banner__title">
-              <img src={clockIcon} alt="Location Icon" />
+            <div className="customer-banner__title-wrapper">
+              <div className="customer-banner__title">
+                <img src={clockIcon} alt="Clock Icon" />
 
-              <span>{t("tasksPage.timeLimit")}</span>
-            </div>
+                <span>{t("tasksPage.timeLimit")}</span>
+              </div>
 
-            <div className="dropdown-wrapper">
-              <input
-                type="number"
-                value={timeLimit}
-                onClick={() => setIsOpenDropdown((val) => !val)}
-                onBlur={() => setTimeout(() => setIsOpenDropdown(false), 100)}
-                onChange={(e) => setTimeLimit(e.target.value)}
-                placeholder={t("tasksPage.addDuration")}
-                className="dropdown-input"
-                inputMode="numeric"
+              <ValidationIcon
+                isValid={
+                  !isUrgent ||
+                  (timeHours.trim().length > 0 &&
+                    timeMinutes.trim().length > 0 &&
+                    !(timeHours === "0" && timeMinutes === "0"))
+                }
               />
-
-              {isOpenDropdown && (
-                <ul className="dropdown-menu">
-                  {TIME_LIMITS.map((num) => (
-                    <li key={num} onMouseDown={() => handleSelectDropdown(num)} className="dropdown-item">
-                      {num === 1 ? `${num} ${t("tasksPage.hour")}` : `${num} ${t("tasksPage.hours")}`}
-                    </li>
-                  ))}
-                </ul>
-              )}
             </div>
+
+            {isUrgent && (
+              <div className="time-selectors">
+                <div className="time-selector">
+                  <div
+                    className={`time-dropdown-trigger ${isHoursDropdownOpen ? "open" : ""}`}
+                    onClick={() => setIsHoursDropdownOpen(!isHoursDropdownOpen)}
+                  >
+                    <span>{timeHours ? timeHours.padStart(2, "0") : t("tasksPage.hours")}</span>
+                    <svg className="dropdown-arrow" width="12" height="8" viewBox="0 0 12 8" fill="none">
+                      <path
+                        d="M1 1.5L6 6.5L11 1.5"
+                        stroke="currentColor"
+                        strokeWidth="2"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                      />
+                    </svg>
+                  </div>
+
+                  {isHoursDropdownOpen && (
+                    <div className="time-dropdown-menu">
+                      {hoursOptions.map((hour) => (
+                        <div
+                          key={hour}
+                          className={`time-dropdown-item ${timeHours === hour.toString() ? "selected" : ""}`}
+                          onClick={() => handleHoursSelect(hour)}
+                        >
+                          {hour.toString().padStart(2, "0")}
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+
+                <div className="time-separator">:</div>
+
+                <div className="time-selector">
+                  <div
+                    className={`time-dropdown-trigger ${isMinutesDropdownOpen ? "open" : ""}`}
+                    onClick={() => setIsMinutesDropdownOpen(!isMinutesDropdownOpen)}
+                  >
+                    <span>{timeMinutes ? timeMinutes.padStart(2, "0") : t("tasksPage.minutes")}</span>
+                    <svg className="dropdown-arrow" width="12" height="8" viewBox="0 0 12 8" fill="none">
+                      <path
+                        d="M1 1.5L6 6.5L11 1.5"
+                        stroke="currentColor"
+                        strokeWidth="2"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                      />
+                    </svg>
+                  </div>
+
+                  {isMinutesDropdownOpen && (
+                    <div className="time-dropdown-menu">
+                      {minutesOptions.map((minute) => (
+                        <div
+                          key={minute}
+                          className={`time-dropdown-item ${timeMinutes === minute.toString() ? "selected" : ""}`}
+                          onClick={() => handleMinutesSelect(minute)}
+                        >
+                          {minute.toString().padStart(2, "0")}
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
 
             <div className="customer-banner__description-container">
               <div className="customer-banner__description">
@@ -234,10 +341,14 @@ const Tasks = () => {
           </div>
 
           <div className="customer-banner">
-            <div className="customer-banner__title">
-              <img src={coinsIcon} alt="Location Icon" />
+            <div className="customer-banner__title-wrapper">
+              <div className="customer-banner__title">
+                <img src={coinsIcon} alt="Coins Icon" />
 
-              <span>{t("tasksPage.budget")}</span>
+                <span>{t("tasksPage.budget")}</span>
+              </div>
+
+              <ValidationIcon isValid={budget.trim().length > 0} />
             </div>
 
             <input
@@ -245,6 +356,8 @@ const Tasks = () => {
               inputMode="numeric" // открывает цифровую клавиатуру на мобилках
               placeholder={t("tasksPage.budgetPlaceholder")}
               className="budget-input"
+              value={budget}
+              onChange={(e) => setBudget(e.target.value)}
             />
           </div>
 

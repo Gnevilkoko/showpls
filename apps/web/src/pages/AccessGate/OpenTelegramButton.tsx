@@ -22,7 +22,7 @@ const OpenTelegramButton = () => {
     <button className="access-gate__button-switch-telegram" onClick={handleOpenTg}>
       <img src={telegramLogo} alt="Telegram Logo" />
 
-      <span>Continue with Telegram</span>
+      <span>Continue with Mini App</span>
     </button>
   )
 }
