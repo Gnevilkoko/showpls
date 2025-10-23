@@ -3,7 +3,7 @@ import { ErrorCode } from "@share"
 import { ZodDto, ZodValidationPipe } from "nestjs-zod"
 import { isZodDto } from "nestjs-zod/dto"
 import { ZodError } from "zod"
-import { ApiException } from "../http"
+import { APIException } from "@server/api"
 
 @Injectable()
 export class ValidationPipe extends ZodValidationPipe {
@@ -37,7 +37,7 @@ export class ValidationPipe extends ZodValidationPipe {
   }
 
   createValidationException(error: ZodError) {
-    return new ApiException(ErrorCode.VALIDATION_ERROR, error.issues)
+    return new APIException(ErrorCode.VALIDATION_ERROR, error.issues)
   }
 }
 

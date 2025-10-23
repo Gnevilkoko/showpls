@@ -20,8 +20,8 @@ services:
       - "traefik.http.routers.backend.rule=PathPrefix(`/api`) ||  PathPrefix(`/socket.io`)"
       - "traefik.http.routers.backend.priority=10"
       - "traefik.http.routers.backend.service=backend"
-      - "traefik.http.services.backend.loadbalancer.server.url=http://host.docker.internal:8000"
-      - "traefik.http.services.backend.loadbalancer.server.port=8000"
+      - "traefik.http.services.backend.loadbalancer.server.url=http://host.docker.internal:8080"
+      - "traefik.http.services.backend.loadbalancer.server.port=8080"
 
 
       - "traefik.http.routers.http-frontend.rule=PathPrefix(`/`)"

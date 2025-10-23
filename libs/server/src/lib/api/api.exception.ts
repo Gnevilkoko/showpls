@@ -9,7 +9,7 @@ export type ApiExceptionResponseData = {
   message?: ApiExceptionMessage
 }
 
-export class ApiException extends HttpException {
+export class APIException extends HttpException {
   constructor(code: ErrorCode, message?: ApiExceptionMessage, cause?: Error) {
     super(
       { statusCode: HttpStatus.BAD_REQUEST, errorCode: code, message } as ApiExceptionResponseData,

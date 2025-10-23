@@ -13,7 +13,7 @@ export class ConfigService {
 
   static loadEnv() {
     // if (ConfigService.isDevelopment()) {
-    dotenv.config({ path: path.join(ConfigService.getRootDir(), ".env.development") })
+    dotenv.config({ path: path.join(ConfigService.getRootDir(), ".env.development"), quiet: true })
     // }
   }
 

@@ -14,5 +14,5 @@ export default {
     ],
   },
   moduleFileExtensions: ['ts', 'js', 'html'],
-  coverageDirectory: '../../coverage/showpls-e2e',
+  coverageDirectory: '../../coverage/api-e2e',
 };

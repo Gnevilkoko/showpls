@@ -1,37 +1,39 @@
 import { Module } from "@nestjs/common"
 import { AppService } from "./app.service"
-import { WinstonModule } from "nest-winston"
+import { WinstonModule, utilities } from "nest-winston"
 import { getWinstonOptions } from "./get-winston-options"
-import { format, transports } from "winston"
-import { CacheModule } from "@nestjs/cache-manager"
-import Keyv from "keyv"
 import ms from "ms"
 import { TypeOrmModule } from "@nestjs/typeorm"
 import { DatabaseConfig, RedisConfig } from "./config"
 import { RedisModule } from "@liaoliaots/nestjs-redis"
 import { ThrottlerModule, ThrottlerModuleOptions } from "@nestjs/throttler"
-import {DataSource, DataSourceOptions} from "typeorm"
-import {CacheableMemory} from "cacheable"
+import { DataSource, DataSourceOptions } from "typeorm"
 import { AuthModule } from "./modules/auth/auth.module"
+import path from "path"
+import { AcceptLanguageResolver, HeaderResolver, I18nModule } from "nestjs-i18n"
+import { LanguageCode } from "@share"
+
 
 @Module({
   imports: [
     WinstonModule.forRoot({
-      ...getWinstonOptions()
+      ...getWinstonOptions(),
+
     }),
-    CacheModule.registerAsync({
-      isGlobal: true,
-      useFactory: async () => {
-        return {
-          stores: [
-            new Keyv({
-              store: new CacheableMemory({ ttl: ms("5m"), lruSize: 500 }),
-            }),
-            // new KeyvRedis(RedisConfig.getDSN())
-          ],
-        }
-      },
-    }),
+
+    // CacheModule.registerAsync({
+    //   isGlobal: true,
+    //   useFactory: async () => {
+    //     return {
+    //       stores: [
+    //         new Keyv({
+    //           store: new CacheableMemory({ ttl: ms("5m"), lruSize: 500 }),
+    //         }),
+    //         new KeyvRedis(RedisConfig.getDSN())
+    // ],
+    // }
+    // },
+    // }),
     TypeOrmModule.forRootAsync({
       name: "default",
       inject: [],
@@ -65,7 +67,19 @@ import { AuthModule } from "./modules/auth/auth.module"
         } as ThrottlerModuleOptions
       },
     }),
-    AuthModule
+    I18nModule.forRoot({
+      logging: false,
+      fallbackLanguage: LanguageCode.EN,
+      loaderOptions: {
+        path: path.join(__dirname, "/assets/i18n/"),
+        watch: false,
+      },
+      resolvers: [new AcceptLanguageResolver({ // RFC4647, BCP 47(Best Current Practice 47), <language>-<region>.
+        matchType: "loose"
+      })],
+    }),
+
+    AuthModule,
   ],
   providers: [AppService],
   controllers: [],

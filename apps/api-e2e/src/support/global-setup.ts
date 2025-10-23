@@ -8,8 +8,8 @@ module.exports = async function () {
   console.log('\nSetting up...\n');
 
   const host = process.env.HOST ?? 'localhost';
-  const port = process.env.PORT ? Number(process.env.PORT) : 3000;
-  await waitForPortOpen(port, { host });
+  const port = process.env.PORT ? Number(process.env.PORT) : 8000;
+  // await waitForPortOpen(port, { host });
 
   // Hint: Use `globalThis` to pass variables to global teardown.
   globalThis.__TEARDOWN_MESSAGE__ = '\nTearing down...\n';

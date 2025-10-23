@@ -11,7 +11,7 @@
         "jestConfig": "apps/api-e2e/jest.config.ts",
         "passWithNoTests": true
       },
-      "dependsOn": ["showpls:build", "showpls:serve"]
+      "dependsOn": ["api:build", "api:serve"]
     }
   }
 }

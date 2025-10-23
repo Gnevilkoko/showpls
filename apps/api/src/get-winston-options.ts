@@ -1,6 +1,7 @@
 import { format, LoggerOptions, transports } from "winston"
-import {colorize, color} from 'json-colorizer';
+import { color, colorize } from "json-colorizer"
 import { ConfigService } from "./config"
+import { utilities } from "nest-winston"
 
 const jsonColorFormat = format.printf(({ level, message, timestamp, context, data, ...meta }) => {
   const logObject = {
@@ -10,23 +11,19 @@ const jsonColorFormat = format.printf(({ level, message, timestamp, context, dat
     message,
     data,
     ...meta,
-  };
+  }
 
-  return colorize(
-   logObject,
-    {
-      indent: 2,
-      colors: {
-        StringKey: color.magenta,
-        StringLiteral: color.yellow,
-        NumberLiteral: color.blue,
-        NullLiteral: color.blue,
-        BooleanLiteral: color.blue,
-      } as any ,
-    }
-  );
-});
-
+  return colorize(logObject, {
+    indent: 2,
+    colors: {
+      StringKey: color.magenta,
+      StringLiteral: color.yellow,
+      NumberLiteral: color.blue,
+      NullLiteral: color.blue,
+      BooleanLiteral: color.blue,
+    } as any,
+  })
+})
 
 export function getWinstonOptions(): LoggerOptions {
   return {
@@ -36,7 +33,9 @@ export function getWinstonOptions(): LoggerOptions {
         format: `dd.MM.YYYY HH:mm:ss.SSS`,
         // format: `YYYY-MM-DD HH:mm:ss.SSS`,
       }),
-      ...(ConfigService.isDevelopment()  ? [jsonColorFormat] : []),
+      format.errors({ stack: true }),
+      jsonColorFormat
+      // ...(ConfigService.isDevelopment() ? [jsonColorFormat] : [])
     ),
     transports: [new transports.Console()],
   }

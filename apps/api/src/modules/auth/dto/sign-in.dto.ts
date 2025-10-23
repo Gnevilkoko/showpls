@@ -3,13 +3,6 @@ import { createZodDto } from "nestjs-zod"
 
 export const SignInSchema = z.discriminatedUnion("type", [
   z.object({
-    type: z.literal("basic"),
-    payload: z.object({
-      username: z.string().trim().nonempty(),
-      password: z.string().trim().nonempty(),
-    }),
-  }),
-  z.object({
     type: z.literal("tg-login-widget"),
     payload: z.record(z.string(), z.any()),
   }),

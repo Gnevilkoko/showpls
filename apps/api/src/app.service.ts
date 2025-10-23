@@ -1,16 +1,18 @@
-import { Inject, Injectable, LoggerService } from "@nestjs/common"
-import { WINSTON_MODULE_NEST_PROVIDER, WINSTON_MODULE_PROVIDER } from 'nest-winston';
+import { INestApplication, Injectable } from "@nestjs/common"
+import { getLoggerToken, InjectLogger, RequestLoggingMiddleware, ResponseLoggingInterceptor } from "@server/logging"
+import fs from "fs"
+import { ConfigService, SessionConfig } from "./config"
+import cookieParser from "cookie-parser"
+import { RedisStore } from "connect-redis"
+import session from "express-session"
+import { RedisService } from "@liaoliaots/nestjs-redis"
+import { ValidationPipe } from "./common/validation"
 import { Logger } from "winston"
-import { InjectLogger } from "@share/logging"
-
-
-
+import { APIExceptionFilter } from "@server/api/api.exception-filter"
+import r from "redis" // You can use any module to create redis client
 @Injectable()
 export class AppService {
-
-  constructor(
-    @InjectLogger() protected logger: Logger
-  ) {
+  constructor(@InjectLogger() protected logger: Logger) {
     // this.logger.info({
     //   message: "Test",
     //   data: {
@@ -23,5 +25,63 @@ export class AppService {
     // })
   }
 
+  static async upgrade(app: INestApplication) {
+    if (!fs.existsSync(ConfigService.mediaRoot)) {
+      fs.mkdirSync(ConfigService.mediaRoot)
+    }
 
+    if (!fs.existsSync(ConfigService.mediaPrivateRoot)) {
+      fs.mkdirSync(ConfigService.mediaPrivateRoot)
+    }
+
+    app.setGlobalPrefix("api")
+
+    const redisService = app.get(RedisService)
+    const redis = redisService.getOrThrow()
+
+    const logger = app.get<Logger>(getLoggerToken())
+
+
+
+    // @ts-ignore
+    app.set("trust proxy", 1) // before set express-session
+    // @ts-ignore
+    app.set("query parser", "extended")
+
+    app.use(cookieParser())
+    app.use(
+      session({
+        name: "sessionID",
+        secret: SessionConfig.secret,
+        resave: false,
+        saveUninitialized: false,
+        // store: new RedisStore({
+        //   client: redis,
+        //   prefix: "sess:",
+        //   ttl: SessionConfig.maxAge / 1000,
+        // }),
+        cookie: {
+          path: "/",
+          signed: true,
+          secure: ConfigService.isProduction(),
+          // sameSite (any value even "none") requires secure: true
+          sameSite: ConfigService.isProduction() ? "none" : undefined,
+          httpOnly: true,
+          priority: "high",
+          maxAge: SessionConfig.maxAge,
+        },
+      })
+    )
+
+    const requestLoggingMiddleware = new RequestLoggingMiddleware(logger)
+    app.use(requestLoggingMiddleware.use.bind(requestLoggingMiddleware))
+
+    const responseLoggingInterceptor = new ResponseLoggingInterceptor(logger)
+    app.useGlobalInterceptors(responseLoggingInterceptor)
+
+    app.useGlobalFilters(new APIExceptionFilter(logger))
+    app.useGlobalPipes(new ValidationPipe())
+
+    app.enableShutdownHooks()
+  }
 }

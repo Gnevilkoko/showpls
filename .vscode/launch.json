@@ -6,7 +6,7 @@
       "request": "launch",
       "name": "Debug showpls with Nx",
       "runtimeExecutable": "npx",
-      "runtimeArgs": ["nx", "serve", "showpls"],
+      "runtimeArgs": ["nx", "serve", "api"],
       "env": {
         "NODE_OPTIONS": "--inspect=9229"
       },
@@ -15,7 +15,7 @@
       "skipFiles": ["<node_internals>/**"],
       "sourceMaps": true,
       "outFiles": [
-        "${workspaceFolder}/apps/showpls/dist/**/*.(m|c|)js",
+        "${workspaceFolder}/apps/api/dist/**/*.(m|c|)js",
         "!**/node_modules/**"
       ]
     }

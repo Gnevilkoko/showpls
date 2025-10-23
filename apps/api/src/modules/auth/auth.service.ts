@@ -8,28 +8,63 @@ import qs from "qs"
 import { AuthDataValidator, objectToAuthDataMap } from "@telegram-auth/server"
 import { BotConfig, JwtConfig } from "../../config"
 import jwt, { SignOptions } from "jsonwebtoken"
+import AuthExceptions from "./auth.exceptions"
+import { UserService } from "../user/user.service"
+import { TGUser } from "./auth.types"
+import { retryWithExponentialBackoff } from "@share/utils"
+import { DbHelpers } from "../../db"
+import { omit } from "lodash"
+import { LanguageCode, Role } from "@share"
 
 @Injectable()
 export class AuthService {
   protected token = BotConfig.token
 
-  constructor(@InjectRepository(User) public repository: Repository<User>) {}
+  constructor(@InjectRepository(User) public repository: Repository<User>, protected service: UserService) {}
 
   public async authenticate(data: SignInDto) {
-    if (data.type === "basic") {
-      throw new Error(`Not supported`)
-    }
+    let tgUser: TGUser
 
     if (data.type === "tg-mini-app") {
-      return AuthService.verifyInitData(data.payload, this.token)
+      tgUser = this.verifyInitData(data.payload, this.token)
+    } else if (data.type === "tg-login-widget") {
+      tgUser = await this.verifyTelegramLoginWidgetData(data.payload, this.token)
     }
 
-    if (data.type === "tg-login-widget") {
-      return await AuthService.verifyTelegramLoginWidgetData(data.payload, this.token)
+    try {
+     return await retryWithExponentialBackoff(
+        async () => {
+          return await this.repository.manager.transaction("SERIALIZABLE", async (manager) => {
+            const user = await manager.getRepository(User).findOne({
+              where: {
+                tgId: tgUser.id.toString(),
+              },
+            })
+
+            if (user) {
+              return user
+            }
+
+            return await this.service.create(
+              {
+                ...omit(tgUser, ["id"]),
+                tgId: tgUser.id.toString(),
+                role: Role.Normal,
+                avatar: null,
+                languageCode: tgUser.languageCode as LanguageCode
+              },
+              manager
+            )
+          })
+        },
+        (e) => DbHelpers.isSerializationFailure(e)
+      )
+    } catch (e) {
+      throw e
     }
   }
 
-  static verifyInitData(initData: string, botToken: string) {
+  protected verifyInitData(initData: string, botToken: string) {
     const encoded = decodeURIComponent(initData)
 
     const secret = crypto.createHmac("sha256", "WebAppData").update(botToken)
@@ -45,13 +80,13 @@ export class AuthService {
 
     const isOk = _hash === hash
     if (!isOk) {
-      throw new Error(`Invalid initData`)
+      throw new AuthExceptions.CredentialsAreInvalid(undefined)
     }
 
     return this.decodeInitData(initData)
   }
 
-  protected static decodeInitData(initData: string) {
+  protected decodeInitData(initData: string) {
     const rawData = qs.parse(initData)
 
     const user = JSON.parse(rawData.user as any)
@@ -65,7 +100,7 @@ export class AuthService {
     }
   }
 
-  protected static async verifyTelegramLoginWidgetData(data: Record<string, any>, botToken: string) {
+  protected async verifyTelegramLoginWidgetData(data: Record<string, any>, botToken: string) {
     const validator = new AuthDataValidator({ botToken })
     try {
       const user = await validator.validate(objectToAuthDataMap(data))
@@ -78,7 +113,7 @@ export class AuthService {
         languageCode?: string
       }
     } catch (e) {
-      throw e
+      throw new AuthExceptions.CredentialsAreInvalid(undefined, {cause: e})
     }
   }
 
@@ -96,7 +131,7 @@ export class AuthService {
     )
   }
 
-    public static generateToken<T extends object>(payload: T, expMilliseconds?: number) {
+  public static generateToken<T extends object>(payload: T, expMilliseconds?: number) {
     let options: SignOptions = {
       algorithm: "RS256",
     }
@@ -106,5 +141,19 @@ export class AuthService {
     }
 
     return jwt.sign(payload, JwtConfig.privateKey, options)
+  }
+
+  public static verifySignature<T extends object>(token: string): T {
+    return jwt.verify(token, JwtConfig.publicKey, {
+      ignoreExpiration: false,
+      algorithms: ["RS256"],
+    }) as T
+  }
+
+  async checkPolitics(user: User): Promise<true> {
+    if (user.banned) {
+      throw new AuthExceptions.IsBanned()
+    }
+    return true
   }
 }

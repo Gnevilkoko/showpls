@@ -5,7 +5,7 @@ import { ErrorCode } from "@share"
 import { Request } from "express"
 import { getClientIp } from "request-ip"
 import { ConfigService } from "../../config"
-import { ApiException } from "../http"
+import { APIException } from "@server/api"
 
 @Injectable()
 export class RateLimitGuard extends ThrottlerGuard {
@@ -29,7 +29,7 @@ export class RateLimitGuard extends ThrottlerGuard {
     context: ExecutionContext,
     throttlerLimitDetail: ThrottlerLimitDetail,
   ): Promise<void> {
-    throw new ApiException(ErrorCode.RATE_LIMITED, {
+    throw new APIException(ErrorCode.RATE_LIMITED, {
       wait: throttlerLimitDetail.timeToExpire * 1000,
     })
   }
