@@ -1,9 +1,40 @@
 import background from "../../assets/images/access-gate-bg.webp"
 import logoAnimation from "../../assets/animations/logo-animation.json"
 import OpenTelegramButton from "./OpenTelegramButton"
+import TelegramLoginButton from "./TelegramLoginButton"
 import Lottie from "lottie-react"
+import { BOT_ID } from "../../constants"
+import type { TelegramAuthDataType } from "../../shared/types"
+import { useAppDispatch } from "../../store"
+import { setAuthData } from "../../store/userSlice"
+import { useSignInMutation } from "../../store/authApi"
 
 const AccessGate = () => {
+  const dispatch = useAppDispatch()
+  const [signIn] = useSignInMutation()
+
+  const handleAuthCallback = (data: TelegramAuthDataType) => {
+    // Обрабатываем авторизацию
+    signIn({
+      type: "tg-login-widget",
+      payload: data,
+    })
+      .unwrap()
+      .then((result) => {
+        if (result.accessToken && result.user) {
+          dispatch(
+            setAuthData({
+              accessToken: result.accessToken,
+              userData: result.user,
+            })
+          )
+        }
+      })
+      .catch((error) => {
+        console.error("Auth error:", error)
+      })
+  }
+
   return (
     <div className="page access-gate">
       <img src={background} alt="Background" fetchPriority="high" className="access-gate__background" />
@@ -23,6 +54,8 @@ const AccessGate = () => {
           </p>
 
           <OpenTelegramButton />
+
+          <TelegramLoginButton botId={BOT_ID} onAuthCallback={handleAuthCallback} />
         </div>
 
         <footer className="access-gate__footer">

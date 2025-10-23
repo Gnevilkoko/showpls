@@ -6,11 +6,12 @@ import MessageItem from "../components/MessageItem"
 import MessageInput from "../components/MessageInput"
 import arrowDownGreenIcon from "../../../assets/icons/ui/arrow-down-green.svg"
 import { chatData } from "../data/chatData"
-import MiniMapContainer from "../../Tasks/MiniMapContainer"
+import ChatMap from "../components/ChatMap"
 import checkWhiteIcon from "../../../assets/icons/status/check-white.svg"
 import cameraWhiteIcon from "../../../assets/icons/actions/camera-white.svg"
 import menuDotsIcon from "../../../assets/icons/ui/menu-dots.svg"
 import starsWhiteIcon from "../../../assets/icons/status/stars-white.svg"
+import ImageViewer from "../../../shared/components/ImageViewer"
 
 interface ChatProps {
   chat: ChatType
@@ -26,8 +27,21 @@ const Chat = ({ chat, handleOpenChat }: ChatProps) => {
   const [value, setValue] = useState("")
 
   const [isOpenTask, setIsOpenTask] = useState<boolean>(false)
+  const [selectedImageIndex, setSelectedImageIndex] = useState<number | null>(null)
+
   const handleClickTaskShow = () => {
     setIsOpenTask((prev) => !prev)
+  }
+
+  const handleImageClick = (imageSrc: string) => {
+    if (chat.order?.attachments) {
+      const index = chat.order.attachments.indexOf(imageSrc)
+      setSelectedImageIndex(index)
+    }
+  }
+
+  const handleCloseImageViewer = () => {
+    setSelectedImageIndex(null)
   }
 
   const chatdataItem = chatData.find((i) => i.chat_id === chat.chat_id)
@@ -68,19 +82,15 @@ const Chat = ({ chat, handleOpenChat }: ChatProps) => {
                 </div>
 
                 <div className="chat__task-tags">
+                  <div className="tag stars">
+                    {chat.order.price}
+
+                    <span>
+                      <img src={starsWhiteIcon} alt="Stars Icon" />
+                    </span>
+                  </div>
+
                   {chat.order.tags.map((tag, index) => {
-                    if (tag.type === "stars") {
-                      return (
-                        <div key={index} className="tag stars">
-                          {chat.order?.price}
-
-                          <span>
-                            <img src={starsWhiteIcon} alt="Stars Icon" />
-                          </span>
-                        </div>
-                      )
-                    }
-
                     if (tag.type === "hLeft") {
                       return (
                         <div key={index} className="tag">
@@ -92,7 +102,17 @@ const Chat = ({ chat, handleOpenChat }: ChatProps) => {
                 </div>
               </div>
 
-              <MiniMapContainer address={""} />
+              {chat.order.attachments && (
+                <div className="task__attachments">
+                  {chat.order.attachments.map((img, idx) => (
+                    <div key={idx} className="preview-attachments" onClick={() => handleImageClick(img)}>
+                      <img src={img} alt={`attachments-${idx}`} />
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              <ChatMap coordinates={chat.order.position} />
 
               <div className="chat__task__actions">
                 <button className="chat__task__first-action-btn">
@@ -117,6 +137,15 @@ const Chat = ({ chat, handleOpenChat }: ChatProps) => {
       </div>
 
       <MessageInput value={value} onChange={setValue} />
+
+      {/* Image Viewer Modal */}
+      {selectedImageIndex !== null && chat.order?.attachments && (
+        <ImageViewer
+          images={chat.order.attachments}
+          currentImageIndex={selectedImageIndex}
+          onClose={handleCloseImageViewer}
+        />
+      )}
     </div>
   )
 }

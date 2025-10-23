@@ -1,0 +1,104 @@
+import { useLayoutEffect, useState } from "react"
+import { useAppDispatch } from "../../store"
+import { initLanguageFromTg } from "../../store/languageSlice"
+import { setAuthData } from "../../store/userSlice"
+import { useSignInMutation } from "../../store/authApi"
+import { tgService } from "../../services/webApp"
+
+interface AppInitializerProps {
+  children: React.ReactNode
+}
+
+const AppInitializer = ({ children }: AppInitializerProps) => {
+  const dispatch = useAppDispatch()
+  const [signIn] = useSignInMutation()
+  const [isInitialized, setIsInitialized] = useState(false)
+
+  useLayoutEffect(() => {
+    const initializeApp = async () => {
+      try {
+        tgService.init() // инициализация WebApp и вызов expand()
+
+        // Подхватываем язык из телеги если localStorage пуст
+        const userFromTg = window.Telegram?.WebApp.initDataUnsafe?.user
+        if (userFromTg) {
+          dispatch(initLanguageFromTg(userFromTg))
+        }
+
+        const initData = window.Telegram?.WebApp.initData
+
+        if (initData) {
+          try {
+            const result = await signIn({
+              type: "tg-mini-app",
+              payload: initData,
+            }).unwrap()
+
+            if (result.accessToken && result.user) {
+              dispatch(
+                setAuthData({
+                  accessToken: result.accessToken,
+                  userData: result.user,
+                })
+              )
+            }
+          } catch {
+            // Fallback to Telegram user data - убрать когда будет развернут бек
+            if (userFromTg) {
+              const tempUser = {
+                id: userFromTg.id,
+                firstName: userFromTg.first_name,
+                lastName: userFromTg.last_name,
+                username: userFromTg.username,
+                languageСode: userFromTg.language_code,
+                photoUrl: userFromTg.photo_url,
+                authDate: Date.now(),
+              }
+
+              dispatch(
+                setAuthData({
+                  accessToken: "temp-token",
+                  userData: tempUser,
+                })
+              )
+            }
+          }
+        } else if (userFromTg) {
+          // если нет initData, то используем userFromTg - убрать когда будет развернут бек
+          const tempUser = {
+            id: userFromTg.id,
+            firstName: userFromTg.first_name,
+            lastName: userFromTg.last_name,
+            username: userFromTg.username,
+            languageСode: userFromTg.language_code,
+            photoUrl: userFromTg.photo_url,
+            authDate: Date.now(),
+          }
+
+          dispatch(
+            setAuthData({
+              accessToken: "temp-token",
+              userData: tempUser,
+            })
+          )
+        }
+      } finally {
+        setIsInitialized(true)
+      }
+    }
+
+    initializeApp()
+  }, [dispatch, signIn])
+
+  if (!isInitialized) {
+    return (
+      <div className="app-loading">
+        <div className="loading-spinner">Loading...</div>
+      </div>
+    )
+  }
+
+  return <>{children}</>
+}
+
+export default AppInitializer

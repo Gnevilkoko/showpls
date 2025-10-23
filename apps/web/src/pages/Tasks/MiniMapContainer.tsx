@@ -1,25 +1,24 @@
 import { GoogleMap } from "@react-google-maps/api"
 import { memo, useCallback, useEffect, useRef, useState } from "react"
-// import { MAP_ID } from '../../constants';
 import pinIcon from "../../assets/icons/ui/pin.svg" // своя иконка
 import { useMapLoaded } from "../../shared/providers/MapContext"
+import { MAP_ID } from "../../constants"
 
 // лишь демонстрация, сюда возможно пойдет реальная геолокация пользователя
 const centerMap = { lat: 37.75296, lng: -122.467844 }
 
 const mapOptions: google.maps.MapOptions = {
   disableDefaultUI: true,
-  // поставил случайную строку, ибо что то с mapID в гугл клауде
-  // если не надо кастомизировать карту - то оставляем как есть
-  mapId: "MAP_ID",
+  mapId: MAP_ID,
   gestureHandling: "greedy",
 }
 
 interface MiniMapContainerProps {
   address: string // строка из инпута
+  onCoordinatesChange: (coordinates: { lat: number; lng: number } | null) => void
 }
 
-const MiniMapContainer = memo(({ address }: MiniMapContainerProps) => {
+const MiniMapContainer = memo(({ address, onCoordinatesChange }: MiniMapContainerProps) => {
   const isLoaded = useMapLoaded()
   const [map, setMap] = useState<google.maps.Map | null>(null)
   const [center, setCenter] = useState<{ lat: number; lng: number }>(centerMap)
@@ -37,7 +36,7 @@ const MiniMapContainer = memo(({ address }: MiniMapContainerProps) => {
     if (!center) return
 
     const coords = { lat: center.lat(), lng: center.lng() }
-    console.log("Center coords:", coords)
+    onCoordinatesChange(coords)
   }
 
   // Когда изменился адрес — геокодируем и двигаем карту
@@ -52,13 +51,16 @@ const MiniMapContainer = memo(({ address }: MiniMapContainerProps) => {
           const loc = results[0].geometry.location
           const coords = { lat: loc.lat(), lng: loc.lng() }
           setCenter(coords)
-          map.setZoom(17)
+          map.setZoom(16)
+          onCoordinatesChange(coords)
+        } else {
+          onCoordinatesChange(null)
         }
       })
     }, 1000)
 
     return () => clearTimeout(debounce)
-  }, [address, map])
+  }, [address, map, onCoordinatesChange])
 
   const timeoutRef = useRef<number | null>(null)
 

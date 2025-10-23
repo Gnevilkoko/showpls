@@ -12,7 +12,7 @@ const Header = () => {
   const navigate = useNavigate()
   const dispatch = useAppDispatch()
 
-  const user = useAppSelector((state) => state.user.tgData)
+  const userData = useAppSelector((state) => state.user.userData)
   const selectedLang = useAppSelector((state) => state.language)
 
   const [isOpenLang, setIsOpenLang] = useState<boolean>(false)
@@ -57,7 +57,7 @@ const Header = () => {
       </div>
 
       <div className="avatar-container" onClick={handleClickAvatar}>
-        <img src={user?.photo_url || userIcon} alt="" className="avatar" />
+        <img src={userData?.photoUrl || userIcon} alt="" className="avatar" />
 
         <img src={checkIcon} alt="Check Icon" className="avatar__check" />
       </div>

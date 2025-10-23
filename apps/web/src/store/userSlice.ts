@@ -1,22 +1,31 @@
-import { createSlice, type PayloadAction } from '@reduxjs/toolkit';
-import type { TgUserType } from '../shared/types';
+import { createSlice, type PayloadAction } from "@reduxjs/toolkit"
+import type { UserDataType } from "../shared/types"
 
 interface UserState {
-  tgData: TgUserType | null;
+  accessToken: string | null
+  userData: UserDataType | null
 }
 
-const initialState: UserState = { tgData: null };
+const initialState: UserState = {
+  accessToken: null,
+  userData: null,
+}
 
 const userSlice = createSlice({
-  name: 'user',
+  name: "user",
   initialState,
   reducers: {
-    setUserTg: (state, action: PayloadAction<TgUserType | null>) => {
-      state.tgData = action.payload;
+    setAuthData: (state, action: PayloadAction<{ accessToken: string; userData: UserDataType }>) => {
+      state.accessToken = action.payload.accessToken
+      state.userData = action.payload.userData
+    },
+    clearAuthData: (state) => {
+      state.accessToken = null
+      state.userData = null
     },
   },
-});
+})
 
-export const { setUserTg } = userSlice.actions;
-const userReducer = userSlice.reducer;
-export default userReducer;
+export const { setAuthData, clearAuthData } = userSlice.actions
+const userReducer = userSlice.reducer
+export default userReducer

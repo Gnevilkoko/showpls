@@ -14,20 +14,14 @@ import supportIcon from "../../assets/icons/ui/support.svg"
 import documentTextIcon from "../../assets/icons/ui/document-text.svg"
 import messageQuestionIcon from "../../assets/icons/ui/message-question.svg"
 import arrowRightIcon from "../../assets/icons/ui/arrow-right-white.svg"
-import { useEffect, useState } from "react"
+import { useState } from "react"
 import MiniWallet from "../../shared/components/MiniWallet"
 import ToggleProfileMode from "../../shared/components/ToggleProfileMode"
 import { useNavigate } from "react-router-dom"
 import { useAppDispatch, useAppSelector } from "../../store"
 import { useTranslation } from "react-i18next"
 import { AVAILABLE_LANGUAGES, setLanguage } from "../../store/languageSlice"
-import type { TgUserType } from "../../shared/types"
 import Navigation from "../../shared/components/Navigation"
-
-const userTest: TgUserType = {
-  id: 1111111,
-  first_name: "Test User",
-}
 
 const Profile = () => {
   const { t } = useTranslation()
@@ -36,14 +30,7 @@ const Profile = () => {
 
   const selectedLang = useAppSelector((state) => state.language)
 
-  const isDev = import.meta.env.MODE === "development"
-
-  const tgUser = useAppSelector((state) => state.user.tgData)
-  const [user, setUser] = useState(isDev ? userTest : tgUser)
-
-  useEffect(() => {
-    if (tgUser) setUser(tgUser)
-  }, [tgUser])
+  const userData = useAppSelector((state) => state.user.userData)
 
   const [isReady, setIsReady] = useState(true)
   const [isOpenLang, setIsOpenLang] = useState<boolean>(false)
@@ -55,8 +42,8 @@ const Profile = () => {
     setIsOpenLang(false)
   }
 
-  if (!user) {
-    return <div>Вы не авторизованы</div>
+  if (!userData) {
+    return <div>{t("notAuthorized")}</div>
   }
 
   return (
@@ -65,7 +52,7 @@ const Profile = () => {
 
       <div className="profile-data_container">
         <div className="profile__avatar-container">
-          <img src={user.photo_url || userIcon} alt="Profile Avatar" className="profile__avatar" />
+          <img src={userData.photoUrl || userIcon} alt="Profile Avatar" className="profile__avatar" />
 
           <div className="stats-star">
             <span>4.8</span>
@@ -76,7 +63,7 @@ const Profile = () => {
 
         <div className="profile__info-container">
           <span className="profile__name">
-            {user.first_name} {user.last_name ? user.last_name : ""}
+            {userData.firstName} {userData.lastName ? userData.lastName : ""}
           </span>
 
           <div className="profile__location">
