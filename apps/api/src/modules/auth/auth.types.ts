@@ -4,4 +4,7 @@ export type TGUser = {
   firstName: string
   lastName?: string | null
   languageCode?: string | null
+  photoUrl?: string | null
+
+  authDate: string
 }

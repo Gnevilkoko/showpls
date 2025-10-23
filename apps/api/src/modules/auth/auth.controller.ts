@@ -63,7 +63,6 @@ export class AuthController {
     try {
       const user = await this.service.authenticate(dto)
       const now = new Date()
-
       req.session.refreshToken = {
         expireAt: addMilliseconds(now, SessionConfig.maxAge).toISOString(),
       }
@@ -86,6 +85,11 @@ export class AuthController {
       if (e instanceof AuthExceptions.CredentialsAreInvalid) {
         throw new APIException(ErrorCode.UNAUTHORIZED, `Credentials are invalid`)
       }
+
+      if (e instanceof AuthExceptions.CredentialsAreExpired) {
+        throw new APIException(ErrorCode.UNAUTHORIZED, `Credentials are expired`)
+      }
+
       if (e instanceof AuthExceptions.IsBanned) {
         throw new APIException(ErrorCode.ACCESS_DENIED, `You are banned`)
       }

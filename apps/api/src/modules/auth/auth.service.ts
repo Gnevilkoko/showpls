@@ -16,6 +16,7 @@ import { DbHelpers } from "../../db"
 import { omit } from "lodash"
 import { FallbackLanguageCode, LanguageCode, Role } from "@share"
 import { z } from "zod"
+import ms from "ms"
 
 @Injectable()
 export class AuthService {
@@ -23,7 +24,7 @@ export class AuthService {
 
   constructor(@InjectRepository(User) public repository: Repository<User>, protected service: UserService) {}
 
-  public async authenticate(data: SignInDto) {
+  public async authenticate(data: SignInDto, ignoreExpiration: boolean = false) {
     let tgUser: TGUser
 
     if (data.type === "tg-mini-app") {
@@ -32,8 +33,15 @@ export class AuthService {
       tgUser = await this.verifyTelegramLoginWidgetData(data.payload, this.token)
     }
 
+    if (!ignoreExpiration) {
+      const distance = new Date().getTime() - new Date(+tgUser.authDate * 1000).getTime()
+      if (distance > ms("1h")) {
+        throw new AuthExceptions.CredentialsAreExpired()
+      }
+    }
+
     try {
-     return await retryWithExponentialBackoff(
+      return await retryWithExponentialBackoff(
         async () => {
           return await this.repository.manager.transaction("SERIALIZABLE", async (manager) => {
             const user = await manager.getRepository(User).findOne({
@@ -51,8 +59,10 @@ export class AuthService {
                 ...omit(tgUser, ["id"]),
                 tgId: tgUser.id.toString(),
                 role: Role.Normal,
-                avatar: null,
-                languageCode: z.enum(LanguageCode).safeParse(tgUser.languageCode).success ? tgUser.languageCode as LanguageCode : FallbackLanguageCode
+                avatar: tgUser.photoUrl,
+                languageCode: z.enum(LanguageCode).safeParse(tgUser.languageCode).success
+                  ? (tgUser.languageCode as LanguageCode)
+                  : FallbackLanguageCode,
               },
               manager
             )
@@ -88,27 +98,24 @@ export class AuthService {
   }
 
   protected decodeInitData(initData: string) {
-    const rawData = qs.parse(initData)
-
-    const user = JSON.parse(rawData.user as any)
-
-    return AuthService.recursiveToCamel(user) as TGUser
+    const rawData = qs.parse(initData) as any
+    const user = AuthService.recursiveToCamel(JSON.parse(rawData.user)) as TGUser
+    user.authDate = (rawData as any).auth_date
+    return user
   }
 
   protected async verifyTelegramLoginWidgetData(data: Record<string, any>, botToken: string) {
     const validator = new AuthDataValidator({ botToken })
     try {
-      const user = await validator.validate(objectToAuthDataMap(data))
-
-      return AuthService.recursiveToCamel(user) as TGUser
-
-
+      const authDataMap = objectToAuthDataMap(data)
+      const user = await validator.validate(authDataMap)
+      return {
+        ...(AuthService.recursiveToCamel(user) as object),
+      } as TGUser
     } catch (e) {
-      throw new AuthExceptions.CredentialsAreInvalid(undefined, {cause: e})
+      throw new AuthExceptions.CredentialsAreInvalid(undefined, { cause: e })
     }
   }
-
-
 
   protected static recursiveToCamel = (item: unknown): unknown => {
     if (Array.isArray(item)) {
