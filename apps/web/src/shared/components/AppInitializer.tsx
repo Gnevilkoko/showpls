@@ -45,6 +45,24 @@ const AppInitializer = ({ children }: AppInitializerProps) => {
             .catch((error) => {
               console.error("Auth error:", error)
             })
+        } else if (userFromTg) {
+          // если нет initData, то используем userFromTg - убрать когда будет развернут бек
+          const tempUser = {
+            id: userFromTg.id,
+            firstName: userFromTg.first_name,
+            lastName: userFromTg.last_name,
+            username: userFromTg.username,
+            languageСode: userFromTg.language_code,
+            photoUrl: userFromTg.photo_url,
+            authDate: Date.now(),
+          }
+
+          dispatch(
+            setAuthData({
+              accessToken: "temp-token",
+              userData: tempUser,
+            })
+          )
         }
       } finally {
         setIsInitialized(true)
