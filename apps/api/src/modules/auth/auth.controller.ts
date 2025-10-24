@@ -1,4 +1,4 @@
-import { Body, Controller, Post, Req } from "@nestjs/common"
+import { Body, Controller, Get, Post, Req } from "@nestjs/common"
 import { ValidationPipe } from "../../common/validation"
 import { SignInDto, SignInSchema } from "./dto/sign-in.dto"
 import { AuthService } from "./auth.service"
@@ -18,6 +18,7 @@ import AuthExceptions from "./auth.exceptions"
 import { RateLimit } from "../../common/rate-limit"
 import { InjectLogger } from "@server/logging"
 import { Logger } from "winston"
+import { GetUser } from "../user/decorators"
 
 @ApiExtraModels(User)
 @ApiTags("Auth")
@@ -31,13 +32,13 @@ export class AuthController {
     protected service: AuthService,
     @InjectRepository(User) protected repository: Repository<User>
   ) {
-    this.logger = logger.child({context: AuthController.name})
-}
+    this.logger = logger.child({ context: AuthController.name })
+  }
 
   @Post("test")
   async test() {
     return {
-      ok: true
+      ok: true,
     }
   }
 
@@ -166,13 +167,24 @@ export class AuthController {
     }
   }
 
-  @Post('sign-out')
-  async signOut(
-    @Req() req: Request
-  ) {
+  @Post("sign-out")
+  async signOut(@Req() req: Request) {
     req.session.destroy((e) => {
       this.logger.error(e)
     })
+  }
 
+  @ApiOkResponse({
+    schema: {
+      type: "array",
+      items: {
+        type: "object",
+        properties: {},
+      },
+    },
+  })
+  @Get("get-rules")
+  async getRules(@GetUser() user: User | null) {
+    return await this.service.getRules(user)
   }
 }

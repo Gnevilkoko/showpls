@@ -20,6 +20,7 @@ import ms from "ms"
 import { ClsService } from "nestjs-cls"
 import { Logger } from "winston"
 import { InjectLogger } from "@server/logging"
+import { AbilityFactory } from "./ability-factory"
 
 @Injectable()
 export class AuthService {
@@ -30,6 +31,7 @@ export class AuthService {
     @InjectLogger() logger: Logger,
     @InjectRepository(User) public repository: Repository<User>,
     protected service: UserService,
+    protected abilityFactory: AbilityFactory,
 
   ) {
     this.logger = logger.child({
@@ -143,6 +145,19 @@ export class AuthService {
     )
   }
 
+  async checkPolitics(user: User): Promise<true> {
+    if (user.banned) {
+      throw new AuthExceptions.IsBanned()
+    }
+    return true
+  }
+
+
+  async getRules(user: User | null) {
+    const ability = await this.abilityFactory.create(user)
+    return AbilityFactory.getPackedRules(ability)
+  }
+
   public static generateToken<T extends object>(payload: T, expMilliseconds?: number) {
     let options: SignOptions = {
       algorithm: "RS256",
@@ -160,12 +175,5 @@ export class AuthService {
       ignoreExpiration: false,
       algorithms: ["RS256"],
     }) as T
-  }
-
-  async checkPolitics(user: User): Promise<true> {
-    if (user.banned) {
-      throw new AuthExceptions.IsBanned()
-    }
-    return true
   }
 }

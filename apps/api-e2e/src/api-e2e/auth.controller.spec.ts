@@ -16,6 +16,7 @@ import { APIExceptionResponse } from "@server/api"
 import { getLoggerToken } from "@server/logging"
 import { ClsService } from "nestjs-cls"
 import { Logger } from "winston"
+import { AbilityFactory } from "../../../api/src/modules/auth"
 
 jest.mock("../../../api/src/config/bot.config", () => {
   const actual = jest.requireActual("../../../api/src/config/bot.config")
@@ -46,7 +47,7 @@ describe("AuthController", () => {
       .overrideProvider(AuthService)
       .useFactory({
         inject: [getLoggerToken(), getRepositoryToken(User), UserService],
-        factory: (logger: Logger, repository: Repository<User>, service: UserService) => {
+        factory: (logger: Logger, repository: Repository<User>, service: UserService, abilityFactory: AbilityFactory) => {
           class UpgradedAuthService extends AuthService {
             authenticate(data: SignInDto, ignoreExpiration: boolean = false) {
               return super.authenticate(data, true)
@@ -57,7 +58,7 @@ describe("AuthController", () => {
             }
           }
 
-          return new UpgradedAuthService(logger, repository, service)
+          return new UpgradedAuthService(logger, repository, service, abilityFactory)
         },
       })
       .compile()

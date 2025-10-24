@@ -49,10 +49,7 @@ export class UserController {
   @UseGuards(AuthGuard)
   @Get("get-me")
   async getMe(@GetUser() user: User) {
-    const ability = await this.abilityFactory.create(user)
-    return {
-      ...(await this.service.retrieve(user.id)),
-      rules: AbilityFactory.getPackedRules(ability),
-    }
+    return  this.service.retrieve(user.id)
   }
+
 }
