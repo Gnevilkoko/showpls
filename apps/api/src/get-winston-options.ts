@@ -2,6 +2,7 @@ import { format, LoggerOptions, transports } from "winston"
 import { color, colorize } from "json-colorizer"
 import { serializeError } from "serialize-error-cjs"
 import { ConfigService } from "./config"
+import { ClsServiceManager } from 'nestjs-cls';
 
 
 function deepSerializeError(err: unknown): unknown {
@@ -17,6 +18,17 @@ function deepSerializeError(err: unknown): unknown {
 
   return serialized;
 }
+
+export const clsFormat = format((info) => {
+  const cls = ClsServiceManager.getClsService();
+  if (cls) {
+    const traceId = cls.get("id")
+    if (traceId) {
+      info.id = traceId;
+    }
+  }
+  return info;
+});
 
 
 const jsonColorFormat = format.printf(({ level, message, timestamp, context, data, ...meta }) => {
@@ -62,6 +74,7 @@ export function getWinstonOptions(): LoggerOptions {
   return {
     level: "silly",
     format: format.combine(
+      clsFormat(),
       serializeErrorsFormat(),
       format.timestamp({
         format: ConfigService.isProduction() ? undefined : `dd.MM.YYYY HH:mm:ss.SSS`,

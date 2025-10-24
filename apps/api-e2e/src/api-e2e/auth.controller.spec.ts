@@ -45,8 +45,8 @@ describe("AuthController", () => {
     })
       .overrideProvider(AuthService)
       .useFactory({
-        inject: [getLoggerToken(), getRepositoryToken(User), UserService, ClsService],
-        factory: (logger: Logger, repository: Repository<User>, service: UserService, cls: ClsService) => {
+        inject: [getLoggerToken(), getRepositoryToken(User), UserService],
+        factory: (logger: Logger, repository: Repository<User>, service: UserService) => {
           class UpgradedAuthService extends AuthService {
             authenticate(data: SignInDto, ignoreExpiration: boolean = false) {
               return super.authenticate(data, true)
@@ -57,7 +57,7 @@ describe("AuthController", () => {
             }
           }
 
-          return new UpgradedAuthService(logger, repository, service, cls)
+          return new UpgradedAuthService(logger, repository, service)
         },
       })
       .compile()

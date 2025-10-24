@@ -30,16 +30,15 @@ export class AuthService {
     @InjectLogger() logger: Logger,
     @InjectRepository(User) public repository: Repository<User>,
     protected service: UserService,
-    protected clsService: ClsService
+
   ) {
     this.logger = logger.child({
-      id: this.clsService.get("id")
+     context: AuthService.name
     })
   }
 
   public async authenticate(data: SignInDto, ignoreExpiration: boolean = false) {
     let tgUser: TGUser
-
     if (data.type === "tg-mini-app") {
       tgUser = this.verifyInitData(data.payload, this.token)
     } else if (data.type === "tg-login-widget") {
