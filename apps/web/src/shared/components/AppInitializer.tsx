@@ -4,12 +4,44 @@ import { initLanguageFromTg } from "../../store/languageSlice"
 import { setAuthData } from "../../store/userSlice"
 import { useSignInMutation } from "../../store/authApi"
 import { tgService } from "../../services/webApp"
+import type { TelegramWebAppUserType, UserDataType } from "../types"
+import { useTranslation } from "react-i18next"
 
 interface AppInitializerProps {
   children: React.ReactNode
 }
 
+const getFallbackUserData = (userFromTg: TelegramWebAppUserType): UserDataType => {
+  return {
+    id: userFromTg.id.toString(),
+    role: "normal",
+    tgId: userFromTg.id.toString(),
+    username: userFromTg.username || null,
+    firstName: userFromTg.first_name,
+    lastName: userFromTg.last_name || null,
+    languageCode: userFromTg.language_code || "en",
+    avatar: userFromTg.photo_url || null,
+    banned: false,
+    lastSeenAt: Date.now().toString(),
+    createdAt: Date.now().toString(),
+    balances: {
+      XTR: "0",
+    },
+  }
+}
+
+const setFallbackAuth = (userFromTg: TelegramWebAppUserType, dispatch: ReturnType<typeof useAppDispatch>) => {
+  const tempUser = getFallbackUserData(userFromTg)
+  dispatch(
+    setAuthData({
+      accessToken: "temp-token",
+      userData: tempUser,
+    })
+  )
+}
+
 const AppInitializer = ({ children }: AppInitializerProps) => {
+  const { t } = useTranslation()
   const dispatch = useAppDispatch()
   const [signIn] = useSignInMutation()
   const [isInitialized, setIsInitialized] = useState(false)
@@ -27,6 +59,7 @@ const AppInitializer = ({ children }: AppInitializerProps) => {
 
         const initData = window.Telegram?.WebApp.initData
 
+        // Пытаемся авторизоваться через бэкенд
         if (initData) {
           try {
             const result = await signIn({
@@ -43,44 +76,14 @@ const AppInitializer = ({ children }: AppInitializerProps) => {
               )
             }
           } catch {
-            // Fallback to Telegram user data - убрать когда будет развернут бек
+            // Fallback к Telegram данным при ошибке бэкенда
             if (userFromTg) {
-              const tempUser = {
-                id: userFromTg.id,
-                firstName: userFromTg.first_name,
-                lastName: userFromTg.last_name,
-                username: userFromTg.username,
-                languageСode: userFromTg.language_code,
-                photoUrl: userFromTg.photo_url,
-                authDate: Date.now(),
-              }
-
-              dispatch(
-                setAuthData({
-                  accessToken: "temp-token",
-                  userData: tempUser,
-                })
-              )
+              setFallbackAuth(userFromTg, dispatch)
             }
           }
         } else if (userFromTg) {
-          // если нет initData, то используем userFromTg - убрать когда будет развернут бек
-          const tempUser = {
-            id: userFromTg.id,
-            firstName: userFromTg.first_name,
-            lastName: userFromTg.last_name,
-            username: userFromTg.username,
-            languageСode: userFromTg.language_code,
-            photoUrl: userFromTg.photo_url,
-            authDate: Date.now(),
-          }
-
-          dispatch(
-            setAuthData({
-              accessToken: "temp-token",
-              userData: tempUser,
-            })
-          )
+          // Fallback к Telegram данным если нет initData
+          setFallbackAuth(userFromTg, dispatch)
         }
       } finally {
         setIsInitialized(true)
@@ -93,7 +96,7 @@ const AppInitializer = ({ children }: AppInitializerProps) => {
   if (!isInitialized) {
     return (
       <div className="app-loading">
-        <div className="loading-spinner">Loading...</div>
+        <div className="loading-spinner">{t("loading")}</div>
       </div>
     )
   }

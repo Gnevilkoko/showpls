@@ -52,7 +52,7 @@ const Profile = () => {
 
       <div className="profile-data_container">
         <div className="profile__avatar-container">
-          <img src={userData.photoUrl || userIcon} alt="Profile Avatar" className="profile__avatar" />
+          <img src={userData.avatar || userIcon} alt="Profile Avatar" className="profile__avatar" />
 
           <div className="stats-star">
             <span>4.8</span>

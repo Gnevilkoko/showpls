@@ -23,13 +23,20 @@ export type UserType = {
 }
 
 export type UserDataType = {
-  id: number
+  id: string
+  role: string
+  tgId: string
+  username: string | null
   firstName: string
-  lastName?: string
-  username?: string
-  languageCode?: string
-  photoUrl?: string
-  authDate: number
+  lastName: string | null
+  avatar: string | null
+  languageCode: string
+  banned: boolean
+  lastSeenAt: string
+  createdAt: string
+  balances: {
+    XTR: string
+  }
 }
 
 export type ChatType = {
@@ -93,6 +100,27 @@ export type TaskType = {
   }[]
   customer_id: number
   performer_id: number | null
+}
+
+// API Error types
+export type APIErrorCode =
+  | "business-error"
+  | "validation-error"
+  | "access-denied"
+  | "unauthorized"
+  | "access-token-expired"
+  | "internal-server-error"
+  | "rate-limited"
+
+export type APIErrorResponse = {
+  statusCode: number
+  errorCode: APIErrorCode
+  message?: string | object
+}
+
+export type APIError = {
+  data?: APIErrorResponse
+  status?: number
 }
 
 // export type UserFromBackType = {
