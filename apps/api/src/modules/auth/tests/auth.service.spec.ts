@@ -1,8 +1,9 @@
-import crypto from "crypto"
 import { AuthService } from "../auth.service"
+import { plainToInstance } from "class-transformer"
+import { User } from "@share/entities"
 
 describe("AuthService", () => {
-  const service = new AuthService({child: () => {}} as any, {} as any, {} as any, {} as any)
+  const service = new AuthService({ child: () => {} } as any, {} as any, {} as any, {} as any)
   const botToken = "123456789:ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefg"
 
   it("should verifyInitData() works", async () => {

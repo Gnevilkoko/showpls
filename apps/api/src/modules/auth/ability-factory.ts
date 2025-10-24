@@ -65,7 +65,7 @@ export class AbilityFactory {
   }
 
   public static detectSubjectType(item: any) {
-    return item.constructor as ExtractSubjectType<Subjects>
+    return item.constructor.name as ExtractSubjectType<Subjects>
   }
 
   public static getPackedRules(ability: AppAbility) {

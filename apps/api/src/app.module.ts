@@ -1,10 +1,9 @@
-import { Global, MiddlewareConsumer, Module, NestModule, RequestMethod } from "@nestjs/common"
-import { AppService } from "./app.service"
+import { MiddlewareConsumer, Module, NestModule } from "@nestjs/common"
 import { WinstonModule } from "nest-winston"
 import { getWinstonOptions } from "./get-winston-options"
 import ms from "ms"
 import { TypeOrmModule } from "@nestjs/typeorm"
-import { DatabaseConfig, RedisConfig } from "./config"
+import { BotConfig, ConfigService, DatabaseConfig, RedisConfig } from "./config"
 import { RedisModule } from "@liaoliaots/nestjs-redis"
 import { ThrottlerModule, ThrottlerModuleOptions } from "@nestjs/throttler"
 import { DataSource, DataSourceOptions } from "typeorm"
@@ -12,20 +11,17 @@ import { AuthModule } from "./modules/auth/auth.module"
 import path from "path"
 import { AcceptLanguageResolver, I18nModule } from "nestjs-i18n"
 import { FallbackLanguageCode } from "@share"
-import { AsyncLocalStorage } from "node:async_hooks"
-import { ClsModule, ClsMiddleware, ClsServiceManager } from "nestjs-cls"
+import { ClsMiddleware, ClsModule } from "nestjs-cls"
 import { RequestLoggingMiddleware } from "@server/logging"
-import { randomUUID } from "crypto"
-import { Request } from "express"
-
+import { TelegrafModule } from "nestjs-telegraf"
 
 @Module({
   imports: [
     ClsModule.forRoot({
       global: true,
       middleware: {
-        mount: false
-      }
+        mount: false,
+      },
     }),
     WinstonModule.forRoot({
       ...getWinstonOptions(),
@@ -76,7 +72,6 @@ import { Request } from "express"
         } as ThrottlerModuleOptions
       },
     }),
-
     I18nModule.forRoot({
       logging: false,
       fallbackLanguage: FallbackLanguageCode,
@@ -91,6 +86,17 @@ import { Request } from "express"
         }),
       ],
     }),
+    // TelegrafModule.forRoot({
+    //   token: BotConfig.token,
+    //   launchOptions: {
+    //     webhook: ConfigService.isProduction()
+    //       ? {
+    //           domain: BotConfig.domain,
+    //           path: BotConfig.webhookSecretPath,
+    //         }
+    //       : undefined,
+    //   },
+    // }),
 
     AuthModule,
   ],
