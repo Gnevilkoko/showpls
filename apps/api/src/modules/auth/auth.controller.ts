@@ -34,6 +34,13 @@ export class AuthController {
     this.logger = logger.child({context: AuthController.name})
 }
 
+  @Post("test")
+  async test() {
+    return {
+      ok: true
+    }
+  }
+
   @ApiBody({
     schema: {
       oneOf: [

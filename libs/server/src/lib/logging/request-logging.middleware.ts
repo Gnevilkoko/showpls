@@ -14,25 +14,26 @@ export class RequestLoggingMiddleware implements NestMiddleware {
     protected cls: ClsService
   ) {}
 
-  async use(request: Request, res: Response, next: NextFunction) {
+  async use(req: Request, res: Response, next: NextFunction) {
     const id = randomUUID()
     this.cls.set("id", id)
 
-    this.logger.info(`Request ${request.method} ${request.path}`, {
-      method: request.method,
-      url: request.path,
+    const path = req.originalUrl
+
+    this.logger.info(`Request ${req.method} ${path}`, {
+      method: req.method,
+      url: path,
       id: this.cls.get("id"),
-      ip: getClientIp(request),
-      userAgent: request.get("user-agent") || undefined,
-      body: request.body,
-      query: isEmpty(request.query) ? undefined : request.query,
-      params: isEmpty(request.params) ? undefined : request.params,
-      userId: get(request, "payload.id"),
-      sessionId: get(request, "session.id"),
+      ip: getClientIp(req),
+      userAgent: req.get("user-agent") || undefined,
+      body: isEmpty(req.body) ? undefined : req.body,
+      query: isEmpty(req.query) ? undefined : req.query,
+      userId: get(req, "payload.id"),
+      sessionId: get(req, "session.id"),
       // headers: {},
     })
 
-    request.start = process.hrtime.bigint()
+    req.start = process.hrtime.bigint()
     next()
   }
 }

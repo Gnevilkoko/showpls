@@ -18,16 +18,24 @@ import { FallbackLanguageCode, LanguageCode, Role } from "@share"
 import { z } from "zod"
 import ms from "ms"
 import { ClsService } from "nestjs-cls"
+import { Logger } from "winston"
+import { InjectLogger } from "@server/logging"
 
 @Injectable()
 export class AuthService {
+  protected logger: Logger
   protected token = BotConfig.token
 
   constructor(
+    @InjectLogger() logger: Logger,
     @InjectRepository(User) public repository: Repository<User>,
     protected service: UserService,
-    // protected clsService: ClsService
-  ) {}
+    protected clsService: ClsService
+  ) {
+    this.logger = logger.child({
+      id: this.clsService.get("id")
+    })
+  }
 
   public async authenticate(data: SignInDto, ignoreExpiration: boolean = false) {
     let tgUser: TGUser

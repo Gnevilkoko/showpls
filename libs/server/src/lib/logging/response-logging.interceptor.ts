@@ -8,24 +8,25 @@ import { ClsService } from "nestjs-cls"
 
 @Injectable()
 export class ResponseLoggingInterceptor implements NestInterceptor {
-  constructor(@InjectLogger() private readonly logger: Logger,  protected cls: ClsService) {}
+  constructor(@InjectLogger() private readonly logger: Logger, protected cls: ClsService) {}
 
   public intercept(context: ExecutionContext, next: CallHandler): Observable<any> {
     const ctx = context.switchToHttp()
-    const request = ctx.getRequest<Request>()
+    const req = ctx.getRequest<Request>()
     const response = ctx.getResponse<Response>()
+    const path = req.originalUrl
 
     return next.handle().pipe(
       tap((data) => {
         const end = process.hrtime.bigint()
-        this.logger.info(`Response ${request.method} ${request.path} ${response.statusCode}`, {
-          method: request.method,
-          url: request.path,
+        this.logger.info(`Response ${req.method} ${path} ${response.statusCode}`, {
+          method: req.method,
+          url: path,
           id: this.cls.get("id"),
-          userId: get(request, "payload.id"),
-          sessionId: get(request, "session.id"),
+          userId: get(req, "payload.id"),
+          sessionId: get(req, "session.id"),
           body: data,
-          duration: request.start ? Number(end - request.start) : undefined,
+          duration: req.start ? Number(end - req.start) : undefined,
         })
       })
     )

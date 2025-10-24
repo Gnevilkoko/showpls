@@ -5,8 +5,7 @@ import { APIException, APIExceptionResponse } from "@server/api/api.exception"
 import { Logger } from "winston"
 import { ErrorCode } from "@share"
 import { CRUDExceptions } from "./crud.exceptions"
-import { get, omit } from "lodash"
-import { randomUUID } from 'crypto';
+import { get } from "lodash"
 import { serializeError } from "serialize-error-cjs"
 import { ClsService } from "nestjs-cls"
 
@@ -19,15 +18,13 @@ export class APIExceptionFilter {
     // this.logger = logger.child({
     //   context: APIExceptionFilter.name,
     // })
-
   }
 
   async catch(e: Error, host: ArgumentsHost) {
     const ctx = host.switchToHttp()
-    const response = ctx.getResponse<Response>()
-    const request = ctx.getRequest<Request>()
+    const resp = ctx.getResponse<Response>()
+    const req = ctx.getRequest<Request>()
     let isUnexpectedError: boolean = true
-
 
     let exceptionResponseData: APIExceptionResponse = {
       statusCode: 500,
@@ -55,24 +52,23 @@ export class APIExceptionFilter {
       isUnexpectedError = false
     }
 
-    response.status(exceptionResponseData.statusCode).json(exceptionResponseData)
+    resp.status(exceptionResponseData.statusCode).json(exceptionResponseData)
     const end = process.hrtime.bigint()
 
-    this.logger.error(`Response ${request.method} ${request.path} ${exceptionResponseData.statusCode}`, {
+    this.logger.error(`Response ${req.method} ${req.path} ${exceptionResponseData.statusCode}`, {
       // error: stack ? JSON.parse(JSON.stringify(e, Object.getOwnPropertyNames(e))) : undefined,
-       method: request.method,
-      url: request.path,
+      method: req.method,
+      url: req.originalUrl,
       id: this.cls.get("id"),
-          userId: get(request, "payload.id"),
-      sessionId: get(request, "session.id"),
+      userId: get(req, "payload.id"),
+      sessionId: get(req, "session.id"),
 
       body: exceptionResponseData,
 
       error: isUnexpectedError ? serializeError(e) : undefined,
 
       // stack: shouldLogStack ? e.stack : undefined,
-      duration: request.start ? Number(end - request.start) : undefined,
-
+      duration: req.start ? Number(end - req.start) : undefined,
     })
   }
 }

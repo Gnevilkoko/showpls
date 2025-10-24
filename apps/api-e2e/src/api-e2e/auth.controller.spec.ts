@@ -13,7 +13,9 @@ import { SignInDto } from "../../../api/src/modules/auth/dto/sign-in.dto"
 import request from "supertest"
 import { ErrorCode } from "@share"
 import { APIExceptionResponse } from "@server/api"
-
+import { getLoggerToken } from "@server/logging"
+import { ClsService } from "nestjs-cls"
+import { Logger } from "winston"
 
 jest.mock("../../../api/src/config/bot.config", () => {
   const actual = jest.requireActual("../../../api/src/config/bot.config")
@@ -43,8 +45,8 @@ describe("AuthController", () => {
     })
       .overrideProvider(AuthService)
       .useFactory({
-        inject: [getRepositoryToken(User), UserService],
-        factory: (repository: Repository<User>, service: UserService) => {
+        inject: [getLoggerToken(), getRepositoryToken(User), UserService, ClsService],
+        factory: (logger: Logger, repository: Repository<User>, service: UserService, cls: ClsService) => {
           class UpgradedAuthService extends AuthService {
             authenticate(data: SignInDto, ignoreExpiration: boolean = false) {
               return super.authenticate(data, true)
@@ -55,7 +57,7 @@ describe("AuthController", () => {
             }
           }
 
-          return new UpgradedAuthService(repository, service)
+          return new UpgradedAuthService(logger, repository, service, cls)
         },
       })
       .compile()
