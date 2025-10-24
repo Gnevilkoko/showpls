@@ -1,6 +1,6 @@
-import { Module } from "@nestjs/common"
+import { Global, MiddlewareConsumer, Module, NestModule, RequestMethod } from "@nestjs/common"
 import { AppService } from "./app.service"
-import { WinstonModule, utilities } from "nest-winston"
+import { WinstonModule } from "nest-winston"
 import { getWinstonOptions } from "./get-winston-options"
 import ms from "ms"
 import { TypeOrmModule } from "@nestjs/typeorm"
@@ -10,17 +10,26 @@ import { ThrottlerModule, ThrottlerModuleOptions } from "@nestjs/throttler"
 import { DataSource, DataSourceOptions } from "typeorm"
 import { AuthModule } from "./modules/auth/auth.module"
 import path from "path"
-import { AcceptLanguageResolver, HeaderResolver, I18nModule } from "nestjs-i18n"
-import { FallbackLanguageCode, LanguageCode } from "@share"
+import { AcceptLanguageResolver, I18nModule } from "nestjs-i18n"
+import { FallbackLanguageCode } from "@share"
+import { AsyncLocalStorage } from "node:async_hooks"
+import { ClsModule, ClsMiddleware } from "nestjs-cls"
+import { RequestLoggingMiddleware } from "@server/logging"
+import { randomUUID } from "crypto"
+import { Request } from "express"
 
 
 @Module({
   imports: [
+    ClsModule.forRoot({
+      global: true,
+      middleware: {
+        mount: false
+      }
+    }),
     WinstonModule.forRoot({
       ...getWinstonOptions(),
-
     }),
-
     // CacheModule.registerAsync({
     //   isGlobal: true,
     //   useFactory: async () => {
@@ -67,6 +76,7 @@ import { FallbackLanguageCode, LanguageCode } from "@share"
         } as ThrottlerModuleOptions
       },
     }),
+
     I18nModule.forRoot({
       logging: false,
       fallbackLanguage: FallbackLanguageCode,
@@ -74,14 +84,21 @@ import { FallbackLanguageCode, LanguageCode } from "@share"
         path: path.join(__dirname, "/assets/i18n/"),
         watch: false,
       },
-      resolvers: [new AcceptLanguageResolver({ // RFC4647, BCP 47(Best Current Practice 47), <language>-<region>.
-        matchType: "loose"
-      })],
+      resolvers: [
+        new AcceptLanguageResolver({
+          // RFC4647, BCP 47(Best Current Practice 47), <language>-<region>.
+          matchType: "loose",
+        }),
+      ],
     }),
 
     AuthModule,
   ],
-  providers: [AppService],
   controllers: [],
+  exports: [],
 })
-export class AppModule {}
+export class AppModule implements NestModule {
+  configure(consumer: MiddlewareConsumer): void {
+    consumer.apply(ClsMiddleware, RequestLoggingMiddleware).forRoutes("*")
+  }
+}

@@ -4,10 +4,11 @@ import { InjectLogger } from "@server/logging/inject-logger"
 import { Request, Response } from "express"
 import { Observable, tap } from "rxjs"
 import { get } from "lodash"
+import { ClsService } from "nestjs-cls"
 
 @Injectable()
 export class ResponseLoggingInterceptor implements NestInterceptor {
-  constructor(@InjectLogger() private readonly logger: Logger) {}
+  constructor(@InjectLogger() private readonly logger: Logger,  protected cls: ClsService) {}
 
   public intercept(context: ExecutionContext, next: CallHandler): Observable<any> {
     const ctx = context.switchToHttp()
@@ -20,7 +21,7 @@ export class ResponseLoggingInterceptor implements NestInterceptor {
         this.logger.info(`Response ${request.method} ${request.path} ${response.statusCode}`, {
           method: request.method,
           url: request.path,
-          id: request.id,
+          id: this.cls.get("id"),
           userId: get(request, "payload.id"),
           sessionId: get(request, "session.id"),
           body: data,

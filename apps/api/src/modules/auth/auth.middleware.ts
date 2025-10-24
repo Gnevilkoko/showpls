@@ -6,12 +6,14 @@ import { JsonWebTokenError, TokenExpiredError } from "jsonwebtoken"
 import { AuthService } from "./auth.service"
 import { InjectLogger } from "@server/logging"
 import { Logger } from "winston"
+import { ClsService } from "nestjs-cls"
 
 @Injectable()
 export class AuthMiddleware implements NestMiddleware {
 
   constructor(
-    @InjectLogger() protected logger: Logger
+    @InjectLogger() protected logger: Logger,
+    protected cls: ClsService
   ) {}
 
   async use(req: Request, res: Response, next: NextFunction) {
@@ -30,6 +32,7 @@ export class AuthMiddleware implements NestMiddleware {
     try {
       try {
         req.payload = AuthService.verifySignature(token) as any
+        this.cls.set("userId", req.payload.id)
       } catch (e: any) {
         if (e instanceof TokenExpiredError) {
           throw new APIException(ErrorCode.ACCESS_TOKEN_EXPIRED)

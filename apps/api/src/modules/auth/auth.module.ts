@@ -31,6 +31,5 @@ export class AuthModule implements NestModule {
 		consumer
 			.apply(AuthMiddleware)
 			.forRoutes({path: "*", method: RequestMethod.ALL})
-		// Это установка middleware глобально, а не только в рамках конкретно этого модуля.
 	}
 }

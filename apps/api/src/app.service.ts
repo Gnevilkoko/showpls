@@ -3,27 +3,17 @@ import { getLoggerToken, InjectLogger, RequestLoggingMiddleware, ResponseLogging
 import fs from "fs"
 import { ConfigService, SessionConfig } from "./config"
 import cookieParser from "cookie-parser"
-import { RedisStore } from "connect-redis"
 import session from "express-session"
 import { RedisService } from "@liaoliaots/nestjs-redis"
 import { ValidationPipe } from "./common/validation"
 import { Logger } from "winston"
 import { APIExceptionFilter } from "@server/api/api.exception-filter"
-import r from "redis" // You can use any module to create redis client
+import { AsyncLocalStorage } from "node:async_hooks"
+import { ClsService } from "nestjs-cls"
+
 @Injectable()
 export class AppService {
-  constructor(@InjectLogger() protected logger: Logger) {
-    // this.logger.info({
-    //   message: "Test",
-    //   data: {
-    //     id: 1,
-    //     nullable: null,
-    //     foo: "bar",
-    //     arr: [1, 2, 3],
-    //     test: true,
-    //   }
-    // })
-  }
+  constructor(@InjectLogger() protected logger: Logger) {}
 
   static async upgrade(app: INestApplication) {
     if (!fs.existsSync(ConfigService.mediaRoot)) {
@@ -40,8 +30,6 @@ export class AppService {
     const redis = redisService.getOrThrow()
 
     const logger = app.get<Logger>(getLoggerToken())
-
-
 
     // @ts-ignore
     app.set("trust proxy", 1) // before set express-session
@@ -73,13 +61,16 @@ export class AppService {
       })
     )
 
-    const requestLoggingMiddleware = new RequestLoggingMiddleware(logger)
-    app.use(requestLoggingMiddleware.use.bind(requestLoggingMiddleware))
+    // const als = app.get<AsyncLocalStorage<any>>(AsyncLocalStorage)
+    // const requestLoggingMiddleware = new RequestLoggingMiddleware(logger, als)
+    // app.use(requestLoggingMiddleware.use.bind(requestLoggingMiddleware))
 
-    const responseLoggingInterceptor = new ResponseLoggingInterceptor(logger)
+    const clsService = app.get(ClsService)
+
+    const responseLoggingInterceptor = new ResponseLoggingInterceptor(logger, clsService)
     app.useGlobalInterceptors(responseLoggingInterceptor)
 
-    app.useGlobalFilters(new APIExceptionFilter(logger))
+    app.useGlobalFilters(new APIExceptionFilter(logger, clsService))
     app.useGlobalPipes(new ValidationPipe())
 
     app.enableShutdownHooks()

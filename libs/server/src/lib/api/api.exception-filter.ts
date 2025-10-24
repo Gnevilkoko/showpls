@@ -8,13 +8,14 @@ import { CRUDExceptions } from "./crud.exceptions"
 import { get, omit } from "lodash"
 import { randomUUID } from 'crypto';
 import { serializeError } from "serialize-error-cjs"
+import { ClsService } from "nestjs-cls"
 
 @Catch(Error)
 export class APIExceptionFilter {
   protected bizStatusCode = 400
   // protected logger: Logger
 
-  constructor(@InjectLogger() protected logger: Logger) {
+  constructor(@InjectLogger() protected logger: Logger, protected cls: ClsService) {
     // this.logger = logger.child({
     //   context: APIExceptionFilter.name,
     // })
@@ -61,14 +62,13 @@ export class APIExceptionFilter {
       // error: stack ? JSON.parse(JSON.stringify(e, Object.getOwnPropertyNames(e))) : undefined,
        method: request.method,
       url: request.path,
-      id: request.id,
+      id: this.cls.get("id"),
           userId: get(request, "payload.id"),
       sessionId: get(request, "session.id"),
 
       body: exceptionResponseData,
 
-
-      ...(isUnexpectedError ? serializeError(e) : undefined),
+      error: isUnexpectedError ? serializeError(e) : undefined,
 
       // stack: shouldLogStack ? e.stack : undefined,
       duration: request.start ? Number(end - request.start) : undefined,

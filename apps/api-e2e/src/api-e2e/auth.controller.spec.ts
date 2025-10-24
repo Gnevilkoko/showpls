@@ -1,6 +1,6 @@
 import { INestApplication } from "@nestjs/common"
 import { Test, TestingModule } from "@nestjs/testing"
-import axios, { AxiosInstance } from "axios"
+import axios, { AxiosError, AxiosInstance } from "axios"
 import { DataSource, Repository } from "typeorm"
 import { getDataSourceToken, getRepositoryToken } from "@nestjs/typeorm"
 import ms from "ms"
@@ -10,6 +10,10 @@ import { AuthService } from "../../../api/src/modules/auth/auth.service"
 import { User } from "@share/entities"
 import { UserService } from "../../../api/src/modules/user"
 import { SignInDto } from "../../../api/src/modules/auth/dto/sign-in.dto"
+import request from "supertest"
+import { ErrorCode } from "@share"
+import { APIExceptionResponse } from "@server/api"
+
 
 jest.mock("../../../api/src/config/bot.config", () => {
   const actual = jest.requireActual("../../../api/src/config/bot.config")
@@ -82,6 +86,27 @@ describe("AuthController", () => {
     expect(data.user.tgId).toBe("1814724100")
     expect(data.accessToken).toBeDefined()
   })
+
+  it("should /auth/sign-in 400 (ValidationError)",  async () => {
+    const response = await request(app.getHttpServer()).post("/api/auth/sign-in").send({
+      type: "tg-mini-app",
+      payload: null
+    })
+    expect(response.statusCode).toBe(400)
+    const data = response.body as APIExceptionResponse
+    expect(data.errorCode).toBe(ErrorCode.VALIDATION_ERROR)
+  })
+
+    it("should /auth/sign-in 400 (UNAUTHORIZED) - CredentialsAreInvalid",  async () => {
+    const response = await request(app.getHttpServer()).post("/api/auth/sign-in").send({
+      type: "tg-mini-app",
+      payload: "..."
+    })
+    expect(response.statusCode).toBe(400)
+    const data = response.body as APIExceptionResponse
+    expect(data.errorCode).toBe(ErrorCode.UNAUTHORIZED)
+  })
+
 
   it("POST /auth/sign-in 200 for tg-login-widget", async () => {
     const resp = await instance.post("sign-in", {

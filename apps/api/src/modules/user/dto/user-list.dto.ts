@@ -15,10 +15,7 @@ const schema = paginationSchema.extend({
     .object({
       createdAt: z.enum(OrderValue).optional(),
     })
-    .default({
-      createdAt: OrderValue.DESC
-    }),
+    .default({}),
 })
 
 export class UserListDto extends createZodDto(schema) {}
-

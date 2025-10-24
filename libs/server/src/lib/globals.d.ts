@@ -14,8 +14,7 @@ declare module "express-session" {
 declare global {
   namespace Express {
     interface Request {
-      id: string
-      payload: User
+      payload: User | undefined
       start: bigint
     }
   }

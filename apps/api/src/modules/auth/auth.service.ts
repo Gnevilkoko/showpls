@@ -17,12 +17,17 @@ import { omit } from "lodash"
 import { FallbackLanguageCode, LanguageCode, Role } from "@share"
 import { z } from "zod"
 import ms from "ms"
+import { ClsService } from "nestjs-cls"
 
 @Injectable()
 export class AuthService {
   protected token = BotConfig.token
 
-  constructor(@InjectRepository(User) public repository: Repository<User>, protected service: UserService) {}
+  constructor(
+    @InjectRepository(User) public repository: Repository<User>,
+    protected service: UserService,
+    // protected clsService: ClsService
+  ) {}
 
   public async authenticate(data: SignInDto, ignoreExpiration: boolean = false) {
     let tgUser: TGUser

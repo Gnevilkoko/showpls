@@ -1,7 +1,23 @@
 import { format, LoggerOptions, transports } from "winston"
 import { color, colorize } from "json-colorizer"
+import { serializeError } from "serialize-error-cjs"
 import { ConfigService } from "./config"
-import { utilities } from "nest-winston"
+
+
+function deepSerializeError(err: unknown): unknown {
+  if (!(err instanceof Error)) return err;
+
+  const serialized = serializeError(err) as Record<string, unknown>;
+
+  if (err.cause instanceof Error) {
+    serialized.cause = deepSerializeError(err.cause);
+  } else if (err.cause && typeof err.cause === 'object') {
+    serialized.cause = err.cause;
+  }
+
+  return serialized;
+}
+
 
 const jsonColorFormat = format.printf(({ level, message, timestamp, context, data, ...meta }) => {
   const logObject = {
@@ -25,17 +41,35 @@ const jsonColorFormat = format.printf(({ level, message, timestamp, context, dat
   })
 })
 
+const serializeErrorsFormat = format((info) => {
+  if (info instanceof Error) {
+    return {
+      ...info,
+      error: deepSerializeError(info),
+      message: info.message,
+      test: "here",
+    }
+  }
+
+  if (info.error instanceof Error) {
+    info.error = deepSerializeError(info.error)
+  }
+
+  return info
+})
+
 export function getWinstonOptions(): LoggerOptions {
   return {
     level: "silly",
     format: format.combine(
+      serializeErrorsFormat(),
       format.timestamp({
-        format: `dd.MM.YYYY HH:mm:ss.SSS`,
+        format: ConfigService.isProduction() ? undefined : `dd.MM.YYYY HH:mm:ss.SSS`,
         // format: `YYYY-MM-DD HH:mm:ss.SSS`,
       }),
-      format.errors({ stack: true }),
-      jsonColorFormat
-      // ...(ConfigService.isDevelopment() ? [jsonColorFormat] : [])
+      // format.errors({ stack: true }),
+      jsonColorFormat,
+      ...(ConfigService.isProduction() ? [format.json()] : [jsonColorFormat])
     ),
     transports: [new transports.Console()],
   }

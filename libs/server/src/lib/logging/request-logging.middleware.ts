@@ -2,21 +2,26 @@ import { Injectable, NestMiddleware } from "@nestjs/common"
 import { InjectLogger } from "./inject-logger"
 import { Logger } from "winston"
 import { NextFunction, Request, Response } from "express"
-import { randomUUID } from "crypto"
 import { getClientIp } from "request-ip"
 import { get, isEmpty } from "lodash"
+import { ClsService } from "nestjs-cls"
+import { randomUUID } from "crypto"
 
 @Injectable()
 export class RequestLoggingMiddleware implements NestMiddleware {
-  constructor(@InjectLogger() private readonly logger: Logger) {}
+  constructor(
+    @InjectLogger() private readonly logger: Logger,
+    protected cls: ClsService
+  ) {}
 
   async use(request: Request, res: Response, next: NextFunction) {
-    request.id = randomUUID()
+    const id = randomUUID()
+    this.cls.set("id", id)
 
     this.logger.info(`Request ${request.method} ${request.path}`, {
       method: request.method,
       url: request.path,
-      id: request.id,
+      id: this.cls.get("id"),
       ip: getClientIp(request),
       userAgent: request.get("user-agent") || undefined,
       body: request.body,
@@ -27,8 +32,7 @@ export class RequestLoggingMiddleware implements NestMiddleware {
       // headers: {},
     })
 
-    const start = process.hrtime.bigint()
-    request.start = start
+    request.start = process.hrtime.bigint()
     next()
   }
 }
