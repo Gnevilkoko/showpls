@@ -6,6 +6,7 @@ import { User } from "@share/entities"
 import { UserController } from "../user/user.controller"
 import { AuthMiddleware } from "./auth.middleware"
 import { UserService } from "../user/user.service"
+import { AbilityFactory } from "./ability-factory"
 
 
 @Module({
@@ -16,6 +17,7 @@ import { UserService } from "../user/user.service"
   ],
   providers: [
     AuthService,
+    AbilityFactory,
     UserService
   ],
   controllers: [
@@ -23,6 +25,7 @@ import { UserService } from "../user/user.service"
     UserController
   ],
   exports: [
+    AbilityFactory,
     UserService
   ]
 })

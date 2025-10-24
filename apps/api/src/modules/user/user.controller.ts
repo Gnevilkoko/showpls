@@ -9,12 +9,17 @@ import { UserService } from "./user.service"
 import { GetUser } from "./decorators"
 import { UserListDto } from "./dto/user-list.dto"
 import { IdDto } from "../../common/dto"
+import { AbilityFactory } from "../auth"
 
 @ApiExtraModels(User)
 @ApiTags("User")
 @Controller("user")
 export class UserController {
-  constructor(@InjectRepository(User) protected repository: Repository<User>, protected service: UserService) {}
+  constructor(
+    @InjectRepository(User) protected repository: Repository<User>,
+    protected service: UserService,
+    protected abilityFactory: AbilityFactory
+  ) {}
 
   @ApiOkResponse({
     schema: SwaggerUtilities.getPaginatedResponseSchema(User),
@@ -43,7 +48,11 @@ export class UserController {
   })
   @UseGuards(AuthGuard)
   @Get("get-me")
-  async getMe(@GetUser() user: { id: string }) {
-    return await this.service.retrieve(user.id)
+  async getMe(@GetUser() user: User) {
+    const ability = await this.abilityFactory.create(user)
+    return {
+      ...(await this.service.retrieve(user.id)),
+      rules: AbilityFactory.getPackedRules(ability),
+    }
   }
 }

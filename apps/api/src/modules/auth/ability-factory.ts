@@ -2,12 +2,11 @@ import { Ability, AbilityBuilder, AbilityClass, ExtractSubjectType, MongoQuery }
 import { Injectable } from "@nestjs/common"
 import { Action, Role } from "@share"
 import { Subjects } from "@share/action.enum"
-import {
-  User,
-} from "@share/entities"
+import { User } from "@share/entities"
 import { NeverError } from "@share/errors"
 
 import { plainToInstance } from "class-transformer"
+import { packRules } from "@casl/ability/extra"
 
 export type AppAbility = Ability<[Action, Subjects]>
 
@@ -21,7 +20,7 @@ export class AbilityFactory {
     if (!user) {
       this.forAnonym(ability)
       return ability.build({
-        detectSubjectType: (item) => item.constructor as ExtractSubjectType<Subjects>,
+        detectSubjectType: AbilityFactory.detectSubjectType,
       })
     }
 
@@ -39,29 +38,47 @@ export class AbilityFactory {
     }
 
     return ability.build({
-      detectSubjectType: (item) => item.constructor as ExtractSubjectType<Subjects>,
+      detectSubjectType: AbilityFactory.detectSubjectType,
     })
   }
 
-  protected forAnonym(ability: AbilityBuilder<Ability<[Action, Subjects], MongoQuery>>) {
+  protected forAnonym(ability: AbilityBuilder<AppAbility>) {
     const { can, cannot } = ability
   }
 
   protected forAdmin(
-    ability: AbilityBuilder<Ability<[Action, Subjects], MongoQuery>>,
-    user: Pick<User, "id" | "role">,
+    ability: AbilityBuilder<AppAbility>,
+    user: Pick<User, "id" | "role">
   ) {
     const { can, cannot } = ability
     can([Action.Create, Action.Read, Action.Update, Action.Delete], "all")
   }
 
   protected forNormal(
-    ability: AbilityBuilder<Ability<[Action, Subjects], MongoQuery>>,
-    user: Pick<User, "id" | "role">,
+    ability: AbilityBuilder<AppAbility>,
+    user: Pick<User, "id" | "role">
   ) {
     const { can, cannot } = ability
 
     can(Action.Read, User, { id: user.id })
     can(Action.Update, User, { id: user.id })
+  }
+
+  public static detectSubjectType(item: any) {
+    return item.constructor as ExtractSubjectType<Subjects>
+  }
+
+  public static getPackedRules(ability: AppAbility) {
+    return packRules(ability.rules, AbilityFactory.packSubject)
+  }
+
+  protected static packSubject(subject: any) {
+    if (typeof subject === "string") {
+      return subject
+    }
+    if (typeof subject === "function") {
+      return subject.name
+    }
+    return subject.constructor.name
   }
 }
