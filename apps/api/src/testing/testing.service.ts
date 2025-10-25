@@ -35,17 +35,17 @@ export class TestingService {
 
     const redis = new Redis(RedisConfig.getDSN())
     await new Promise((resolve, reject) => {
-      redis.on("connect", () => {
+      redis.once("connect", () => {
         resolve(undefined)
       })
-
-      redis.on("error", (e) => {
-        // console.error(e)
+      redis.once("error", (e) => {
         reject(e)
       })
     })
+    await redis.flushall()
+    await redis.quit()
 
-    redis.flushall()
+    await dataSource.destroy()
   }
 
   static getMustHaveModules(): (DynamicModule | { new (): any })[] {
@@ -82,7 +82,7 @@ export class TestingService {
         },
         dataSourceFactory: async (options) => {
           const dataSource = new DataSource({ ...options } as DataSourceOptions)
-          // await dataSource.initialize()
+          await dataSource.initialize()
           return dataSource
         },
       }),
@@ -93,6 +93,9 @@ export class TestingService {
         closeClient: true,
         readyLog: true,
         errorLog: true,
+        commonOptions: {
+          keepAlive: ms("10m"),
+        },
       }),
       ThrottlerModule.forRootAsync({
         useFactory: () => {

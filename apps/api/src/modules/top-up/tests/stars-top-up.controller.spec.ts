@@ -1,3 +1,4 @@
+import whyIsNodeRunning from 'why-is-node-running'
 import { Test, TestingModule } from "@nestjs/testing"
 import { DataSource } from "typeorm"
 import { StarsTopUpService } from "../stars-top-up.service"
@@ -15,6 +16,8 @@ import AuthService from "../../auth/auth.service"
 import { ClsModule } from "nestjs-cls"
 import { ClsService } from "nestjs-cls"
 
+
+
 describe("StarsTopUpController", () => {
   let module: TestingModule
   let dataSource: DataSource
@@ -23,8 +26,9 @@ describe("StarsTopUpController", () => {
   let url: string = "http://localhost:8000"
   let instance: AxiosInstance
 
+
   beforeEach(async () => {
-    await TestingService.dropDataSources()
+     await TestingService.dropDataSources()
     module = await Test.createTestingModule({
       imports: [...TestingService.getMustHaveModules(), TypeOrmModule.forFeature([StarsTopUp])],
       providers: [
@@ -55,7 +59,8 @@ describe("StarsTopUpController", () => {
   })
 
   afterEach(async () => {
-    await module.close()
+    await app.close()
+    // whyIsNodeRunning();
   })
 
   async function createUser() {
