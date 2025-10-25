@@ -13,6 +13,7 @@ import { AbilityFactory } from "../auth"
 import { Action, ErrorCode } from "@share"
 import { APIException } from "@server/api"
 import UserExceptions from "./user.exceptions"
+import { SetLanguageCodeDto } from "./dto/set-language-code.dto"
 
 @ApiExtraModels(User)
 @ApiTags("User")
@@ -70,5 +71,14 @@ export class UserController {
   @Get("get-me")
   async getMe(@GetUser() user: User) {
     return this.service.retrieve(user.id)
+  }
+
+  @UseGuards(AuthGuard)
+  @Post("set-language-code")
+  async setLanguageCode(
+    @GetUser() user: User,
+    @Body() {code}: SetLanguageCodeDto
+  ) {
+    await this.service.setLanguageCode(user.id, code)
   }
 }

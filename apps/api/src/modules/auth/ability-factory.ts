@@ -62,7 +62,7 @@ export class AbilityFactory {
 
 
     can(Action.Read, User, { id: user.id })
-    can(Action.Update, User, { id: user.id })
+    can(Action.Update, User, ["languageCode"], { id: user.id }, )
 
     can(Action.Create, StarsTopUp)
     can(Action.Read, StarsTopUp, {userId: user.id})

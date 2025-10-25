@@ -36,7 +36,7 @@ export class StarsTopUpService {
 
     const link = await this.bot.telegram.createInvoiceLink({
       title: "Top Up",
-      description: "",
+      description: `Пополнение баланса на ${amount} Stars`,
       payload: id,
       currency: "XTR",
       prices: [

@@ -86,6 +86,10 @@ export class UserService {
     )
   }
 
+  public async setLanguageCode(id: string, languageCode: LanguageCode) {
+    await this.repository.update({id}, {languageCode})
+  }
+
   public async incrementBalance(
     {
       userId,
