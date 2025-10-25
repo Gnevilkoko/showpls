@@ -4,9 +4,11 @@ import { WinstonModule } from "nest-winston"
 import { getWinstonOptions } from "./get-winston-options"
 import { DocumentBuilder, SwaggerModule } from "@nestjs/swagger"
 import { cleanupOpenApiDoc } from "nestjs-zod"
-import { ConfigService } from "./config"
+import { BotConfig, ConfigService } from "./config"
 import { AppService } from "./app.service"
 import { APIExceptionResponse } from "@server/api"
+import { Context, Telegraf } from "telegraf"
+import { getBotToken } from "nestjs-telegraf"
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule, {
@@ -14,6 +16,11 @@ async function bootstrap() {
   })
 
   await AppService.upgrade(app)
+
+  if (ConfigService.isProduction()) {
+    const bot = app.get<Telegraf<Context>>(getBotToken())
+    app.use(bot.webhookCallback(BotConfig.webhookSecretPath))
+  }
 
   if (ConfigService.isDevelopment()) {
     const document = SwaggerModule.createDocument(
