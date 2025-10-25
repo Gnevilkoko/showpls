@@ -10,6 +10,7 @@ import UserExceptions from "./user.exceptions"
 import { NotImplemented } from "@share/errors"
 import { UserListDto } from "./dto/user-list.dto"
 import { paginate } from "nestjs-typeorm-paginate"
+import { z } from "zod"
 
 @Injectable()
 export class UserService {
@@ -87,8 +88,14 @@ export class UserService {
   }
 
   public async setLanguageCode(id: string, languageCode: LanguageCode) {
-    await this.repository.update({id}, {languageCode})
+    await this.repository.update({ id }, { languageCode })
   }
+
+  protected incrementBalanceSchema = z.object({
+    userId: z.coerce.bigint().positive(),
+    token: z.enum(Token),
+    amount: z.coerce.bigint(),
+  })
 
   public async incrementBalance(
     {
@@ -102,6 +109,17 @@ export class UserService {
     },
     manager: EntityManager | undefined
   ) {
+
+    const result = this.incrementBalanceSchema.safeParse({
+      userId,
+      token,
+      amount,
+    })
+
+    if (!result.success) {
+      throw new UserExceptions.CannotChangeBalance(undefined, { cause: result.error })
+    }
+
     await (manager || this.repository.manager).query(
       `
         UPDATE "user" u
@@ -128,6 +146,29 @@ export class UserService {
     },
     manager: EntityManager | undefined
   ) {
+
+    const result = this.incrementBalanceSchema.safeParse({
+      userId,
+      token,
+      amount,
+    })
+
+    if (!result.success) {
+      throw new UserExceptions.CannotChangeBalance(undefined, { cause: result.error })
+    }
+
+    const user = await (manager.getRepository(User) || this.repository).findOneOrFail({
+      where: {
+        id: userId,
+      },
+    })
+
+    const balance = BigInt(user.balances[token])
+
+    if (balance - BigInt(amount) < 0) {
+      throw new UserExceptions.BalanceCannotBeNegative()
+    }
+
     return await this.incrementBalance(
       {
         userId,

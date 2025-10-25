@@ -11,6 +11,7 @@ export class StarsTopUp {
   @Column("varchar", {
     length: 255,
     nullable: true,
+    unique: true
   })
   txid: string | null
 
