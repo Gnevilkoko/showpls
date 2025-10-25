@@ -2,7 +2,7 @@ import { CorsOptions } from "@nestjs/common/interfaces/external/cors-options.int
 
 export default function () {
   return {
-    origin: [],
+    origin: [process.env.NGROK_URL],
     allowedHeaders: ["Origin", "Content-Type", "Accept", "Authorization", "User-Agent", "X-Requested-With"],
     credentials: true,
     methods: ["GET", "POST", "PUT", "PATCH", "DELETE"],
