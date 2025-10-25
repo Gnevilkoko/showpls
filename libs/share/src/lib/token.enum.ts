@@ -1,7 +1,7 @@
 
 
 export enum Token {
-  XTR = "XTR",
+  STARS = "STARS",
   TON = "TON",
   USDT = "USDT"
 }

@@ -9,13 +9,10 @@ import { randomUUID } from "crypto"
 
 @Injectable()
 export class RequestLoggingMiddleware implements NestMiddleware {
-  constructor(
-    @InjectLogger() private readonly logger: Logger,
-    protected cls: ClsService
-  ) {}
+  constructor(@InjectLogger() private readonly logger: Logger, protected cls: ClsService) {}
 
   async use(req: Request, res: Response, next: NextFunction) {
-    const id = randomUUID()
+    const id = req.header("x-trace-id") || randomUUID()
     this.cls.set("id", id)
 
     const path = req.originalUrl

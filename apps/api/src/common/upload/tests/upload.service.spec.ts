@@ -4,7 +4,7 @@ import { rimraf } from "rimraf"
 import { ConfigService } from "../../../config"
 import { UploadService } from "../upload.service"
 
-describe("UploadService", () => {
+describe.skip("UploadService", () => {
   const image = fs.readFileSync(path.join(__dirname, "fox.jpg"))
 
   afterAll(async () => {

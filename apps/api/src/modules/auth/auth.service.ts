@@ -21,9 +21,10 @@ import { ClsService } from "nestjs-cls"
 import { Logger } from "winston"
 import { InjectLogger } from "@server/logging"
 import { AbilityFactory } from "./ability-factory"
+import { instanceToPlain } from "class-transformer"
 
 @Injectable()
-export class AuthService {
+class AuthService {
   protected logger: Logger
   protected token = BotConfig.token
 
@@ -167,7 +168,7 @@ export class AuthService {
       options.expiresIn = `${expMilliseconds}`
     }
 
-    return jwt.sign(payload, JwtConfig.privateKey, options)
+    return jwt.sign(instanceToPlain(payload), JwtConfig.privateKey, options)
   }
 
   public static verifySignature<T extends object>(token: string): T {
@@ -177,3 +178,5 @@ export class AuthService {
     }) as T
   }
 }
+
+export default AuthService;

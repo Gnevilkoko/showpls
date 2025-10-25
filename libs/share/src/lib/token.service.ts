@@ -10,7 +10,7 @@ export class TokenService {
     const decimals: Record<Token, number> = {
       TON: 9,
       USDT: 6,
-      XTR: 6,
+      STARS: 6,
     }
     return decimals[token]
   }

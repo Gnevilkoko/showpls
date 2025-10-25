@@ -2,7 +2,7 @@ import { Ability, AbilityBuilder, AbilityClass, ExtractSubjectType, MongoQuery }
 import { Injectable } from "@nestjs/common"
 import { Action, Role } from "@share"
 import { Subjects } from "@share/action.enum"
-import { User } from "@share/entities"
+import { StarsTopUp, User } from "@share/entities"
 import { NeverError } from "@share/errors"
 
 import { plainToInstance } from "class-transformer"
@@ -60,8 +60,12 @@ export class AbilityFactory {
   ) {
     const { can, cannot } = ability
 
+
     can(Action.Read, User, { id: user.id })
     can(Action.Update, User, { id: user.id })
+
+    can(Action.Create, StarsTopUp)
+    can(Action.Read, StarsTopUp, {userId: user.id})
   }
 
   public static detectSubjectType(item: any) {

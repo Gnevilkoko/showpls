@@ -14,6 +14,8 @@ import { FallbackLanguageCode } from "@share"
 import { ClsMiddleware, ClsModule } from "nestjs-cls"
 import { RequestLoggingMiddleware } from "@server/logging"
 import { TelegrafModule } from "nestjs-telegraf"
+import { BotHandler } from "./modules/bot/bot.handler"
+import { TopUpModule } from "./modules/top-up/top-up.module"
 
 @Module({
   imports: [
@@ -86,25 +88,28 @@ import { TelegrafModule } from "nestjs-telegraf"
         }),
       ],
     }),
-    // TelegrafModule.forRoot({
-    //   token: BotConfig.token,
-    //   launchOptions: {
-    //     webhook: ConfigService.isProduction()
-    //       ? {
-    //           domain: BotConfig.domain,
-    //           path: BotConfig.webhookSecretPath,
-    //         }
-    //       : undefined,
-    //   },
-    // }),
+    TelegrafModule.forRoot({
+      token: BotConfig.token,
+      launchOptions: {
+        webhook: ConfigService.isProduction()
+          ? {
+              domain: BotConfig.domain,
+              path: BotConfig.webhookSecretPath,
+            }
+          : undefined,
+      },
+    }),
 
     AuthModule,
+    TopUpModule
   ],
+  providers: [BotHandler],
   controllers: [],
   exports: [],
 })
 export class AppModule implements NestModule {
   configure(consumer: MiddlewareConsumer): void {
-    consumer.apply(ClsMiddleware, RequestLoggingMiddleware).forRoutes("*")
+
+    // consumer.apply(ClsMiddleware, RequestLoggingMiddleware).forRoutes("*")
   }
 }

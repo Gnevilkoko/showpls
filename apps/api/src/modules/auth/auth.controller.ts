@@ -1,7 +1,7 @@
 import { Body, Controller, Get, Post, Req } from "@nestjs/common"
 import { ValidationPipe } from "../../common/validation"
 import { SignInDto, SignInSchema } from "./dto/sign-in.dto"
-import { AuthService } from "./auth.service"
+import AuthService from "./auth.service"
 import { ConfigService, SessionConfig } from "../../config"
 import ms from "ms"
 import { get, omit } from "lodash"

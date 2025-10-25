@@ -10,6 +10,6 @@ nx run api:dev
 
 ```shell
 docker-compose -f dev-docker-compose.yaml up -d 
-nx test api
-nx e2e api-e2e --runInBand
+nx test api --runInBand --detectOpenHandles  --forceExit --bail
+nx e2e api-e2e --runInBand 
 ```

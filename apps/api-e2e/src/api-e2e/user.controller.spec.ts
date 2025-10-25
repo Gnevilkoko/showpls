@@ -9,7 +9,7 @@ import { getDataSourceToken } from "@nestjs/typeorm"
 import { UserService } from "../../../api/src/modules/user"
 import { faker } from "@faker-js/faker/locale/en"
 import { LanguageCode, Role } from "@share"
-import { AuthService } from "../../../api/src/modules/auth/auth.service"
+import AuthService from "../../../api/src/modules/auth/auth.service"
 import { instanceToPlain } from "class-transformer"
 
 jest.setTimeout(ms("1m"))

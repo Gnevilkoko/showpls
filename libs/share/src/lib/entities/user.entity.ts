@@ -1,8 +1,9 @@
-import { Column, CreateDateColumn, Entity, PrimaryGeneratedColumn } from "typeorm"
+import { Column, CreateDateColumn, Entity, OneToMany, PrimaryGeneratedColumn, type Relation } from "typeorm"
 import { Role } from "../role.enum"
 import { ApiProperty } from "@nestjs/swagger"
 import { LanguageCode } from "../language-code.enum"
 import { Token } from "../token.enum"
+import { StarsTopUp } from "./stars-top-up.entity"
 
 @Entity()
 export class User {
@@ -61,6 +62,9 @@ export class User {
   @ApiProperty({ type: "boolean" })
   @Column("boolean")
   banned: boolean
+
+  @OneToMany(() => StarsTopUp, (topUp) => topUp.user)
+  starsTopUps: Relation<StarsTopUp>[]
 
   @ApiProperty({ type: "string" })
   @Column({ type: "timestamptz" })

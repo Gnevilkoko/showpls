@@ -32,7 +32,7 @@ export class UserService {
           lastName: params.lastName || null,
           balances: !balances
             ? {
-                [Token.XTR]: "0",
+                [Token.STARS]: "0",
                 [Token.TON]: "0",
                 [Token.USDT]: "0",
               }
@@ -83,6 +83,54 @@ export class UserService {
           createdAt: sort.createdAt,
         },
       }
+    )
+  }
+
+  public async incrementBalance(
+    {
+      userId,
+      token,
+      amount,
+    }: {
+      userId: string
+      token: Token
+      amount: string
+    },
+    manager: EntityManager | undefined
+  ) {
+    await (manager || this.repository.manager).query(
+      `
+        UPDATE "user" u
+        SET "balances" = jsonb_set(
+                "balances",
+                '{${token}}',
+                to_jsonb((COALESCE(("balances" ->> '${token}'), '0')::decimal + $2::decimal)::text),
+                true)
+        WHERE u.id = $1
+    `,
+      [userId, amount]
+    )
+  }
+
+  public async decrementBalance(
+    {
+      userId,
+      token,
+      amount,
+    }: {
+      userId: string
+      token: Token
+      amount: string
+    },
+    manager: EntityManager | undefined
+  ) {
+    return await this.incrementBalance(
+      {
+        userId,
+        token,
+        amount: (-+amount).toString(),
+      },
+      manager
     )
   }
 }

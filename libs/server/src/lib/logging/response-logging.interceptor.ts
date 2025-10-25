@@ -18,6 +18,10 @@ export class ResponseLoggingInterceptor implements NestInterceptor {
 
     return next.handle().pipe(
       tap((data) => {
+        if (response.statusCode === 201) {
+          response.status(200)
+        }
+
         const end = process.hrtime.bigint()
         this.logger.info(`Response ${req.method} ${path} ${response.statusCode}`, {
           method: req.method,

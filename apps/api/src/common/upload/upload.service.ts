@@ -1,8 +1,9 @@
 import { fromBuffer } from "file-type"
 import fs from "fs"
 import path from "path"
-import { v4 as uuidV4 } from "uuid"
 import { ConfigService } from "../../config"
+import { randomUUID } from "crypto"
+
 
 type UploadFileParams = {
   file: Buffer
@@ -69,7 +70,7 @@ export class UploadService {
   }
 
   protected static generateFileName(extension: string) {
-    return uuidV4() + `.${extension}`
+    return randomUUID() + `.${extension}`
   }
 
   public static getAbsoluteFilePath(filePath: string) {
