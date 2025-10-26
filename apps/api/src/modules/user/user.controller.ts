@@ -73,7 +73,6 @@ export class UserController {
     return this.service.retrieve(user.id)
   }
 
-  @ApiSecurity("jwt-auth")
   @UseGuards(AuthGuard)
   @Post("set-language-code")
   async setLanguageCode(
