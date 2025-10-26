@@ -39,6 +39,11 @@ export type UserDataType = {
   }
 }
 
+export type ChatOrderType = {
+  order: TaskType
+  escrowStatus: "locked" | "released" | "rejected" | null
+}
+
 export type ChatType = {
   chat_id: number
   avatar: string | null
@@ -48,7 +53,7 @@ export type ChatType = {
   last_update: number
   is_favorite: boolean
   is_active_order: boolean
-  order: TaskType | null
+  orders: ChatOrderType[] | null
   is_read: boolean
   count_unread: number | null
 }
@@ -100,6 +105,7 @@ export type TaskType = {
   }[]
   customer_id: number
   performer_id: number | null
+  arbitrationApproved: boolean // Флаг: арбитраж согласен закрыть задачу
 }
 
 // API Error types

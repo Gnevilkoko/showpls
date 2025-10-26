@@ -25,6 +25,7 @@ export const TasksList: TaskType[] = [
     ],
     customer_id: 100,
     performer_id: 200,
+    arbitrationApproved: true,
   },
   {
     id: "2",
@@ -35,8 +36,9 @@ export const TasksList: TaskType[] = [
     price: 35,
     position: { lat: 37.75254, lng: -122.472629 },
     tags: [{ type: "km", count: 1.2 }],
-    customer_id: 200,
-    performer_id: 100,
+    customer_id: 100,
+    performer_id: 200,
+    arbitrationApproved: false,
   },
   {
     id: "3",
@@ -50,5 +52,6 @@ export const TasksList: TaskType[] = [
     tags: [{ type: "km", count: 1.2 }],
     customer_id: 200,
     performer_id: 100,
+    arbitrationApproved: false,
   },
 ]

@@ -1,25 +1,25 @@
-import { useCallback, useMemo, useState } from 'react';
-import { useTranslation } from 'react-i18next';
-import type { ChatType } from '../../shared/types';
-import Navigation from '../../shared/components/Navigation';
-import ChatsHeader from './components/ChatsHeader';
-import ChatsList from './screens/ChatsList';
-import Chat from './screens/Chat';
-import { chatsData } from './data/chatsData';
+import { useCallback, useMemo, useState } from "react"
+import { useTranslation } from "react-i18next"
+import type { ChatType } from "../../shared/types"
+import Navigation from "../../shared/components/Navigation"
+import ChatsHeader from "./components/ChatsHeader"
+import ChatsList from "./screens/ChatsList"
+import Chat from "./screens/Chat"
+import { chatsData } from "./data/chatsData"
 
 const Chats = () => {
-  const { t } = useTranslation();
-  const [searchValue, setSearchValue] = useState<string>('');
-  const [isFavoriteList, setIsFavoriteList] = useState<boolean>(false);
-  const [openChat, setOpenChat] = useState<ChatType | null>(null);
+  const { t } = useTranslation()
+  const [searchValue, setSearchValue] = useState<string>("")
+  const [isFavoriteList, setIsFavoriteList] = useState<boolean>(false)
+  const [openChat, setOpenChat] = useState<ChatType | null>(null)
 
   const handleOpenChat = useCallback((chat: ChatType | null) => {
-    setOpenChat(chat);
-  }, []);
+    setOpenChat(chat)
+  }, [])
 
   const handleSwitchFavorite = useCallback(() => {
-    setIsFavoriteList((prev) => !prev);
-  }, []);
+    setIsFavoriteList((prev) => !prev)
+  }, [])
 
   const counters = useMemo(
     () => ({
@@ -27,10 +27,10 @@ const Chats = () => {
       favorites: chatsData.count_unread_favorite,
     }),
     []
-  );
+  )
 
   if (openChat) {
-    return <Chat chat={openChat} handleOpenChat={handleOpenChat} />;
+    return <Chat chat={openChat} handleOpenChat={handleOpenChat} />
   }
 
   return (
@@ -51,12 +51,12 @@ const Chats = () => {
           callbackOpenChat={handleOpenChat}
         />
       ) : (
-        <p className="zero-chats-paragraph">{t('zeroChats')}</p>
+        <p className="zero-chats-paragraph">{t("zeroChats")}</p>
       )}
 
       <Navigation />
     </div>
-  );
-};
+  )
+}
 
-export default Chats;
+export default Chats
