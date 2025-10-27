@@ -1,5 +1,7 @@
-export const BOT_USERNAME = "showpls_vercel_bot"
-export const BOT_ID = "8064276204"
+const isDev = import.meta.env.DEV
+
+export const BOT_USERNAME = isDev ? import.meta.env.VITE_DEV_BOT_USERNAME : "showpls_vercel_bot"
+export const BOT_ID = isDev ? import.meta.env.VITE_DEV_BOT_ID : "8064276204"
 
 export const API_KEY_MAPS = "AIzaSyDJt2qqfPntS72Iw0qakVpDC7vH9VwzHn0"
 // export const MAP_ID = "326e5c0581dc4ddc71a87e5d"

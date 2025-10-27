@@ -17,11 +17,9 @@ import { useTranslation } from "react-i18next"
 import Navigation from "../../shared/components/Navigation"
 import ImageViewer from "../../shared/components/ImageViewer"
 import ValidationIcon from "../../shared/components/ValidationIcon"
-
-interface UploadedImage {
-  file: File
-  url: string
-}
+import type { TaskType, UploadedImageType } from "../../shared/types"
+import TaskInfo from "../Chats/components/TaskInfo"
+import Modal from "../../shared/components/Modal"
 
 const Tasks = () => {
   const location = useLocation()
@@ -69,7 +67,7 @@ const Tasks = () => {
     }
   }, [activeSection, activeTaskId])
 
-  const [images, setImages] = useState<UploadedImage[]>([])
+  const [images, setImages] = useState<UploadedImageType[]>([])
   const [selectedImageIndex, setSelectedImageIndex] = useState<number | null>(null)
 
   // Состояния для валидации инпутов
@@ -88,12 +86,13 @@ const Tasks = () => {
     const files = e.target.files
     if (!files) return
 
-    const newImages: UploadedImage[] = Array.from(files).map((file) => ({
+    const newImages: UploadedImageType[] = Array.from(files).map((file) => ({
       file,
       url: URL.createObjectURL(file),
     }))
 
     setImages((prev) => [...prev, ...newImages])
+    e.target.value = ""
   }
 
   const handleRemove = (url: string) => {
@@ -147,6 +146,17 @@ const Tasks = () => {
       setIsMinutesDropdownOpen(false)
     }
   }, [isUrgent])
+
+  const [selectedTask, setSelectedTask] = useState<TaskType | null>(null)
+
+  const handleSelectTask = (task: TaskType) => {
+    setSelectedTask(task)
+  }
+
+  const handleCloseTask = () => {
+    setSelectedTask(null)
+  }
+
   return (
     <div className="page tasks">
       <Header />
@@ -445,7 +455,9 @@ const Tasks = () => {
                     <span>{task.description}</span>
                   </div>
 
-                  <button className="task__button">{t("tasksPage.viewDetails")}</button>
+                  <button className="task__button" onClick={() => handleSelectTask(task)}>
+                    {t("tasksPage.viewDetails")}
+                  </button>
                 </div>
               </div>
             ))}
@@ -524,6 +536,10 @@ const Tasks = () => {
           onClose={handleCloseImageViewer}
         />
       )}
+
+      <Modal isOpen={selectedTask !== null} onClose={handleCloseTask}>
+        <TaskInfo selectedOrder={selectedTask as TaskType} />
+      </Modal>
     </div>
   )
 }

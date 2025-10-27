@@ -9,8 +9,10 @@ import { tgService } from "../../services/webApp"
 import TonWalletConnect from "./TonWalletConnect"
 import type { TransactionType } from "../../shared/types"
 import Navigation from "../../shared/components/Navigation"
+import Modal from "../../shared/components/Modal"
 import { useAppSelector } from "../../store"
 import OpenTelegramButton from "../AccessGate/OpenTelegramButton"
+import { useNotification } from "../../shared/hooks/useNotification"
 
 const transactionList: TransactionType[] = [
   {
@@ -63,6 +65,8 @@ const transactionList: TransactionType[] = [
 
 const Wallet = () => {
   const { t } = useTranslation()
+  const notification = useNotification()
+
   const [isOpenModalTopUp, setIsOpenModalTopUp] = useState(false)
   const [activeSection, setActiveSection] = useState<"stars" | "ton">("stars")
   const [stars, setStars] = useState<number>(1)
@@ -96,15 +100,15 @@ const Wallet = () => {
     webApp.openInvoice(data.link, (status) => {
       switch (status) {
         case "paid":
-          webApp.showAlert("Оплата успешно завершена!")
+          notification.showSuccess("paymentSuccess")
           setIsOpenModalTopUp(false)
           break
         case "cancelled":
-          webApp.showAlert("Оплата была отменена.")
+          notification.showWarning("paymentCancelled")
           break
         case "failed":
         default:
-          webApp.showAlert("Ошибка при оплате. Попробуйте ещё раз.")
+          notification.showError("paymentFailed")
           break
       }
     })
@@ -180,60 +184,58 @@ const Wallet = () => {
         ))}
       </div>
 
-      <div className={`modal__wrapper ${isOpenModalTopUp ? "active" : ""}`} onClick={() => setIsOpenModalTopUp(false)}>
-        <div className="modal" onClick={(e) => e.stopPropagation()}>
-          <h2 className="wallet-header">{t("topUp")}</h2>
+      <Modal isOpen={isOpenModalTopUp} onClose={() => setIsOpenModalTopUp(false)}>
+        <h2 className="wallet-header">{t("topUp")}</h2>
 
-          <div className="specials__options">
-            <button
-              className={`specials__option ${activeSection === "stars" ? "active" : ""} `}
-              onClick={() => handleClickOption("stars")}
-            >
-              Stars
-            </button>
+        <div className="specials__options">
+          <button
+            className={`specials__option ${activeSection === "stars" ? "active" : ""} `}
+            onClick={() => handleClickOption("stars")}
+          >
+            Stars
+          </button>
 
-            <button
-              className={`specials__option ${activeSection === "ton" ? "active" : ""} `}
-              onClick={() => handleClickOption("ton")}
-            >
-              TON Wallet
-            </button>
-          </div>
-
-          {activeSection === "stars" &&
-            (isInTelegram ? (
-              <>
-                <input
-                  type="number"
-                  value={stars}
-                  onChange={(e) => {
-                    let val = Number(e.target.value)
-
-                    if (isNaN(val) || val < 1) val = 1
-                    if (val > 10000) val = 10000
-
-                    setStars(val)
-                  }}
-                  inputMode="numeric" // открывает цифровую клавиатуру на мобилках
-                  placeholder={t("tasksPage.budgetPlaceholder")}
-                  className="budget-input"
-                />
-
-                <button className="wallet-content__button green" onClick={handleTopUpStars}>
-                  {t("topUpStars")}
-                </button>
-              </>
-            ) : (
-              <>
-                <span className="stars-not-supported-text">{t("miniWallet.starsNotSupported")}</span>
-
-                <OpenTelegramButton />
-              </>
-            ))}
-
-          {activeSection === "ton" && <TonWalletConnect />}
+          <button
+            className={`specials__option ${activeSection === "ton" ? "active" : ""} `}
+            onClick={() => handleClickOption("ton")}
+          >
+            TON Wallet
+          </button>
         </div>
-      </div>
+
+        {activeSection === "stars" &&
+          (isInTelegram ? (
+            <>
+              <input
+                type="number"
+                value={stars}
+                onChange={(e) => {
+                  let val = Number(e.target.value)
+
+                  if (isNaN(val) || val < 1) val = 1
+                  if (val > 10000) val = 10000
+
+                  setStars(val)
+                }}
+                inputMode="numeric" // открывает цифровую клавиатуру на мобилках
+                placeholder={t("tasksPage.budgetPlaceholder")}
+                className="budget-input"
+              />
+
+              <button className="wallet-content__button green" onClick={handleTopUpStars}>
+                {t("topUpStars")}
+              </button>
+            </>
+          ) : (
+            <>
+              <span className="stars-not-supported-text">{t("miniWallet.starsNotSupported")}</span>
+
+              <OpenTelegramButton />
+            </>
+          ))}
+
+        {activeSection === "ton" && <TonWalletConnect />}
+      </Modal>
 
       <Navigation />
     </div>

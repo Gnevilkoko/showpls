@@ -1,3 +1,8 @@
+export type UploadedImageType = {
+  file: File
+  url: string
+}
+
 export type TelegramAuthDataType = {
   id: number
   first_name: string
@@ -61,7 +66,7 @@ export type ChatType = {
 export type Message = {
   id: number
   type: "notification" | "message"
-  variant?: "upload" | "newTask"
+  variant?: "upload" | "newTask" | "permissionToCancel"
   sender_id: number
   receiver_id: number
   text: string | null

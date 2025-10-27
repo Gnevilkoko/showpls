@@ -118,6 +118,7 @@ const resources = {
           authError: "Authorization error",
           dataSaveError: "Failed to save data",
           orderCreateError: "Failed to create order",
+          paymentFailed: "Payment failed, please try again.",
         },
         success: {
           dataSaved: "Data saved successfully!",
@@ -128,6 +129,7 @@ const resources = {
           orderCancelledSuccessfully:
             "The order was successfully cancelled! All funds will be returned to your wallet soon.",
           orderCompletedSuccessfully: "The order has been successfully sent for confirmation!",
+          paymentSuccess: "Payment completed successfully!",
         },
         info: {
           newUpdate: "New update available",
@@ -139,6 +141,7 @@ const resources = {
           sessionExpiring: "Session will expire soon",
           insufficientFunds: "Insufficient funds",
           lowBalance: "Low balance",
+          paymentCancelled: "Payment was cancelled.",
         },
         default: {
           loadingComplete: "Loading complete",
@@ -169,6 +172,10 @@ const resources = {
         "Make sure you uploaded the photo in good quality, and completed all the customer's wishes",
       executorUploadPhoto: "Executor have uploaded photo",
       customerNewTask: "Сustomer made a new task(s)",
+      arbitration: "Arbitration",
+      permissionToCancel: "You have the opportunity to cancel the order",
+      addFiles: "Add files",
+      addTask: "Suggest a task",
     },
   },
   ru: {
@@ -288,6 +295,7 @@ const resources = {
           authError: "Ошибка авторизации",
           dataSaveError: "Не удалось сохранить данные",
           orderCreateError: "Не удалось создать заказ",
+          paymentFailed: "Ошибка при оплате. Попробуйте ещё раз.",
         },
         success: {
           dataSaved: "Данные сохранены успешно!",
@@ -298,6 +306,7 @@ const resources = {
           orderCancelledSuccessfully:
             "Заказ был успешно отменен! Все средства будут возвращены на ваш кошелек в ближайшее время.",
           orderCompletedSuccessfully: "Заказ был успешно отправлен на проверку!",
+          paymentSuccess: "Оплата успешно завершена!",
         },
         info: {
           newUpdate: "Доступно новое обновление",
@@ -309,6 +318,7 @@ const resources = {
           sessionExpiring: "Сессия скоро истечет",
           insufficientFunds: "Недостаточно средств",
           lowBalance: "Низкий баланс",
+          paymentCancelled: "Оплата была отменена.",
         },
         default: {
           loadingComplete: "Загрузка завершена",
@@ -339,6 +349,10 @@ const resources = {
         "Убедитесь что загрузили фотографию в хорошем качестве, и исполнили все пожелания заказчика",
       executorUploadPhoto: "Исполнитель загрузил фотографию",
       customerNewTask: "Заказчик сделал новый заказ(ы)",
+      arbitration: "Арбитраж",
+      permissionToCancel: "У вас есть возможность отменить заказ",
+      addFiles: "Добавить файлы",
+      addTask: "Предложить задачу",
     },
   },
 }
