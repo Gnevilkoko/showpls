@@ -1,17 +1,14 @@
-import { useTranslation } from "react-i18next"
-import ChatMap from "./ChatMap"
-import starsWhiteIcon from "../../../assets/icons/status/stars-white.svg"
-import type { TaskType } from "../../../shared/types"
-import ImageViewer from "../../../shared/components/ImageViewer"
+import type { TaskType } from "../types"
 import { useCallback, useState } from "react"
+import ChatMap from "../../pages/Chats/components/ChatMap"
+import ImageViewer from "./ImageViewer"
+import TaskTags from "./TaskTags"
 
 interface TaskInfoProps {
   selectedOrder: TaskType
 }
 
 const TaskInfo = ({ selectedOrder }: TaskInfoProps) => {
-  const { t } = useTranslation()
-
   const [selectedImageIndex, setSelectedImageIndex] = useState<number | null>(null)
 
   const handleImageClick = useCallback(
@@ -33,27 +30,9 @@ const TaskInfo = ({ selectedOrder }: TaskInfoProps) => {
           <span className="chat__task-info__title">{selectedOrder.title}</span>
           <span className="chat__task-info__description">{selectedOrder.description}</span>
         </div>
-
-        <div className="chat__task-tags">
-          <div className="tag stars">
-            {selectedOrder.price}
-            <span>
-              <img src={starsWhiteIcon} alt="Stars Icon" />
-            </span>
-          </div>
-
-          {selectedOrder.tags.map((tag, index) => {
-            if (tag.type === "hLeft") {
-              return (
-                <div key={index} className="tag">
-                  {t("tasksPage.hLeft", { count: tag.count })}
-                </div>
-              )
-            }
-            return null
-          })}
-        </div>
       </div>
+
+      <TaskTags task={selectedOrder} />
 
       {selectedOrder.attachments && selectedOrder.attachments.length > 0 && (
         <div className="task__attachments">

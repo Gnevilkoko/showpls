@@ -1,6 +1,6 @@
 import { useLayoutEffect, useState } from "react"
 import { useAppDispatch } from "../../store"
-import { initLanguageFromTg } from "../../store/languageSlice"
+import { initLanguageFromTgAsync } from "../../store/languageSlice"
 import { setAuthData } from "../../store/userSlice"
 import { useSignInMutation } from "../../store/authApi"
 import { tgService } from "../../services/webApp"
@@ -54,7 +54,7 @@ const AppInitializer = ({ children }: AppInitializerProps) => {
         // Подхватываем язык из телеги если localStorage пуст
         const userFromTg = window.Telegram?.WebApp.initDataUnsafe?.user
         if (userFromTg) {
-          dispatch(initLanguageFromTg(userFromTg))
+          dispatch(initLanguageFromTgAsync(userFromTg))
         }
 
         const initData = window.Telegram?.WebApp.initData

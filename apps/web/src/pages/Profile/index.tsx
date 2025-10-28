@@ -20,13 +20,15 @@ import ToggleProfileMode from "../../shared/components/ToggleProfileMode"
 import { useNavigate } from "react-router-dom"
 import { useAppDispatch, useAppSelector } from "../../store"
 import { useTranslation } from "react-i18next"
-import { AVAILABLE_LANGUAGES, setLanguage } from "../../store/languageSlice"
+import { AVAILABLE_LANGUAGES } from "../../store/languageSlice"
+import { useUpdateLanguageMutation } from "../../store/userApi"
 import Navigation from "../../shared/components/Navigation"
 
 const Profile = () => {
   const { t } = useTranslation()
   const navigate = useNavigate()
   const dispatch = useAppDispatch()
+  const [updateLanguage] = useUpdateLanguageMutation()
 
   const selectedLang = useAppSelector((state) => state.language)
 
@@ -37,8 +39,17 @@ const Profile = () => {
 
   const [activeMode, setActiveMode] = useState<"customer" | "performer">("performer")
 
-  const handleSelectDropdown = (lng: string) => {
-    dispatch(setLanguage(lng))
+  const handleSelectDropdown = async (lng: string) => {
+    try {
+      // Отправляем запрос на бекенд
+      await updateLanguage({ language: lng as "en" | "ru" }).unwrap()
+    } catch (error) {
+      console.warn("Failed to update language on backend:", error)
+    }
+
+    // В любом случае обновляем локально
+    localStorage.setItem("lang", lng)
+    dispatch({ type: "language/setLanguage", payload: lng })
     setIsOpenLang(false)
   }
 

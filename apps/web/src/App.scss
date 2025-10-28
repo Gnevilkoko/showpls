@@ -1180,6 +1180,7 @@ $max-width-all-content: 450px;
 }
 
 .task__tags-container {
+  width: 100%;
   display: flex;
   flex-wrap: wrap;
   gap: 8px;
@@ -2322,7 +2323,7 @@ $max-width-all-content: 450px;
   }
 }
 
-.chat__task__first-action-btn {
+.task__first-action-btn {
   all: unset;
   width: 100%;
   display: flex;

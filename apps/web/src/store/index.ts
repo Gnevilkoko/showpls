@@ -3,14 +3,16 @@ import { useDispatch, useSelector, type TypedUseSelectorHook } from "react-redux
 import userReducer from "./userSlice"
 import languageReducer from "./languageSlice"
 import { authApi } from "./authApi"
+import { userApi } from "./userApi"
 
 export const store = configureStore({
   reducer: {
     user: userReducer,
     language: languageReducer,
     [authApi.reducerPath]: authApi.reducer,
+    [userApi.reducerPath]: userApi.reducer,
   },
-  middleware: (getDefaultMiddleware) => getDefaultMiddleware().concat(authApi.middleware),
+  middleware: (getDefaultMiddleware) => getDefaultMiddleware().concat(authApi.middleware, userApi.middleware),
 })
 
 export type RootState = ReturnType<typeof store.getState>

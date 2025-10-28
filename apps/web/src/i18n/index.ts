@@ -176,6 +176,7 @@ const resources = {
       permissionToCancel: "You have the opportunity to cancel the order",
       addFiles: "Add files",
       addTask: "Suggest a task",
+      respondToTask: "Respond to the task",
     },
   },
   ru: {
@@ -353,6 +354,7 @@ const resources = {
       permissionToCancel: "У вас есть возможность отменить заказ",
       addFiles: "Добавить файлы",
       addTask: "Предложить задачу",
+      respondToTask: "Откликнуться на задачу",
     },
   },
 }

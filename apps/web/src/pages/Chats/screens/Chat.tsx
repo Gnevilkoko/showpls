@@ -8,10 +8,10 @@ import Modal from "../../../shared/components/Modal"
 import EscrowStatus from "../components/EscrowStatus"
 import ModalContent from "../components/ModalContent"
 import TaskActions from "../components/TaskActions"
-import TaskInfo from "../components/TaskInfo"
+import TaskInfo from "../../../shared/components/TaskInfo"
 import TaskHeader from "../components/TaskHeader"
 import TaskSwitcher from "../components/TaskSwitcher"
-import TaskPrimaryButton from "../components/TaskPrimaryButton"
+import TaskPrimaryButton from "../../../shared/components/TaskPrimaryButton"
 import AcceptOrderModal from "../components/AcceptOrderModal"
 import ImageViewer from "../../../shared/components/ImageViewer"
 import type { UploadedImageType } from "../../../shared/types"
@@ -20,6 +20,8 @@ import acceptCheckIcon from "../../../assets/icons/status/accept-check.svg"
 import cancelCrossIcon from "../../../assets/icons/status/cancel-cross.svg"
 import { useNotification } from "../../../shared/hooks/useNotification"
 import ChatArbitration from "./ChatArbitration"
+import checkWhiteIcon from "../../../assets/icons/status/check-white.svg"
+import cameraWhiteIcon from "../../../assets/icons/actions/camera-white.svg"
 
 interface ChatProps {
   chat: ChatType
@@ -120,13 +122,13 @@ const Chat = ({ chat, handleOpenChat }: ChatProps) => {
 
                 <div className="chat__task__actions">
                   <TaskPrimaryButton
-                    selectedOrder={selectedOrder}
-                    userId={userId}
                     onClick={() =>
                       selectedOrder?.order.customer_id === userId
                         ? setIsOpenModalAcceptOrder(true)
                         : setIsOpenModalCompleteOrder(true)
                     }
+                    icon={selectedOrder?.order.customer_id === userId ? checkWhiteIcon : cameraWhiteIcon}
+                    text={selectedOrder?.order.customer_id === userId ? t("acceptJob") : t("upload")}
                   />
 
                   <TaskActions
