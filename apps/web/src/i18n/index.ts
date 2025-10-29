@@ -97,7 +97,7 @@ const resources = {
       loadingChats: "Loading chats...",
       somethingWentWrong: "Something went wrong, please try again later",
       message: "Message...",
-      wasOnline: "Was online in",
+      wasOnline: "Was online in ",
       taskDetails: "Task Details",
       tasksDetails: "Tasks Details ({{count}})",
       show: "Show",
@@ -177,6 +177,7 @@ const resources = {
       addFiles: "Add files",
       addTask: "Suggest a task",
       respondToTask: "Respond to the task",
+      sendTheOrder: "Send the order",
     },
   },
   ru: {
@@ -355,6 +356,7 @@ const resources = {
       addFiles: "Добавить файлы",
       addTask: "Предложить задачу",
       respondToTask: "Откликнуться на задачу",
+      sendTheOrder: "Отправить предложение",
     },
   },
 }

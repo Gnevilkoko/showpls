@@ -15,8 +15,11 @@ export default defineConfig({
     // Добавляем только в режиме разработки
     ...(isDev && {
       strictPort: false,
-      allowedHosts: ["postesophageal-isochronal-lashawna.ngrok-free.dev"],
+      allowedHosts: ["shakia-entrepreneurial-asley.ngrok-free.dev"],
     }),
+    fs: {
+      allow: [".."],
+    },
   },
   build: {
     outDir: "dist/apps/web",

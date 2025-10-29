@@ -134,6 +134,16 @@ export type APIError = {
   status?: number
 }
 
+export type PerformerType = {
+  id: number
+  firstName: string
+  lastName: string | null
+  avatar: string | null
+  position: { lat: number; lng: number }
+  lastSeenAt: Date
+  rating: number
+}
+
 // export type UserFromBackType = {
 //   telegram_data: TgUserType
 //   user_id: number

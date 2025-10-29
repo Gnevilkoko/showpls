@@ -378,7 +378,8 @@ $max-width-all-content: 450px;
   font-size: 12px;
   line-height: 100%;
 
-  color: #5b6674;
+  // color: #5b6674;
+  color: #0bf99b;
 
   &.active {
     background-color: #ff8b00;
@@ -1236,7 +1237,7 @@ $max-width-all-content: 450px;
 .map-wrapper {
   position: relative;
   width: 100%;
-  height: 80vh;
+  height: 77vh;
 }
 
 .map {
@@ -1253,19 +1254,11 @@ $max-width-all-content: 450px;
   transform: translateY(-6px);
   background-color: #007fff;
 
-  &.urgent {
+  &.accent {
     background-color: #00da4c;
 
     &::after {
       border-top-color: #00da4c;
-    }
-  }
-
-  &.active {
-    background-color: #fc9500;
-
-    &::after {
-      border-top-color: #fc9500;
     }
   }
 
@@ -1297,33 +1290,6 @@ $max-width-all-content: 450px;
 
   img {
     height: 14px;
-  }
-}
-
-.map-tasks-wrapper {
-  position: absolute;
-  left: 0;
-  right: 0;
-  bottom: 32px; // весь контейнер упирается в низ
-  display: flex;
-  flex-direction: column;
-  padding-left: 16px;
-  padding-right: 16px;
-  // gap: 32px;
-}
-
-.map-tasks-container {
-  padding-left: 16px;
-  padding-right: 16px;
-  display: flex;
-  gap: 16px;
-  overflow-x: auto;
-  scrollbar-width: none;
-
-  .tasks__task {
-    flex: 0 0 77vw;
-    max-width: 450px;
-    // min-width: 300px;
   }
 }
 
@@ -1535,6 +1501,7 @@ $max-width-all-content: 450px;
 }
 
 .modal {
+  position: relative;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -3022,5 +2989,127 @@ $max-width-all-content: 450px;
     background-color: #2cd896;
     color: #ffffff;
     box-shadow: 0px 5vw 4vw -2vw #00a7674d;
+  }
+}
+
+.performer-item__wrapper {
+  min-width: 270px;
+  max-width: 300px;
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+  background-color: #ffffff;
+  border-radius: 20px;
+  border: 1px solid #d8e2ee;
+  padding: 14px;
+  box-sizing: border-box;
+  cursor: pointer;
+}
+
+.performer-item__user-info-wrapper {
+  display: flex;
+  align-items: start;
+  justify-content: space-between;
+  gap: 4px;
+}
+
+.performer-item__title {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+
+  font-weight: 700;
+  font-size: 24px;
+  line-height: 100%;
+  color: #3c454c;
+}
+
+.performer-item__user-info {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  height: 100%;
+  gap: 4px;
+}
+
+.performer-item__avatar {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  object-fit: cover;
+}
+
+.performer-item__name-user {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 1;
+  line-clamp: 1;
+  overflow: hidden;
+  word-break: break-all;
+
+  font-weight: 700;
+  font-size: 18px;
+  line-height: 100%;
+  color: #3c454c;
+}
+
+.performer-item__online-status {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 1;
+  line-clamp: 1;
+  overflow: hidden;
+  word-break: break-all;
+
+  font-family: Inter;
+  font-weight: 400;
+  font-size: 14px;
+  line-height: 100%;
+  color: #3c454c;
+}
+
+.performer-item__rating {
+  border-radius: 100px;
+  padding: 6px 10px 5px 10px;
+  transition: all 0.3s ease;
+  background-color: #007fff;
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  flex-wrap: nowrap;
+
+  font-family: Inter;
+  font-weight: 500;
+  font-size: 16px;
+  color: #ffffff;
+
+  &.accent {
+    background-color: #00da4c;
+  }
+}
+
+.map-performers-wrapper {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 32px;
+  display: flex;
+  flex-direction: column;
+  padding-left: 16px;
+  padding-right: 16px;
+}
+
+.map-performers-container {
+  padding-left: 16px;
+  padding-right: 16px;
+  display: flex;
+  gap: 16px;
+  overflow-x: auto;
+  scrollbar-width: none;
+
+  .tasks__task {
+    flex: 0 0 77vw;
+    max-width: 450px;
   }
 }

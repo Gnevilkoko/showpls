@@ -1,7 +1,8 @@
 import { useNavigate } from "react-router-dom"
 import globalTransIcon from "../../assets/icons/ui/global-translate.svg"
 import arrowDownTransIcon from "../../assets/icons/ui/arrow-down-translate.svg"
-import logo from "../../assets/images/logo.svg"
+// import logo from "../../assets/images/logo.svg"
+import newLogo from "../../assets/images/new-logo.svg"
 import checkIcon from "../../assets/icons/status/check-icon.svg"
 import userIcon from "../../assets/icons/navigation/user.svg"
 import { useState } from "react"
@@ -39,7 +40,8 @@ const Header = () => {
 
   return (
     <div className="main-header">
-      <img src={logo} alt="Showpls Logo" className="default-logo" />
+      {/* <img src={logo} alt="Showpls Logo" className="default-logo" /> */}
+      <img src={newLogo} alt="Showpls Logo" className="default-logo" />
 
       <div className="header__dropdown-wrapper">
         <button

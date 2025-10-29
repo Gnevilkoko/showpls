@@ -9,6 +9,8 @@ import DescriptionTaskField from "../components/DescriptionTaskField"
 import MapTaskField from "../components/MapTaskField"
 import TimeLimitField from "../components/TimeLimitField"
 import BudgetField from "../components/BudgetField"
+import Modal from "../../../shared/components/Modal"
+import PerformersMap from "../PerformersMap"
 
 const CustomerTaskForm = () => {
   const { t } = useTranslation()
@@ -26,6 +28,16 @@ const CustomerTaskForm = () => {
   const [timeMinutes, setTimeMinutes] = useState("")
 
   const [budget, setBudget] = useState("")
+
+  const [isOpenPerformerDiscover, setIsOpenPerformerDiscover] = useState(false)
+
+  const handleOpenPerformerDiscover = () => {
+    setIsOpenPerformerDiscover(true)
+  }
+
+  const handleClosePerformerDiscover = () => {
+    setIsOpenPerformerDiscover(false)
+  }
 
   const handleUpload = (e: ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files
@@ -86,8 +98,9 @@ const CustomerTaskForm = () => {
       <CustomerButton
         img={searchActionBannerIcon}
         title={t("tasksPage.findPerformer")}
-        description={t("tasksPage.findPerformerDescription")}
+        description={t("tasksPage.sendDirect")}
         color="blue"
+        onClick={handleOpenPerformerDiscover}
       />
 
       {selectedImageIndex !== null && (
@@ -97,6 +110,10 @@ const CustomerTaskForm = () => {
           onClose={handleCloseImageViewer}
         />
       )}
+
+      <Modal isOpen={isOpenPerformerDiscover} onClose={handleClosePerformerDiscover}>
+        <PerformersMap />
+      </Modal>
     </>
   )
 }
