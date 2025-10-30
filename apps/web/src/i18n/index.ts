@@ -130,6 +130,7 @@ const resources = {
             "The order was successfully cancelled! All funds will be returned to your wallet soon.",
           orderCompletedSuccessfully: "The order has been successfully sent for confirmation!",
           paymentSuccess: "Payment completed successfully!",
+          walletDisconnected: "Wallet disconnected successfully",
         },
         info: {
           newUpdate: "New update available",
@@ -178,6 +179,9 @@ const resources = {
       addTask: "Suggest a task",
       respondToTask: "Respond to the task",
       sendTheOrder: "Send the order",
+      theme: "Theme",
+      light: "Light",
+      dark: "Dark",
     },
   },
   ru: {
@@ -309,6 +313,7 @@ const resources = {
             "Заказ был успешно отменен! Все средства будут возвращены на ваш кошелек в ближайшее время.",
           orderCompletedSuccessfully: "Заказ был успешно отправлен на проверку!",
           paymentSuccess: "Оплата успешно завершена!",
+          walletDisconnected: "TON Кошелек успешно отключен",
         },
         info: {
           newUpdate: "Доступно новое обновление",
@@ -357,6 +362,9 @@ const resources = {
       addTask: "Предложить задачу",
       respondToTask: "Откликнуться на задачу",
       sendTheOrder: "Отправить предложение",
+      theme: "Тема",
+      light: "Светлая",
+      dark: "Тёмная",
     },
   },
 }

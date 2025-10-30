@@ -253,15 +253,14 @@ $max-width-all-content: 450px;
   text-transform: uppercase;
 }
 
-.translate-dropdown-menu {
-  width: 100%;
-  max-width: 100px;
+.dropdown-menu {
+  min-width: 85px;
   display: flex;
   flex-direction: column;
   position: absolute;
-  top: 100%;
+  top: 0;
   right: 0;
-  margin-top: 4px;
+  // margin-top: 4px;
   background-color: #e2ebf0;
   gap: 1px;
   border-radius: 8px;
@@ -272,6 +271,7 @@ $max-width-all-content: 450px;
   text-transform: uppercase;
   z-index: 1;
   border: 1px solid #e2ebf0;
+  box-sizing: border-box;
 
   &.visible {
     opacity: 1;
@@ -280,7 +280,7 @@ $max-width-all-content: 450px;
 
   font-family: Inter;
   font-weight: 400;
-  font-size: 16px;
+  font-size: 14px;
   line-height: 100%;
   color: #3c454c;
 
@@ -290,6 +290,7 @@ $max-width-all-content: 450px;
   li {
     all: unset;
     display: flex;
+    gap: 10px;
     align-items: center;
     justify-content: space-between;
     padding: 10px;
@@ -299,7 +300,7 @@ $max-width-all-content: 450px;
   }
 }
 
-.trans-option-status {
+.option-status {
   width: 20px;
   height: 20px;
   box-sizing: border-box;
@@ -378,8 +379,7 @@ $max-width-all-content: 450px;
   font-size: 12px;
   line-height: 100%;
 
-  // color: #5b6674;
-  color: #0bf99b;
+  color: #5b6674;
 
   &.active {
     background-color: #ff8b00;

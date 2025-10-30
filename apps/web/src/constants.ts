@@ -10,3 +10,5 @@ export const API_KEY_MAPS = "AIzaSyDJt2qqfPntS72Iw0qakVpDC7vH9VwzHn0"
 export const MAP_ID = "MAP_ID"
 
 // export const URL_TOPUP_STARS = "https://functions.yandexcloud.net/d4e3loh0i8bq252142ka"
+
+export const AVAILABLE_THEMES = ["light", "dark"] as const

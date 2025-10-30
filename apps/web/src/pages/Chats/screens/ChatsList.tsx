@@ -3,8 +3,7 @@ import type { ChatType } from "../../../shared/types"
 import { useInView } from "react-intersection-observer"
 import { useTranslation } from "react-i18next"
 import ChatItem from "../components/ChatItem"
-// import showplsAgentIcon from "../../../assets/images/logo-without-text.svg"
-import showplsAgentIcon from "../../../assets/images/new-logo-without-text.svg"
+import showplsAgentIcon from "../../../assets/images/logo-without-text.svg"
 
 interface ChatsListProps {
   list: ChatType[]

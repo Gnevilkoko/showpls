@@ -18,7 +18,7 @@ const ChatItem = ({ chat, callbackOpenChat }: ChatPrevItemProps) => {
       className={`chats__prev-chat ${chat.count_unread ? "unread" : ""} ${chat.is_active_order ? "active-order" : ""}`}
       onClick={() => callbackOpenChat(chat)}
     >
-      <img src={chat.avatar ? chat.avatar : userIcon} alt="User Avatar" className="prev-chat__avatar" />
+      <img src={chat.avatar ? chat.avatar : userIcon} alt="User Avatar" className="prev-chat__avatar" loading="lazy" />
 
       <div className="prev-chat__wrapper">
         <div className="prev-chat__header">

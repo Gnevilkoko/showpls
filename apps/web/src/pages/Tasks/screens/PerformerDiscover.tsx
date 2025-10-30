@@ -15,16 +15,21 @@ const PerformerDiscover = () => {
 
   const [activeSection, setActiveSection] = useState<"list" | "map">("list")
   const [selectedTask, setSelectedTask] = useState<TaskType | null>(null)
+  const [isOpenModal, setIsOpenModal] = useState<boolean>(false)
 
   // Создаём ref для каждой таски в списке и на карте
   const listTaskRefs = useRef<Record<string, HTMLDivElement | null>>({})
 
   const handleSelectTask = (task: TaskType) => {
     setSelectedTask(task)
+    setIsOpenModal(true)
   }
 
   const handleCloseTask = () => {
-    setSelectedTask(null)
+    setIsOpenModal(false)
+    setTimeout(() => {
+      setSelectedTask(null)
+    }, 300)
   }
 
   return (
@@ -65,7 +70,7 @@ const PerformerDiscover = () => {
         </>
       )}
 
-      <Modal isOpen={selectedTask !== null} onClose={handleCloseTask}>
+      <Modal isOpen={isOpenModal} onClose={handleCloseTask}>
         <TaskInfo selectedOrder={selectedTask as TaskType} />
 
         <TaskPrimaryButton onClick={() => {}} icon={penWhiteIcon} text={t("respondToTask")} />
