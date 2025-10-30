@@ -11,7 +11,7 @@ import { StarsTopUp } from "@share/entities"
 import { randomBytes } from "node:crypto"
 import { RedisService } from "@liaoliaots/nestjs-redis"
 
-const token = Token.STARS
+
 describe("StarsTopUpService", () => {
   let module: TestingModule
   let dataSource: DataSource
@@ -67,14 +67,21 @@ describe("StarsTopUpService", () => {
     expect(topUp.userId).toBe(user.id)
   })
 
+  async function getBalance(id: string) {
+   const balances = await module.get(UserService).getBalances(id)
+    return +balances.find((balance) => balance.code === Token.STARS)!.balance
+  }
+
   it("should processSuccessfullPayment() works", async () => {
-    const { id: userId, balances } = await createUser()
+    const { id: userId } = await createUser()
     const amount = 100
     const { id } = await service.create({
       amount,
       userId: userId,
     })
-    expect(+balances[token]).toBe(0)
+
+
+    expect(await getBalance(userId)).toBe(0)
     await service.processSuccessfullPayment({ id, txid: randomBytes(32).toString("hex") })
 
     const topUp = await service.retrieve(id)
@@ -83,17 +90,17 @@ describe("StarsTopUpService", () => {
     expect(topUp.txid).toBeTruthy()
 
     const user = await module.get(UserService).retrieve(userId)
-    expect(+user.balances[token]).toBe(100e6)
+    expect(await getBalance(userId)).toBe(100e6)
   })
 
   it("should processRefundedPayment() works", async () => {
-    const { id: userId, balances } = await createUser()
+    const { id: userId } = await createUser()
     const amount = 100
     const { id } = await service.create({
       amount,
       userId: userId,
     })
-    expect(+balances[token]).toBe(0)
+    expect(await getBalance(userId)).toBe(0)
     await service.processSuccessfullPayment({ id, txid: randomBytes(32).toString("hex") })
     await service.processRefundedPayment({ id, txid: randomBytes(32).toString("hex") })
 
@@ -101,17 +108,17 @@ describe("StarsTopUpService", () => {
     expect(topUp.refunded).toBeTruthy()
 
     const user = await module.get(UserService).retrieve(userId)
-    expect(+user.balances[token]).toBe(0)
+    expect(await getBalance(userId)).toBe(0)
   })
 
   it("should processSuccessfullPayment() to be idempotency", async () => {
-    const { id: userId, balances } = await createUser()
+    const { id: userId } = await createUser()
     const amount = 100
     const { id } = await service.create({
       amount,
       userId: userId,
     })
-    expect(+balances[token]).toBe(0)
+    expect(await getBalance(userId)).toBe(0)
     await service.processSuccessfullPayment({ id, txid: randomBytes(32).toString("hex") })
     await service.processSuccessfullPayment({ id, txid: randomBytes(32).toString("hex") })
     await service.processSuccessfullPayment({ id, txid: randomBytes(32).toString("hex") })
@@ -122,7 +129,7 @@ describe("StarsTopUpService", () => {
     expect(topUp.txid).toBeTruthy()
 
     const user = await module.get(UserService).retrieve(userId)
-    expect(+user.balances[token]).toBe(100e6)
+    expect(await getBalance(userId)).toBe(100e6)
   })
 
   it("should list() works", async () => {
@@ -142,9 +149,11 @@ describe("StarsTopUpService", () => {
       userId: userId,
     })
 
-    expect((await service.list({page: 1, limit: 10, filter: {}, sort: {}})).items.length).toBe(3)
-    expect((await service.list({page: 1, limit: 10, filter: {paid: true}, sort: {}})).items.length).toBe(1)
-    expect((await service.list({page: 1, limit: 10, filter: {paid: false}, sort: {}})).items.length).toBe(2)
-    expect((await service.list({page: 1, limit: 10, filter: {userId: userId}, sort: {}})).items.length).toBe(3)
+    expect((await service.list({page: 1, limit: 10, filter: { refunded: undefined,
+      paid: undefined}, sort: {}})).items.length).toBe(3)
+    expect((await service.list({page: 1, limit: 10, filter: {paid: true, refunded: undefined}, sort: {}})).items.length).toBe(1)
+    expect((await service.list({page: 1, limit: 10, filter: {paid: false, refunded: undefined}, sort: {}})).items.length).toBe(2)
+    expect((await service.list({page: 1, limit: 10, filter: {userId: userId, refunded: undefined,
+      paid: undefined}, sort: {}})).items.length).toBe(3)
   })
 })

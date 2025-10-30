@@ -4,7 +4,7 @@ import { DataSource } from "typeorm"
 import {TestingService} from "../../../testing"
 import { AppModule } from "../../../app.module"
 
-describe.skip("UserService", () => {
+describe("UserService", () => {
   let module: TestingModule
   let dataSource: DataSource
 

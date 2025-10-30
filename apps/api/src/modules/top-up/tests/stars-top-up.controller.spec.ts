@@ -1,4 +1,3 @@
-import whyIsNodeRunning from 'why-is-node-running'
 import { Test, TestingModule } from "@nestjs/testing"
 import { DataSource } from "typeorm"
 import { StarsTopUpService } from "../stars-top-up.service"

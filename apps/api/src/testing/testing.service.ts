@@ -1,4 +1,4 @@
-import { TestingModule } from "@nestjs/testing"
+import { TestingModule, TestingModuleBuilder } from "@nestjs/testing"
 import { AppService } from "../app.service"
 import { DynamicModule, ExecutionContext, INestApplication } from "@nestjs/common"
 import { DataSource, DataSourceOptions } from "typeorm"
@@ -12,15 +12,23 @@ import ms from "ms"
 import { TypeOrmModule } from "@nestjs/typeorm"
 import { getWinstonOptions } from "../get-winston-options"
 import { ClsModule } from "nestjs-cls"
+import { LedgerModule } from "@ledger"
+import { Token } from "@share"
 
 export class TestingService {
   static async getApp(module: TestingModule) {
-    const app = module.createNestApplication()
+    const app = module.createNestApplication({
+      logger: WinstonModule.createLogger(getWinstonOptions()),
+    })
     await AppService.upgrade(app)
     await app.init()
     await app.listen(8000, "0.0.0.0")
     app.getUrl = () => TestingService.getAppUrl(app)
     return app
+  }
+
+  static async compileModule(builder: TestingModuleBuilder) {
+    return await builder.setLogger(WinstonModule.createLogger(getWinstonOptions())).compile()
   }
 
   public static async getAppUrl(app: INestApplication) {
@@ -114,6 +122,24 @@ export class TestingService {
         },
       }),
       AuthModule,
+      LedgerModule.forRootAsync({
+        initialize: async (dataSource, accountService, balanceService, currencyService) => {
+          if (Token.STARS) {
+            let currency = await currencyService.retrieve({
+              code: Token.STARS,
+              blockchain: null,
+            })
+            if (!currency) {
+              await currencyService.create({
+                name: Token.STARS,
+                code: Token.STARS,
+                scale: 6,
+                blockchain: null,
+              })
+            }
+          }
+        },
+      }),
     ]
   }
 }

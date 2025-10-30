@@ -12,7 +12,10 @@ const schema = paginationSchema.extend({
       refunded: ValidationService.getZodBooleanValidator(true),
       userId: z.coerce.number().int().positive().transform(String).optional(),
     })
-    .default({}),
+    .default({
+      refunded: undefined,
+      paid: undefined
+    }),
   sort: z
     .object({
       createdAt: z.enum(OrderValue).optional(),

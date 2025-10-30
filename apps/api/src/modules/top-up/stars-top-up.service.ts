@@ -1,35 +1,30 @@
-import { Injectable } from "@nestjs/common"
+import { Injectable, Logger } from "@nestjs/common"
 import { InjectRepository } from "@nestjs/typeorm"
 import { Repository } from "typeorm"
-import { InjectLogger } from "@server/logging"
-import { Logger } from "winston"
 import { Context, Telegraf } from "telegraf"
 import { InjectBot } from "nestjs-telegraf"
 import { StarsTopUp } from "@share/entities"
-
 import { retryWithExponentialBackoff } from "@share/utils"
 import { DbHelpers } from "../../db"
 import { UserService } from "../user"
-import { Token } from "@share"
 
 import { randomUUID } from "crypto"
 import { StarsTopUpListDto } from "./dto/stars-top-up.list.dto"
 import { paginate } from "nestjs-typeorm-paginate"
+import { Ledger } from "@ledger"
+import { Token } from "@share"
 
 @Injectable()
 export class StarsTopUpService {
-  protected logger: Logger
+  protected logger = new Logger(StarsTopUpService.name)
+  protected externalType = "stars"
 
   constructor(
-    @InjectLogger() logger: Logger,
     @InjectRepository(StarsTopUp) public repository: Repository<StarsTopUp>,
     @InjectBot() protected bot: Telegraf<Context>,
-    protected userService: UserService
-  ) {
-    this.logger = logger.child({
-      context: StarsTopUpService.name,
-    })
-  }
+    protected userService: UserService,
+    protected ledger: Ledger
+  ) {}
 
   async create({ amount, userId }: CreateStarsTopUp) {
     const id = randomUUID()
@@ -65,7 +60,8 @@ export class StarsTopUpService {
       .execute()
 
     const topUp = this.repository.create(insertResult.raw[0] as object)
-    this.logger.info(`TopUp created`, {
+    this.logger.log({
+      message: "TopUp created",
       data: {
         id: topUp.id,
         userId: topUp.userId,
@@ -105,6 +101,11 @@ export class StarsTopUpService {
   }
 
   async processSuccessfullPayment({ id, txid }: ProcessPaymentParams) {
+    const currency = (await this.ledger.currency.retrieve({
+      code: Token.STARS,
+      blockchain: null,
+    }))!
+
     await retryWithExponentialBackoff(
       async () => {
         return await this.repository.manager.transaction("SERIALIZABLE", async (manager) => {
@@ -132,20 +133,32 @@ export class StarsTopUpService {
             }
           )
 
-          await this.userService.incrementBalance(
+          await this.ledger.createDeposit(
             {
               userId: topUp.userId,
-              amount: topUp.amount.toString(),
-              token: Token.STARS,
+              amount: BigInt(topUp.amount),
+              currencyId: currency.id,
+              externalId: topUp.id,
+              externalType: this.externalType,
             },
             manager
           )
+
+          // await this.userService.incrementBalance(
+          //   {
+          //     userId: topUp.userId,
+          //     amount: topUp.amount.toString(),
+          //     token: Token.STARS,
+          //   },
+          //   manager
+          // )
         })
       },
       (e) => DbHelpers.isSerializationFailure(e)
     )
 
-    this.logger.info(`TopUp is paid`, {
+    this.logger.log({
+      message: `TopUp is paid`,
       data: {
         id,
       },
@@ -179,19 +192,28 @@ export class StarsTopUpService {
             }
           )
 
-          await this.userService.decrementBalance(
+          await this.ledger.revertDeposit(
             {
-              userId: topUp.userId,
-              amount: topUp.amount.toString(),
-              token: Token.STARS,
+              externalId: topUp.id,
+              externalType: this.externalType,
             },
             manager
           )
+
+          // await this.userService.decrementBalance(
+          //   {
+          //     userId: topUp.userId,
+          //     amount: topUp.amount.toString(),
+          //     token: Token.STARS,
+          //   },
+          //   manager
+          // )
         })
       },
       (e) => DbHelpers.isSerializationFailure(e)
     )
-    this.logger.info("TopUp is refunded", {
+    this.logger.log({
+      message: "TopUp is refunded",
       data: {
         id,
       },

@@ -41,7 +41,7 @@ export class StarsTopUp {
   @Column("bigint")
   userId: string
 
-  @ApiProperty({ type: "string" })
+  @ApiProperty({ type: "string", format: "date" })
   @CreateDateColumn({ type: "timestamptz" })
   createdAt: Date
 }

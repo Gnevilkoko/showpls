@@ -57,7 +57,7 @@ const serializeErrorsFormat = format((info) => {
   if (info instanceof Error) {
     return {
       ...info,
-      error: deepSerializeError(info),
+      // error: deepSerializeError(info),
       message: info.message,
       test: "here",
     }

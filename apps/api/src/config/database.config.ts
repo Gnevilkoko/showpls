@@ -6,6 +6,7 @@ import { MixedList } from "typeorm/common/MixedList"
 import { PostgresConnectionOptions } from "typeorm/driver/postgres/PostgresConnectionOptions"
 import { z } from "zod"
 import { ConfigService } from "./config.service"
+import {Models} from "@ledger"
 
 const schema = z.object({
   host: z.string(),
@@ -43,7 +44,8 @@ export default function () {
     logging: logLevels,
     entities: [
       User,
-      StarsTopUp
+      StarsTopUp,
+      ...Object.values(Models)
     ] as MixedList<Function>,
     migrations: [] as MixedList<Function>,
     migrationsTableName: "migrations",

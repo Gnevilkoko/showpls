@@ -10,12 +10,12 @@ import { DataSource, DataSourceOptions } from "typeorm"
 import { AuthModule } from "./modules/auth/auth.module"
 import path from "path"
 import { AcceptLanguageResolver, I18nModule } from "nestjs-i18n"
-import { FallbackLanguageCode } from "@share"
-import { ClsMiddleware, ClsModule } from "nestjs-cls"
-import { RequestLoggingMiddleware } from "@server/logging"
+import { FallbackLanguageCode, Token } from "@share"
+import { ClsModule } from "nestjs-cls"
 import { TelegrafModule } from "nestjs-telegraf"
 import { BotHandler } from "./modules/bot/bot.handler"
 import { TopUpModule } from "./modules/top-up/top-up.module"
+import { LedgerModule } from "@ledger"
 
 @Module({
   imports: [
@@ -99,9 +99,26 @@ import { TopUpModule } from "./modules/top-up/top-up.module"
           : undefined,
       },
     }),
-
+    LedgerModule.forRootAsync({
+      initialize: async (dataSource, accountService, balanceService, currencyService) => {
+        if (Token.STARS) {
+          let currency = await currencyService.retrieve({
+            code: Token.STARS,
+            blockchain: null,
+          })
+          if (!currency) {
+            await currencyService.create({
+              name: Token.STARS,
+              code: Token.STARS,
+              scale: 6,
+              blockchain: null,
+            })
+          }
+        }
+      },
+    }),
     AuthModule,
-    TopUpModule
+    TopUpModule,
   ],
   providers: [BotHandler],
   controllers: [],
@@ -109,7 +126,6 @@ import { TopUpModule } from "./modules/top-up/top-up.module"
 })
 export class AppModule implements NestModule {
   configure(consumer: MiddlewareConsumer): void {
-
     // consumer.apply(ClsMiddleware, RequestLoggingMiddleware).forRoutes("*")
   }
 }

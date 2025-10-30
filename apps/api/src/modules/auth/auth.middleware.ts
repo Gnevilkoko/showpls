@@ -7,6 +7,7 @@ import AuthService from "./auth.service"
 import { InjectLogger } from "@server/logging"
 import { Logger } from "winston"
 import { ClsService } from "nestjs-cls"
+import { get } from "lodash"
 
 @Injectable()
 export class AuthMiddleware implements NestMiddleware {
@@ -17,12 +18,14 @@ export class AuthMiddleware implements NestMiddleware {
   ) {}
 
   async use(req: Request, res: Response, next: NextFunction) {
-    if (req.url === "/api/auth/sign-in" || req.url === "/api/auth/refresh-token") {
-      next()
-      return
-    }
+    // if (req.originalUrl === "/api/auth/sign-in" || req.originalUrl === "/api/auth/refresh-token") {
+    //   next()
+    //   return
+    // }
 
     const token = AuthMiddleware.extractToken(req)
+
+
 
     if (!token) {
       next()
@@ -32,7 +35,7 @@ export class AuthMiddleware implements NestMiddleware {
     try {
       try {
         req.payload = AuthService.verifySignature(token) as any
-        this.cls.set("userId", req.payload.id)
+        this.cls.set("userId", get(req, "payload.id"))
       } catch (e: any) {
         if (e instanceof TokenExpiredError) {
           throw new APIException(ErrorCode.ACCESS_TOKEN_EXPIRED)

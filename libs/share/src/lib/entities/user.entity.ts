@@ -17,9 +17,8 @@ export class User {
   })
   role: Role
 
-
-  @Column("jsonb")
-  balances: Record<Token, string>
+  // @Column("jsonb")
+  // balances: Record<Token, string>
 
   @ApiProperty({ type: "string" })
   @Column("bigint")

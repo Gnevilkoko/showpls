@@ -1,25 +1,21 @@
-import { Injectable } from "@nestjs/common"
+import { Injectable, Logger } from "@nestjs/common"
 import { InjectRepository } from "@nestjs/typeorm"
-import { InjectLogger } from "@server/logging"
 import { EntityManager, Repository } from "typeorm"
 import { User } from "@share/entities"
-import { Logger } from "winston"
 import { LanguageCode, Role, Token } from "@share"
 import { DbHelpers } from "../../db"
 import UserExceptions from "./user.exceptions"
 import { NotImplemented } from "@share/errors"
 import { UserListDto } from "./dto/user-list.dto"
 import { paginate } from "nestjs-typeorm-paginate"
+import { Ledger } from "@ledger"
+import { AccountOwnerType } from "@ledger/entities"
 
 @Injectable()
 export class UserService {
-  protected logger: Logger
+  protected logger = new Logger(UserService.name)
 
-  constructor(@InjectLogger() logger: Logger, @InjectRepository(User) protected repository: Repository<User>) {
-    this.logger = logger.child({
-      context: UserService.name,
-    })
-  }
+  constructor(@InjectRepository(User) protected repository: Repository<User>, protected ledger: Ledger) {}
 
   async create({ balances, ...params }: CreateUserParams, manager?: EntityManager | undefined) {
     try {
@@ -30,13 +26,6 @@ export class UserService {
         .values({
           ...params,
           lastName: params.lastName || null,
-          balances: !balances
-            ? {
-                [Token.STARS]: "0",
-                [Token.TON]: "0",
-                [Token.USDT]: "0",
-              }
-            : balances,
           banned: false,
           lastSeenAt: new Date(),
         })
@@ -87,56 +76,52 @@ export class UserService {
   }
 
   public async setLanguageCode(id: string, languageCode: LanguageCode) {
-    await this.repository.update({id}, {languageCode})
+    await this.repository.update({ id }, { languageCode })
   }
 
-  public async incrementBalance(
-    {
-      userId,
-      token,
-      amount,
-    }: {
-      userId: string
-      token: Token
-      amount: string
-    },
-    manager: EntityManager | undefined
-  ) {
-    await (manager || this.repository.manager).query(
-      `
-        UPDATE "user" u
-        SET "balances" = jsonb_set(
-                "balances",
-                '{${token}}',
-                to_jsonb((COALESCE(("balances" ->> '${token}'), '0')::decimal + $2::decimal)::text),
-                true)
-        WHERE u.id = $1
-    `,
-      [userId, amount]
-    )
-  }
 
-  public async decrementBalance(
-    {
-      userId,
-      token,
-      amount,
-    }: {
-      userId: string
-      token: Token
-      amount: string
-    },
-    manager: EntityManager | undefined
-  ) {
-    return await this.incrementBalance(
+  async getBalances(userId: string): Promise<Balance[]> {
+    const currencies = await this.ledger.currency.list()
+    const account = await this.ledger.account.retrieve(
       {
-        userId,
-        token,
-        amount: (-+amount).toString(),
+        ownerId: userId,
+        ownerType: AccountOwnerType.User,
       },
-      manager
+      undefined
     )
+
+    const balances: Balance[] = []
+
+    for (let currency of currencies) {
+      let balance = "0"
+      let lockedBalance = "0"
+      if (account) {
+        const b = await this.ledger.balance.retrieve({ accountId: account.id, currencyId: currency.id }, undefined)
+        if (b) {
+          balance = b.amount
+          lockedBalance = b.lockedAmount
+        }
+      }
+
+      balances.push({
+        code: currency.code,
+        name: currency.name,
+        blockchain: currency.blockchain,
+        balance: balance,
+        lockedBalance: lockedBalance,
+      })
+    }
+
+    return balances
   }
+}
+
+type Balance = {
+  code: string
+  name: string
+  blockchain: string | null
+  balance: string
+  lockedBalance: string
 }
 
 export type CreateUserParams = {

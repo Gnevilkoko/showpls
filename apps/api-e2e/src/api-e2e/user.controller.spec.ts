@@ -4,7 +4,6 @@ import { INestApplication } from "@nestjs/common"
 import axios, { AxiosInstance } from "axios"
 import { DataSource } from "typeorm"
 import { TestingService } from "../../../api/src/testing"
-import { AppModule } from "../../../api/src/app.module"
 import { getDataSourceToken } from "@nestjs/typeorm"
 import { UserService } from "../../../api/src/modules/user"
 import { faker } from "@faker-js/faker/locale/en"
@@ -23,7 +22,7 @@ describe("UserController", () => {
   beforeEach(async () => {
     await TestingService.dropDataSources()
     module = await Test.createTestingModule({
-      imports: [AppModule],
+      imports: [...TestingService.getMustHaveModules()],
     }).compile()
     app = await TestingService.getApp(module)
     // url = await app.getUrl()
@@ -65,13 +64,15 @@ describe("UserController", () => {
       })
     }
 
-    const token = AuthService.generateToken(instanceToPlain({
-      role: Role.Admin
-    }))
+    const token = AuthService.generateToken(
+      instanceToPlain({
+        role: Role.Admin,
+      })
+    )
 
     const resp = await instance.get(`list`, {
       headers: {
-         Authorization: `Bearer ${token}`,
+        Authorization: `Bearer ${token}`,
       },
       params: {
         page: 1,
@@ -81,7 +82,6 @@ describe("UserController", () => {
         },
       },
     })
-
 
     const data = resp.data
     expect(data.items.length).toBe(1)
@@ -98,11 +98,34 @@ describe("UserController", () => {
 
     const resp = await instance.get(`get-me`, {
       headers: {
-        Authorization: `Bearer ${token}`,
+        Authorization: `Bearer ${AuthService.generateToken(user)}`,
       },
     })
     const data = resp.data
     expect(data.id).toBe(user.id)
     expect(data.role).toBe(user.role)
+  })
+
+  it("POST /user/get-balances 200", async () => {
+    const user = await module.get(UserService).create({
+      tgId: faker.number.int({ min: 1, max: 10000 }).toString(),
+      firstName: faker.internet.username(),
+      role: Role.Normal,
+      languageCode: LanguageCode.RU,
+    })
+
+    const resp = await instance.post(
+      `get-balances`,
+      {
+        id: user.id
+      },
+      {
+        headers: {
+          Authorization: `Bearer ${AuthService.generateToken(user)}`,
+        },
+      }
+    )
+    expect(resp.status).toBe(200)
+    expect(Array.isArray(resp.data)).toBe(true)
   })
 })

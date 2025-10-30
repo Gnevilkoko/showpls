@@ -1,7 +1,7 @@
 import { ArgumentsHost, Catch, HttpException } from "@nestjs/common"
 import { InjectLogger } from "@server/logging"
 import { Request, Response } from "express"
-import { APIException, APIExceptionResponse } from "@server/api/api.exception"
+import { APIException, APIExceptionResponse } from "@server/api"
 import { Logger } from "winston"
 import { ErrorCode } from "@share"
 import { CRUDExceptions } from "./crud.exceptions"

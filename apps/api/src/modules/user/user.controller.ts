@@ -14,6 +14,8 @@ import { Action, ErrorCode } from "@share"
 import { APIException } from "@server/api"
 import UserExceptions from "./user.exceptions"
 import { SetLanguageCodeDto } from "./dto/set-language-code.dto"
+import { GetBalancesDto } from "./dto/get-balances.dto"
+import { plainToInstance } from "class-transformer"
 
 @ApiExtraModels(User)
 @ApiTags("User")
@@ -75,10 +77,33 @@ export class UserController {
 
   @UseGuards(AuthGuard)
   @Post("set-language-code")
-  async setLanguageCode(
-    @GetUser() user: User,
-    @Body() {code}: SetLanguageCodeDto
-  ) {
+  async setLanguageCode(@GetUser() user: User, @Body() { code }: SetLanguageCodeDto) {
     await this.service.setLanguageCode(user.id, code)
+  }
+
+  @ApiSecurity("jwt-auth")
+  @ApiOkResponse({
+    schema: {
+      type: "array",
+      items: {
+        type: "object",
+        properties: {
+          code: { type: "string" },
+          name: { type: "string" },
+          blockchain: { type: "string", nullable: true },
+          balance: { type: "string" },
+          lockedBalance: { type: "string" },
+        },
+      },
+    },
+  })
+  @UseGuards(AuthGuard)
+  @Post("get-balances")
+  async getBalances(@GetUser() user: User, @Body() { id }: GetBalancesDto) {
+    const ability = await this.abilityFactory.create(user)
+    if (!ability.cannot(Action.Read, plainToInstance(User, { id }))) {
+      throw new APIException(ErrorCode.ACCESS_DENIED)
+    }
+    return await this.service.getBalances(id)
   }
 }

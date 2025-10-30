@@ -1,6 +1,6 @@
-import { INestApplication } from "@nestjs/common"
+import { INestApplication, Module } from "@nestjs/common"
 import { Test, TestingModule } from "@nestjs/testing"
-import axios, { AxiosError, AxiosInstance } from "axios"
+import axios, { AxiosInstance } from "axios"
 import { DataSource, Repository } from "typeorm"
 import { getDataSourceToken, getRepositoryToken } from "@nestjs/typeorm"
 import ms from "ms"
@@ -14,9 +14,9 @@ import request from "supertest"
 import { ErrorCode } from "@share"
 import { APIExceptionResponse } from "@server/api"
 import { getLoggerToken } from "@server/logging"
-import { ClsService } from "nestjs-cls"
 import { Logger } from "winston"
 import { AbilityFactory } from "../../../api/src/modules/auth"
+import { getBotToken } from "nestjs-telegraf"
 
 jest.mock("../../../api/src/config/bot.config", () => {
   const actual = jest.requireActual("../../../api/src/config/bot.config")
@@ -30,7 +30,6 @@ jest.mock("../../../api/src/config/bot.config", () => {
     __esModule: true,
   }
 })
-
 jest.setTimeout(ms("1m"))
 describe("AuthController", () => {
   let module: TestingModule
@@ -42,12 +41,17 @@ describe("AuthController", () => {
   beforeEach(async () => {
     await TestingService.dropDataSources()
     module = await Test.createTestingModule({
-      imports: [AppModule],
+      imports: [...TestingService.getMustHaveModules()],
     })
       .overrideProvider(AuthService)
       .useFactory({
         inject: [getLoggerToken(), getRepositoryToken(User), UserService],
-        factory: (logger: Logger, repository: Repository<User>, service: UserService, abilityFactory: AbilityFactory) => {
+        factory: (
+          logger: Logger,
+          repository: Repository<User>,
+          service: UserService,
+          abilityFactory: AbilityFactory
+        ) => {
           class UpgradedAuthService extends AuthService {
             authenticate(data: SignInDto, ignoreExpiration: boolean = false) {
               return super.authenticate(data, true)
@@ -90,26 +94,25 @@ describe("AuthController", () => {
     expect(data.accessToken).toBeDefined()
   })
 
-  it("should /auth/sign-in 400 (ValidationError)",  async () => {
+  it("should /auth/sign-in 400 (ValidationError)", async () => {
     const response = await request(app.getHttpServer()).post("/api/auth/sign-in").send({
       type: "tg-mini-app",
-      payload: null
+      payload: null,
     })
     expect(response.statusCode).toBe(400)
     const data = response.body as APIExceptionResponse
     expect(data.errorCode).toBe(ErrorCode.VALIDATION_ERROR)
   })
 
-    it("should /auth/sign-in 400 (UNAUTHORIZED) - CredentialsAreInvalid",  async () => {
+  it("should /auth/sign-in 400 (UNAUTHORIZED) - CredentialsAreInvalid", async () => {
     const response = await request(app.getHttpServer()).post("/api/auth/sign-in").send({
       type: "tg-mini-app",
-      payload: "..."
+      payload: "...",
     })
     expect(response.statusCode).toBe(400)
     const data = response.body as APIExceptionResponse
     expect(data.errorCode).toBe(ErrorCode.UNAUTHORIZED)
   })
-
 
   it("POST /auth/sign-in 200 for tg-login-widget", async () => {
     const resp = await instance.post("sign-in", {

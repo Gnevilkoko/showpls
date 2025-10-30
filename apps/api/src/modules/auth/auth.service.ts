@@ -17,11 +17,11 @@ import { omit } from "lodash"
 import { FallbackLanguageCode, LanguageCode, Role } from "@share"
 import { z } from "zod"
 import ms from "ms"
-import { ClsService } from "nestjs-cls"
 import { Logger } from "winston"
 import { InjectLogger } from "@server/logging"
 import { AbilityFactory } from "./ability-factory"
 import { instanceToPlain } from "class-transformer"
+import { NeverError } from "@share/errors"
 
 @Injectable()
 class AuthService {
@@ -32,20 +32,21 @@ class AuthService {
     @InjectLogger() logger: Logger,
     @InjectRepository(User) public repository: Repository<User>,
     protected service: UserService,
-    protected abilityFactory: AbilityFactory,
-
+    protected abilityFactory: AbilityFactory
   ) {
     this.logger = logger.child({
-     context: AuthService.name
+      context: AuthService.name,
     })
   }
 
   public async authenticate(data: SignInDto, ignoreExpiration: boolean = false) {
-    let tgUser: TGUser
+    let tgUser: TGUser | undefined = undefined
     if (data.type === "tg-mini-app") {
       tgUser = this.verifyInitData(data.payload, this.token)
     } else if (data.type === "tg-login-widget") {
       tgUser = await this.verifyTelegramLoginWidgetData(data.payload, this.token)
+    } else {
+      throw new NeverError(data as any as never)
     }
 
     if (!ignoreExpiration) {
@@ -153,7 +154,6 @@ class AuthService {
     return true
   }
 
-
   async getRules(user: User | null) {
     const ability = await this.abilityFactory.create(user)
     return AbilityFactory.getPackedRules(ability)
@@ -179,4 +179,4 @@ class AuthService {
   }
 }
 
-export default AuthService;
+export default AuthService

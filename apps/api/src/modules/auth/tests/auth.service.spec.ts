@@ -2,7 +2,7 @@ import AuthService from "../auth.service"
 import { plainToInstance } from "class-transformer"
 import { User } from "@share/entities"
 
-describe.skip("AuthService", () => {
+describe("AuthService", () => {
   const service = new AuthService({ child: () => {} } as any, {} as any, {} as any, {} as any)
   const botToken = "123456789:ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefg"
 

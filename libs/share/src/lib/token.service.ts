@@ -1,5 +1,6 @@
 import { Token } from "./token.enum"
 import { z } from "zod"
+import { ethers } from "ethers"
 
 export class TokenService {
   public static getDecimals(token: Token) {
@@ -13,5 +14,15 @@ export class TokenService {
       STARS: 6,
     }
     return decimals[token]
+  }
+
+  public static format(value: bigint | string, { token }: { token: Token }) {
+    const decimals = TokenService.getDecimals(token)
+    return +ethers.formatUnits(BigInt(value), decimals)
+  }
+
+  public static parse(value: number | string, { token }: { token: Token }) {
+    const decimals = TokenService.getDecimals(token)
+    return ethers.parseUnits(typeof value === "number" ? value.toFixed(18) : value, decimals)
   }
 }
