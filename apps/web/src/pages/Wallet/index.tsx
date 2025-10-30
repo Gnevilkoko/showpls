@@ -6,10 +6,13 @@ import lockKeyholeWhiteIcon from "../../assets/icons/status/lock-keyhole-white.s
 import { useTranslation } from "react-i18next"
 import { useState } from "react"
 import { tgService } from "../../services/webApp"
-import { URL_TOPUP_STARS } from "../../constants"
 import TonWalletConnect from "./TonWalletConnect"
 import type { TransactionType } from "../../shared/types"
 import Navigation from "../../shared/components/Navigation"
+import Modal from "../../shared/components/Modal"
+import { useAppSelector } from "../../store"
+import OpenTelegramButton from "../AccessGate/OpenTelegramButton"
+import { useNotification } from "../../shared/hooks/useNotification"
 
 const transactionList: TransactionType[] = [
   {
@@ -62,9 +65,14 @@ const transactionList: TransactionType[] = [
 
 const Wallet = () => {
   const { t } = useTranslation()
+  const notification = useNotification()
+
   const [isOpenModalTopUp, setIsOpenModalTopUp] = useState(false)
   const [activeSection, setActiveSection] = useState<"stars" | "ton">("stars")
   const [stars, setStars] = useState<number>(1)
+  const userToken = useAppSelector((state) => state.user.accessToken)
+
+  const isInTelegram = window.Telegram?.WebApp?.initData
 
   const handleClickOption = (val: "stars" | "ton") => {
     setActiveSection(val)
@@ -77,30 +85,30 @@ const Wallet = () => {
   const handleTopUpStars = async () => {
     const webApp = tgService.webApp
 
-    if (!webApp) {
+    if (!webApp || !userToken) {
       return
     }
 
-    const res = await fetch(URL_TOPUP_STARS, {
+    const res = await fetch(`${window.location.origin}/api/stars-top-up/create`, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ stars }),
+      headers: { "Content-Type": "application/json", Authorization: `Bearer ${userToken}` },
+      body: JSON.stringify({ amount: stars }),
     })
     const data = await res.json()
+    console.log(data)
 
-    // Открываем окно оплаты
-    webApp.openInvoice(data.invoiceUrl, (status) => {
+    webApp.openInvoice(data.link, (status) => {
       switch (status) {
         case "paid":
-          webApp.showAlert("Оплата успешно завершена!")
+          notification.showSuccess("paymentSuccess")
           setIsOpenModalTopUp(false)
           break
         case "cancelled":
-          webApp.showAlert("Оплата была отменена.")
+          notification.showWarning("paymentCancelled")
           break
         case "failed":
         default:
-          webApp.showAlert("Ошибка при оплате. Попробуйте ещё раз.")
+          notification.showError("paymentFailed")
           break
       }
     })
@@ -176,30 +184,27 @@ const Wallet = () => {
         ))}
       </div>
 
-      <div
-        className={`modal-top-up__wrapper ${isOpenModalTopUp ? "active" : ""}`}
-        onClick={() => setIsOpenModalTopUp(false)}
-      >
-        <div className="modal-top-up" onClick={(e) => e.stopPropagation()}>
-          <h2 className="wallet-header">{t("topUp")}</h2>
+      <Modal isOpen={isOpenModalTopUp} onClose={() => setIsOpenModalTopUp(false)}>
+        <h2 className="wallet-header">{t("topUp")}</h2>
 
-          <div className="specials__options">
-            <button
-              className={`specials__option ${activeSection === "stars" ? "active" : ""} `}
-              onClick={() => handleClickOption("stars")}
-            >
-              Stars
-            </button>
+        <div className="specials__options">
+          <button
+            className={`specials__option ${activeSection === "stars" ? "active" : ""} `}
+            onClick={() => handleClickOption("stars")}
+          >
+            Stars
+          </button>
 
-            <button
-              className={`specials__option ${activeSection === "ton" ? "active" : ""} `}
-              onClick={() => handleClickOption("ton")}
-            >
-              TON Wallet
-            </button>
-          </div>
+          <button
+            className={`specials__option ${activeSection === "ton" ? "active" : ""} `}
+            onClick={() => handleClickOption("ton")}
+          >
+            TON Wallet
+          </button>
+        </div>
 
-          {activeSection === "stars" && (
+        {activeSection === "stars" &&
+          (isInTelegram ? (
             <>
               <input
                 type="number"
@@ -221,11 +226,16 @@ const Wallet = () => {
                 {t("topUpStars")}
               </button>
             </>
-          )}
+          ) : (
+            <>
+              <span className="stars-not-supported-text">{t("miniWallet.starsNotSupported")}</span>
 
-          {activeSection === "ton" && <TonWalletConnect />}
-        </div>
-      </div>
+              <OpenTelegramButton />
+            </>
+          ))}
+
+        {activeSection === "ton" && <TonWalletConnect />}
+      </Modal>
 
       <Navigation />
     </div>

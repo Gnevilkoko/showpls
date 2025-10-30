@@ -54,3 +54,4 @@ test-output
 deployment
 *docker-compose.yaml
 **/*.md
+.vercel

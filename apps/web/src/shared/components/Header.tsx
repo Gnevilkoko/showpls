@@ -6,11 +6,13 @@ import checkIcon from "../../assets/icons/status/check-icon.svg"
 import userIcon from "../../assets/icons/navigation/user.svg"
 import { useState } from "react"
 import { useAppDispatch, useAppSelector } from "../../store"
-import { AVAILABLE_LANGUAGES, setLanguage } from "../../store/languageSlice"
+import { AVAILABLE_LANGUAGES } from "../../store/languageSlice"
+import { useUpdateLanguageMutation } from "../../store/userApi"
 
 const Header = () => {
   const navigate = useNavigate()
   const dispatch = useAppDispatch()
+  const [updateLanguage] = useUpdateLanguageMutation()
 
   const userData = useAppSelector((state) => state.user.userData)
   const selectedLang = useAppSelector((state) => state.language)
@@ -21,13 +23,23 @@ const Header = () => {
     navigate("/profile")
   }
 
-  const handleSelectDropdown = (lng: string) => {
-    dispatch(setLanguage(lng))
+  const handleSelectDropdown = async (lng: string) => {
+    try {
+      // Отправляем запрос на бекенд
+      await updateLanguage({ language: lng as "en" | "ru" }).unwrap()
+    } catch (error) {
+      console.warn("Failed to update language on backend:", error)
+    }
+
+    // В любом случае обновляем локально
+    localStorage.setItem("lang", lng)
+    dispatch({ type: "language/setLanguage", payload: lng })
     setIsOpenLang(false)
   }
 
   return (
     <div className="main-header">
+      {/* <img src={logo} alt="Showpls Logo" className="default-logo" /> */}
       <img src={logo} alt="Showpls Logo" className="default-logo" />
 
       <div className="header__dropdown-wrapper">
@@ -45,12 +57,12 @@ const Header = () => {
           <img src={arrowDownTransIcon} alt="Arrow Down Icon" className={isOpenLang ? "rotated" : ""} />
         </button>
 
-        <ul className={`translate-dropdown-menu ${isOpenLang ? "visible" : ""}`}>
+        <ul className={`dropdown-menu ${isOpenLang ? "visible" : ""}`}>
           {AVAILABLE_LANGUAGES.map((lng) => (
             <li key={lng} onMouseDown={() => handleSelectDropdown(lng)}>
               {lng}
 
-              <div className={`trans-option-status ${selectedLang === lng ? "active" : ""}`} />
+              <div className={`option-status ${selectedLang === lng ? "active" : ""}`} />
             </li>
           ))}
         </ul>

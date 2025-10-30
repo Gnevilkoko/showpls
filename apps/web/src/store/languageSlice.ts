@@ -1,6 +1,7 @@
-import { createSlice, type PayloadAction } from "@reduxjs/toolkit"
+import { createSlice, createAsyncThunk, type PayloadAction } from "@reduxjs/toolkit"
 import i18n from "../i18n"
 import type { TelegramWebAppUserType } from "../shared/types"
+import { userApi } from "./userApi"
 
 // Получаем список всех доступных языков из i18n
 export const AVAILABLE_LANGUAGES = Object.keys(i18n.options.resources || {})
@@ -14,6 +15,34 @@ const getInitialLang = (): string => {
 
 const initialState: string = getInitialLang()
 
+// Асинхронный thunk для инициализации языка из Telegram
+export const initLanguageFromTgAsync = createAsyncThunk(
+  "language/initFromTg",
+  async (userFromTg: TelegramWebAppUserType | null, { dispatch }) => {
+    if (localLang) return localLang // уже выбран
+
+    const tgLang = userFromTg?.language_code
+    const langToSet = tgLang && AVAILABLE_LANGUAGES.includes(tgLang) ? tgLang : "en"
+
+    // Если язык из Telegram есть и поддерживается, пытаемся обновить на бекенде
+
+    try {
+      await dispatch(
+        userApi.endpoints.updateLanguage.initiate({
+          language: langToSet as "en" | "ru",
+        })
+      ).unwrap()
+    } catch (error) {
+      console.warn("Failed to update language on backend during init:", error)
+    }
+
+    // В любом случае сохраняем локально
+    localStorage.setItem("lang", langToSet)
+    i18n.changeLanguage(langToSet)
+    return langToSet
+  }
+)
+
 const languageSlice = createSlice({
   name: "language",
   initialState,
@@ -25,20 +54,15 @@ const languageSlice = createSlice({
       i18n.changeLanguage(lang)
       return lang
     },
-    initLanguageFromTg: (_state, action: PayloadAction<TelegramWebAppUserType | null>) => {
-      if (localLang) return localLang // уже выбран
-
-      const tgLang = action.payload?.language_code
-      const langToSet = tgLang && AVAILABLE_LANGUAGES.includes(tgLang) ? tgLang : "en"
-
-      localStorage.setItem("lang", langToSet)
-      i18n.changeLanguage(langToSet)
-      return langToSet
-    },
+  },
+  extraReducers: (builder) => {
+    builder.addCase(initLanguageFromTgAsync.fulfilled, (_state, action) => {
+      return action.payload
+    })
   },
 })
 
-export const { setLanguage, initLanguageFromTg } = languageSlice.actions
+export const { setLanguage } = languageSlice.actions
 const languageReducer = languageSlice.reducer
 
 export default languageReducer

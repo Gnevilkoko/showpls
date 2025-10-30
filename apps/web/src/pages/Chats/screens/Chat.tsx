@@ -1,17 +1,27 @@
-import { useState } from "react"
+import { useState, useMemo, useCallback } from "react"
 import { useTranslation } from "react-i18next"
-import type { ChatType, Message } from "../../../shared/types"
+import type { ChatOrderType, ChatType, Message, TaskType } from "../../../shared/types"
 import ChatHeader from "../components/ChatHeader"
 import MessageItem from "../components/MessageItem"
 import MessageInput from "../components/MessageInput"
-import arrowDownGreenIcon from "../../../assets/icons/ui/arrow-down-green.svg"
+import Modal from "../../../shared/components/Modal"
+import EscrowStatus from "../components/EscrowStatus"
+import ModalContent from "../components/ModalContent"
+import TaskActions from "../components/TaskActions"
+import TaskInfo from "../../../shared/components/TaskInfo"
+import TaskHeader from "../components/TaskHeader"
+import TaskSwitcher from "../components/TaskSwitcher"
+import TaskPrimaryButton from "../../../shared/components/TaskPrimaryButton"
+import AcceptOrderModal from "../components/AcceptOrderModal"
+import ImageViewer from "../../../shared/components/ImageViewer"
+import type { UploadedImageType } from "../../../shared/types"
 import { chatData } from "../data/chatData"
-import ChatMap from "../components/ChatMap"
+import acceptCheckIcon from "../../../assets/icons/status/accept-check.svg"
+import cancelCrossIcon from "../../../assets/icons/status/cancel-cross.svg"
+import { useNotification } from "../../../shared/hooks/useNotification"
+import ChatArbitration from "./ChatArbitration"
 import checkWhiteIcon from "../../../assets/icons/status/check-white.svg"
 import cameraWhiteIcon from "../../../assets/icons/actions/camera-white.svg"
-import menuDotsIcon from "../../../assets/icons/ui/menu-dots.svg"
-import starsWhiteIcon from "../../../assets/icons/status/stars-white.svg"
-import ImageViewer from "../../../shared/components/ImageViewer"
 
 interface ChatProps {
   chat: ChatType
@@ -23,129 +33,183 @@ const Chat = ({ chat, handleOpenChat }: ChatProps) => {
   const userId = 100
 
   const { t } = useTranslation()
+  const notification = useNotification()
+
   const [searchValue, setSearchValue] = useState<string>("")
   const [value, setValue] = useState("")
 
+  const [isOpenModalAcceptOrder, setIsOpenModalAcceptOrder] = useState(false)
+  const [isOpenModalRejectOrder, setIsOpenModalRejectOrder] = useState(false)
+  const [isOpenModalCompleteOrder, setIsOpenModalCompleteOrder] = useState(false)
+
   const [isOpenTask, setIsOpenTask] = useState<boolean>(false)
+  const [selectedOrderIndex, setSelectedOrderIndex] = useState<number>(0)
+  const [selectedStarRating, setSelectedStarRating] = useState<number>(0)
+  const [images, setImages] = useState<UploadedImageType[]>([])
   const [selectedImageIndex, setSelectedImageIndex] = useState<number | null>(null)
+  const selectedOrder = useMemo(() => chat.orders?.[selectedOrderIndex], [chat.orders, selectedOrderIndex])
 
-  const handleClickTaskShow = () => {
-    setIsOpenTask((prev) => !prev)
-  }
+  const [isOpenChatArbitration, setIsOpenChatArbitration] = useState<boolean>(false)
 
-  const handleImageClick = (imageSrc: string) => {
-    if (chat.order?.attachments) {
-      const index = chat.order.attachments.indexOf(imageSrc)
-      setSelectedImageIndex(index)
-    }
+  const handleImageClick = (index: number) => {
+    setSelectedImageIndex(index)
   }
 
   const handleCloseImageViewer = () => {
     setSelectedImageIndex(null)
   }
 
+  const handleChangeSelectedOrderIndex = useCallback(
+    (id: number) => {
+      if (!chat.orders) {
+        return
+      }
+
+      if (id > chat.orders?.length - 1) {
+        setSelectedOrderIndex(0)
+      } else if (id < 0) {
+        setSelectedOrderIndex(chat.orders?.length - 1)
+      } else {
+        setSelectedOrderIndex(id)
+      }
+    },
+    [chat.orders]
+  )
+
   const chatdataItem = chatData.find((i) => i.chat_id === chat.chat_id)
 
   if (!chat) {
-    alert(t("somethingWentWrong"))
+    notification.showError("somethingWentWrong")
     return null
+  }
+
+  if (isOpenChatArbitration) {
+    return (
+      <ChatArbitration
+        selectedOrder={selectedOrder as ChatOrderType}
+        handleCloseArbitration={() => setIsOpenChatArbitration(false)}
+      />
+    )
   }
 
   return (
     <div className="chat">
-      <ChatHeader
-        chat={chat}
-        searchValue={searchValue}
-        onSearchChange={setSearchValue}
-        onBack={() => handleOpenChat(null)}
-      />
+      <div className="chats__header-wrapper">
+        <ChatHeader
+          chat={chat}
+          searchValue={searchValue}
+          onSearchChange={setSearchValue}
+          onBack={() => handleOpenChat(null)}
+        />
 
-      {chat.order && (
-        <div className="chat__task-wrapper">
-          <div className="chat__task-heder">
-            <span>{t("taskDetails")}</span>
+        {chat.orders?.[selectedOrderIndex] && (
+          <div className="chat__task-wrapper">
+            <TaskHeader
+              isOpen={isOpenTask}
+              onToggle={() => setIsOpenTask((prev) => !prev)}
+              ordersLength={chat.orders.length}
+            />
 
-            <button className={`chat__task-show-btn ${isOpenTask ? "rotated" : ""}`} onClick={handleClickTaskShow}>
-              <span>{isOpenTask ? t("hide") : t("show")}</span>
+            {isOpenTask && (
+              <div className="chat__task-container">
+                <TaskSwitcher
+                  ordersLength={chat.orders.length}
+                  selectedIndex={selectedOrderIndex}
+                  onChangeIndex={handleChangeSelectedOrderIndex}
+                />
 
-              <img src={arrowDownGreenIcon} alt="Arrow Down Icon" />
-            </button>
-          </div>
+                <TaskInfo selectedOrder={selectedOrder?.order as TaskType} />
 
-          {isOpenTask && (
-            <div className="chat__task-container">
-              <div className="chat__task-info__wrapper">
-                <div className="chat__task-info">
-                  <span className="chat__task-info__title">{chat.order?.title}</span>
-
-                  <span className="chat__task-info__description">{chat.order?.description}</span>
-                </div>
-
-                <div className="chat__task-tags">
-                  <div className="tag stars">
-                    {chat.order.price}
-
-                    <span>
-                      <img src={starsWhiteIcon} alt="Stars Icon" />
-                    </span>
-                  </div>
-
-                  {chat.order.tags.map((tag, index) => {
-                    if (tag.type === "hLeft") {
-                      return (
-                        <div key={index} className="tag">
-                          {t("tasksPage.hLeft", { count: tag.count })}
-                        </div>
-                      )
+                <div className="chat__task__actions">
+                  <TaskPrimaryButton
+                    onClick={() =>
+                      selectedOrder?.order.customer_id === userId
+                        ? setIsOpenModalAcceptOrder(true)
+                        : setIsOpenModalCompleteOrder(true)
                     }
-                  })}
+                    icon={selectedOrder?.order.customer_id === userId ? checkWhiteIcon : cameraWhiteIcon}
+                    text={selectedOrder?.order.customer_id === userId ? t("acceptJob") : t("upload")}
+                  />
+
+                  <TaskActions
+                    selectedOrder={selectedOrder}
+                    onRejectOrder={() => setIsOpenModalRejectOrder(true)}
+                    onWriteArbitration={() => setIsOpenChatArbitration(true)}
+                  />
                 </div>
               </div>
+            )}
+          </div>
+        )}
 
-              {chat.order.attachments && (
-                <div className="task__attachments">
-                  {chat.order.attachments.map((img, idx) => (
-                    <div key={idx} className="preview-attachments" onClick={() => handleImageClick(img)}>
-                      <img src={img} alt={`attachments-${idx}`} />
-                    </div>
-                  ))}
-                </div>
-              )}
-
-              <ChatMap coordinates={chat.order.position} />
-
-              <div className="chat__task__actions">
-                <button className="chat__task__first-action-btn">
-                  <img src={chat.order.customer_id === userId ? checkWhiteIcon : cameraWhiteIcon} alt="Check Icon" />
-
-                  <span>{chat.order.customer_id === userId ? t("acceptJob") : t("upload")}</span>
-                </button>
-
-                <button className="chat__task__second-action-btn">
-                  <img src={menuDotsIcon} alt="Menu Dots Icon" />
-                </button>
-              </div>
-            </div>
-          )}
-        </div>
-      )}
+        <EscrowStatus selectedOrder={selectedOrder} />
+      </div>
 
       <div className="chat__container">
         {chatdataItem?.messages.map((msg: Message) => (
-          <MessageItem key={msg.id} message={msg} />
+          <MessageItem key={msg.id} message={msg} userId={userId} />
         ))}
       </div>
 
-      <MessageInput value={value} onChange={setValue} />
+      <MessageInput
+        value={value}
+        onChange={setValue}
+        images={images}
+        onImagesChange={setImages}
+        onImageClick={handleImageClick}
+      />
 
       {/* Image Viewer Modal */}
-      {selectedImageIndex !== null && chat.order?.attachments && (
+      {selectedImageIndex !== null && images.length > 0 && (
         <ImageViewer
-          images={chat.order.attachments}
+          images={images.map((img) => img.url)}
           currentImageIndex={selectedImageIndex}
           onClose={handleCloseImageViewer}
         />
       )}
+
+      <Modal isOpen={isOpenModalAcceptOrder} onClose={() => setIsOpenModalAcceptOrder(false)}>
+        <AcceptOrderModal
+          selectedStarRating={selectedStarRating}
+          onRatingChange={setSelectedStarRating}
+          onConfirm={() => {
+            setIsOpenModalAcceptOrder(false)
+            notification.showSuccess("orderAcceptedSuccessfully")
+          }}
+          onCancel={() => setIsOpenModalAcceptOrder(false)}
+        />
+      </Modal>
+
+      <Modal isOpen={isOpenModalRejectOrder} onClose={() => setIsOpenModalRejectOrder(false)}>
+        <ModalContent
+          icon={cancelCrossIcon}
+          title={t("cancelTheOrder")}
+          description={t("sureCancelTheOrder")}
+          confirmText={t("yes")}
+          cancelText={t("no")}
+          onConfirm={() => {
+            notification.showSuccess("orderCancelledSuccessfully")
+            setIsOpenModalRejectOrder(false)
+            handleOpenChat(null)
+          }}
+          onCancel={() => setIsOpenModalRejectOrder(false)}
+        />
+      </Modal>
+
+      <Modal isOpen={isOpenModalCompleteOrder} onClose={() => setIsOpenModalCompleteOrder(false)}>
+        <ModalContent
+          icon={acceptCheckIcon}
+          title={t("confirmCompletion")}
+          description={t("confirmCompletionDescription")}
+          confirmText={t("yes")}
+          cancelText={t("no")}
+          onConfirm={() => {
+            notification.showSuccess("orderCompletedSuccessfully")
+            setIsOpenModalCompleteOrder(false)
+          }}
+          onCancel={() => setIsOpenModalCompleteOrder(false)}
+        />
+      </Modal>
     </div>
   )
 }

@@ -12,7 +12,7 @@ interface ChatsListProps {
   callbackOpenChat: (chat: ChatType) => void
 }
 
-const showplsAgentChat = {
+const showplsAgentChat: ChatType = {
   chat_id: 1,
   avatar: showplsAgentIcon,
   first_name: "Showpls",
@@ -22,7 +22,7 @@ const showplsAgentChat = {
   last_update: 1760453955290,
   is_favorite: false,
   is_active_order: false,
-  order: null,
+  orders: null,
   is_read: true,
   count_unread: null,
 }

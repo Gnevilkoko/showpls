@@ -1,3 +1,8 @@
+export type UploadedImageType = {
+  file: File
+  url: string
+}
+
 export type TelegramAuthDataType = {
   id: number
   first_name: string
@@ -39,6 +44,11 @@ export type UserDataType = {
   }
 }
 
+export type ChatOrderType = {
+  order: TaskType
+  escrowStatus: "locked" | "released" | "rejected" | null
+}
+
 export type ChatType = {
   chat_id: number
   avatar: string | null
@@ -48,7 +58,7 @@ export type ChatType = {
   last_update: number
   is_favorite: boolean
   is_active_order: boolean
-  order: TaskType | null
+  orders: ChatOrderType[] | null
   is_read: boolean
   count_unread: number | null
 }
@@ -56,7 +66,7 @@ export type ChatType = {
 export type Message = {
   id: number
   type: "notification" | "message"
-  variant?: "upload" | "newTask"
+  variant?: "upload" | "newTask" | "permissionToCancel"
   sender_id: number
   receiver_id: number
   text: string | null
@@ -100,6 +110,7 @@ export type TaskType = {
   }[]
   customer_id: number
   performer_id: number | null
+  arbitrationApproved: boolean // Флаг: арбитраж согласен закрыть задачу
 }
 
 // API Error types
@@ -121,6 +132,16 @@ export type APIErrorResponse = {
 export type APIError = {
   data?: APIErrorResponse
   status?: number
+}
+
+export type PerformerType = {
+  id: number
+  firstName: string
+  lastName: string | null
+  avatar: string | null
+  position: { lat: number; lng: number }
+  lastSeenAt: Date
+  rating: number
 }
 
 // export type UserFromBackType = {

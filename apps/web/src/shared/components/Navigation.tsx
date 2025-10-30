@@ -38,6 +38,7 @@ const Navigation = () => {
     <nav className="navigation">
       <button className={`nav-button ${activePath === "/home" ? "active" : ""}`} onClick={() => handleClick("/home")}>
         <img src={activePath === "/home" ? homeWhiteIcon : homeIcon} alt="Home Icon" className="nav-button__icon" />
+
         <span>{t("home")}</span>
       </button>
 
@@ -47,11 +48,13 @@ const Navigation = () => {
           alt="Tasks Icon"
           className="nav-button__icon"
         />
+
         <span>{t("tasks")}</span>
       </button>
 
       <button className={`nav-button ${activePath === "/chats" ? "active" : ""}`} onClick={() => handleClick("/chats")}>
         <img src={activePath === "/chats" ? chatsWhiteIcon : chatsIcon} alt="Chats Icon" className="nav-button__icon" />
+
         <span>{t("chats")}</span>
       </button>
 
@@ -64,6 +67,7 @@ const Navigation = () => {
           alt="Wallet Icon"
           className="nav-button__icon"
         />
+
         <span>{t("wallet")}</span>
       </button>
 
@@ -76,6 +80,7 @@ const Navigation = () => {
           alt="Profile Icon"
           className="nav-button__icon"
         />
+
         <span>{t("profile")}</span>
       </button>
     </nav>

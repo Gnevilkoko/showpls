@@ -2,7 +2,11 @@
   "name": "@showpls/source",
   "version": "0.0.0",
   "license": "MIT",
-  "scripts": {},
+  "scripts": {
+    "build:web": "nx build web",
+    "dev:web": "nx serve web",
+    "preview:web": "nx preview web"
+  },
   "private": true,
   "dependencies": {
     "@casl/ability": "^6.7.3",
