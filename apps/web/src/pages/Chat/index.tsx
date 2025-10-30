@@ -1,34 +1,34 @@
-import { useState, useMemo, useCallback } from "react"
+import { useState, useMemo, useCallback, useEffect } from "react"
 import { useTranslation } from "react-i18next"
-import type { ChatOrderType, ChatType, Message, TaskType } from "../../../shared/types"
-import ChatHeader from "../components/ChatHeader"
-import MessageItem from "../components/MessageItem"
-import MessageInput from "../components/MessageInput"
-import Modal from "../../../shared/components/Modal"
-import EscrowStatus from "../components/EscrowStatus"
-import ModalContent from "../components/ModalContent"
-import TaskActions from "../components/TaskActions"
-import TaskInfo from "../../../shared/components/TaskInfo"
-import TaskHeader from "../components/TaskHeader"
-import TaskSwitcher from "../components/TaskSwitcher"
-import TaskPrimaryButton from "../../../shared/components/TaskPrimaryButton"
-import AcceptOrderModal from "../components/AcceptOrderModal"
-import ImageViewer from "../../../shared/components/ImageViewer"
-import type { UploadedImageType } from "../../../shared/types"
-import { chatData } from "../data/chatData"
-import acceptCheckIcon from "../../../assets/icons/status/accept-check.svg"
-import cancelCrossIcon from "../../../assets/icons/status/cancel-cross.svg"
-import { useNotification } from "../../../shared/hooks/useNotification"
+import type { ChatOrderType, ChatType, Message, TaskType } from "../../shared/types"
+import ChatHeader from "./components/ChatHeader"
+import EscrowStatus from "./components/EscrowStatus"
+import TaskActions from "./components/TaskActions"
+import AcceptOrderModal from "./components/AcceptOrderModal"
+import { chatData } from "./data/chatData"
+import acceptCheckIcon from "../../assets/icons/status/accept-check.svg"
+import cancelCrossIcon from "../../assets/icons/status/cancel-cross.svg"
+import checkWhiteIcon from "../../assets/icons/status/check-white.svg"
+import cameraWhiteIcon from "../../assets/icons/actions/camera-white.svg"
+import MessageItem from "../../shared/components/MessageItem"
+import MessageInput from "../../shared/components/MessageInput"
+import Modal from "../../shared/components/Modal"
+import ModalContent from "../../shared/components/ModalContent"
+import TaskInfo from "../../shared/components/TaskInfo"
+import TaskHeader from "../../shared/components/TaskHeader"
+import TaskSwitcher from "./components/TaskSwitcher"
+import TaskPrimaryButton from "../../shared/components/TaskPrimaryButton"
+import ImageViewer from "../../shared/components/ImageViewer"
+import type { UploadedImageType } from "../../shared/types"
+import { useNotification } from "../../shared/hooks/useNotification"
 import ChatArbitration from "./ChatArbitration"
-import checkWhiteIcon from "../../../assets/icons/status/check-white.svg"
-import cameraWhiteIcon from "../../../assets/icons/actions/camera-white.svg"
+import { useNavigate, useParams } from "react-router-dom"
+import { chatsData } from "../Chats/data/chatsData"
 
-interface ChatProps {
-  chat: ChatType
-  handleOpenChat: (chat: null) => void
-}
-
-const Chat = ({ chat, handleOpenChat }: ChatProps) => {
+const Chat = () => {
+  const { id } = useParams<{ id: string }>()
+  const chat = chatsData.chat_list?.find((chat: ChatType) => chat.chat_id === Number(id))
+  const navigate = useNavigate()
   // здесь нужно брать свой айдишник из user
   const userId = 100
 
@@ -47,7 +47,7 @@ const Chat = ({ chat, handleOpenChat }: ChatProps) => {
   const [selectedStarRating, setSelectedStarRating] = useState<number>(0)
   const [images, setImages] = useState<UploadedImageType[]>([])
   const [selectedImageIndex, setSelectedImageIndex] = useState<number | null>(null)
-  const selectedOrder = useMemo(() => chat.orders?.[selectedOrderIndex], [chat.orders, selectedOrderIndex])
+  const selectedOrder = useMemo(() => chat?.orders?.[selectedOrderIndex], [chat?.orders, selectedOrderIndex])
 
   const [isOpenChatArbitration, setIsOpenChatArbitration] = useState<boolean>(false)
 
@@ -59,9 +59,13 @@ const Chat = ({ chat, handleOpenChat }: ChatProps) => {
     setSelectedImageIndex(null)
   }
 
+  const handleBack = () => {
+    navigate("/chats")
+  }
+
   const handleChangeSelectedOrderIndex = useCallback(
     (id: number) => {
-      if (!chat.orders) {
+      if (!chat?.orders) {
         return
       }
 
@@ -73,13 +77,19 @@ const Chat = ({ chat, handleOpenChat }: ChatProps) => {
         setSelectedOrderIndex(id)
       }
     },
-    [chat.orders]
+    [chat?.orders]
   )
 
-  const chatdataItem = chatData.find((i) => i.chat_id === chat.chat_id)
+  const chatdataItem = chatData.find((i) => i.chat_id === chat?.chat_id)
+
+  useEffect(() => {
+    if (!chat) {
+      navigate("/chats")
+      notification.showError("somethingWentWrong")
+    }
+  }, [chat, navigate, notification])
 
   if (!chat) {
-    notification.showError("somethingWentWrong")
     return null
   }
 
@@ -95,12 +105,7 @@ const Chat = ({ chat, handleOpenChat }: ChatProps) => {
   return (
     <div className="chat">
       <div className="chats__header-wrapper">
-        <ChatHeader
-          chat={chat}
-          searchValue={searchValue}
-          onSearchChange={setSearchValue}
-          onBack={() => handleOpenChat(null)}
-        />
+        <ChatHeader chat={chat} searchValue={searchValue} onSearchChange={setSearchValue} onBack={handleBack} />
 
         {chat.orders?.[selectedOrderIndex] && (
           <div className="chat__task-wrapper">
@@ -190,7 +195,7 @@ const Chat = ({ chat, handleOpenChat }: ChatProps) => {
           onConfirm={() => {
             notification.showSuccess("orderCancelledSuccessfully")
             setIsOpenModalRejectOrder(false)
-            handleOpenChat(null)
+            handleBack()
           }}
           onCancel={() => setIsOpenModalRejectOrder(false)}
         />

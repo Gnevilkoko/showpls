@@ -1,7 +1,8 @@
 import plusActionBannerIcon from "../../assets/icons/actions/plus-action-banner.svg"
 import searchActionBannerIcon from "../../assets/icons/actions/search-action-banner.svg"
 import starsIcon from "../../assets/icons/status/stars.svg"
-import logoSpecials from "../../assets/images/logo-specials.png"
+// import logoSpecials from "../../assets/images/logo-specials.png"
+import newLogoSpecials from "../../assets/images/new-logo-specials.svg"
 import partnerNikeLogo from "../../assets/images/partnerNikeLogo.png"
 import { useNavigate } from "react-router-dom"
 import { useState } from "react"
@@ -14,11 +15,11 @@ import Navigation from "../../shared/components/Navigation"
 const Home = () => {
   const navigate = useNavigate()
 
-  const [activeSection, setActiveSection] = useState<"missions" | "on scene">("missions")
+  const [activeSection, setActiveSection] = useState<"missions" | "hotspots">("missions")
 
   const { t } = useTranslation()
 
-  const handleClickOption = (val: "missions" | "on scene") => {
+  const handleClickOption = (val: "missions" | "hotspots") => {
     setActiveSection(val)
   }
 
@@ -62,7 +63,7 @@ const Home = () => {
 
       <div className="home__specials-banner">
         <div className="specials-banner__header">
-          <img src={logoSpecials} className="default-logo" alt="Showpls Specials Logo" />
+          <img src={newLogoSpecials} className="specials-logo" alt="Showpls Specials Logo" />
         </div>
 
         <div className="specials__container">
@@ -75,8 +76,8 @@ const Home = () => {
             </button>
 
             <button
-              className={`specials__option ${activeSection === "on scene" ? "active" : ""} `}
-              onClick={() => handleClickOption("on scene")}
+              className={`specials__option ${activeSection === "hotspots" ? "active" : ""} `}
+              onClick={() => handleClickOption("hotspots")}
             >
               {t("homePage.options.second")}
             </button>

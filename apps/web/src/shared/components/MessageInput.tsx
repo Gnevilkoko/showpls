@@ -1,10 +1,10 @@
-import paperclipIcon from "../../../assets/icons/ui/paperclip.svg"
-import emojiIcon from "../../../assets/icons/ui/emoji.svg"
-import sendIcon from "../../../assets/icons/actions/send.svg"
+import paperclipIcon from "../../assets/icons/ui/paperclip.svg"
+import emojiIcon from "../../assets/icons/ui/emoji.svg"
+import sendIcon from "../../assets/icons/actions/send.svg"
 import { useEffect, useRef, useState, type ChangeEvent } from "react"
 import { useTranslation } from "react-i18next"
-import type { UploadedImageType } from "../../../shared/types"
-import plusIcon from "../../../assets/icons/ui/plus-gray.svg"
+import type { UploadedImageType } from "../types"
+import plusIcon from "../../assets/icons/ui/plus-gray.svg"
 
 type MessageInputProps = {
   value: string

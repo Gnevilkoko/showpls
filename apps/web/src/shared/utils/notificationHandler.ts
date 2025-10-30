@@ -39,13 +39,13 @@ export class NotificationHandler {
     // 3. Сообщение по коду ошибки
     if (errorCode) {
       const errorMessages: Record<APIErrorCode, string> = {
-        "business-error": i18n.t("notifications.errors.businessError"),
-        "validation-error": i18n.t("notifications.errors.validationError"),
-        "access-denied": i18n.t("notifications.errors.accessDenied"),
-        unauthorized: i18n.t("notifications.errors.unauthorized"),
-        "access-token-expired": i18n.t("notifications.errors.accessTokenExpired"),
-        "internal-server-error": i18n.t("notifications.errors.internalServerError"),
-        "rate-limited": i18n.t("notifications.errors.rateLimited"),
+        "business-error": i18n.t("errors.businessError"),
+        "validation-error": i18n.t("errors.validationError"),
+        "access-denied": i18n.t("errors.accessDenied"),
+        unauthorized: i18n.t("errors.unauthorized"),
+        "access-token-expired": i18n.t("errors.accessTokenExpired"),
+        "internal-server-error": i18n.t("errors.internalServerError"),
+        "rate-limited": i18n.t("errors.rateLimited"),
       }
 
       if (errorMessages[errorCode]) {
@@ -54,7 +54,7 @@ export class NotificationHandler {
     }
 
     // 4. Fallback сообщение или неизвестная ошибка
-    return fallbackMessage || i18n.t("notifications.errors.unknownError")
+    return fallbackMessage || i18n.t("errors.unknownError")
   }
 
   // Проверяет, является ли ошибка API ошибкой
@@ -74,9 +74,9 @@ export class NotificationHandler {
     if (this.isAPIError(error)) {
       this.showError(error, fallbackMessage)
     } else if (error instanceof Error) {
-      toast.error(error.message || fallbackMessage || i18n.t("notifications.errors.unknownError"))
+      toast.error(error.message || fallbackMessage || i18n.t("errors.unknownError"))
     } else {
-      toast.error(fallbackMessage || i18n.t("notifications.errors.unknownError"))
+      toast.error(fallbackMessage || i18n.t("errors.unknownError"))
     }
   }
 
@@ -87,19 +87,19 @@ export class NotificationHandler {
 
   // Методы с переводами (основные)
   static showSuccessTranslated(key: string): void {
-    this.showToast("success", i18n.t(`notifications.success.${key}`))
+    this.showToast("success", i18n.t(`success.${key}`))
   }
 
   static showInfoTranslated(key: string): void {
-    this.showToast("info", i18n.t(`notifications.info.${key}`))
+    this.showToast("info", i18n.t(`info.${key}`))
   }
 
   static showWarningTranslated(key: string): void {
-    this.showToast("warning", i18n.t(`notifications.warnings.${key}`))
+    this.showToast("warning", i18n.t(`warnings.${key}`))
   }
 
   static showErrorTranslated(key: string): void {
-    this.showToast("error", i18n.t(`notifications.errors.${key}`))
+    this.showToast("error", i18n.t(`errors.${key}`))
   }
 
   // Прямые методы для кастомных сообщений

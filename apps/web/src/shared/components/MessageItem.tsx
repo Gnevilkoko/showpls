@@ -1,5 +1,5 @@
 import { memo } from "react"
-import type { Message } from "../../../shared/types"
+import type { Message } from "../types"
 import NotificationMessage from "./NotificationMessage"
 import RegularMessage from "./RegularMessage"
 

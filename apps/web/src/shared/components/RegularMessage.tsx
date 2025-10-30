@@ -1,9 +1,9 @@
 import { useEffect, useRef, useState, useCallback } from "react"
-import { formatTimeFromEpochMs } from "../../../shared/format"
-import checkReadIcon from "../../../assets/icons/status/check-read.svg"
-import checkReadWhiteIcon from "../../../assets/icons/status/check-read-white.svg"
-import ImageViewer from "../../../shared/components/ImageViewer"
-import type { Message } from "../../../shared/types"
+import { formatTimeFromEpochMs } from "../format"
+import checkReadIcon from "../../assets/icons/status/check-read.svg"
+import checkReadWhiteIcon from "../../assets/icons/status/check-read-white.svg"
+import ImageViewer from "./ImageViewer"
+import type { Message } from "../types"
 
 interface RegularMessageProps {
   message: Message

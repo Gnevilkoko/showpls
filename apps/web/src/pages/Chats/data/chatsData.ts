@@ -1,7 +1,22 @@
 import type { ChatsDataType, ChatType } from "../../../shared/types"
 import { TasksList } from "../../Tasks/tasks"
+import showplsAgentIcon from "../../../assets/images/logo-without-text.svg"
 
 export const chatList: ChatType[] = [
+  {
+    chat_id: 0,
+    avatar: showplsAgentIcon,
+    first_name: "Showpls",
+    last_name: "Agent",
+    last_message:
+      "Lorem ipsum dolor sit amet consectetur adipiscing elit Ut et massa mi. Aliquam in hendrerit urna. Pellentesque sit amet sapien.",
+    last_update: 1760453955290,
+    is_favorite: false,
+    is_active_order: false,
+    orders: null,
+    is_read: true,
+    count_unread: null,
+  },
   {
     chat_id: 2,
     avatar: null,

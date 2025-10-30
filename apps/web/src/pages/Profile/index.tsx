@@ -143,7 +143,7 @@ const Profile = () => {
 
           <ProfileBtnItem title={t("verification")} icon={securitySafeIcon} onClick={() => {}} />
 
-          <ProfileBtnItem title={t("notitfications")} icon={notificationIcon} onClick={() => {}}>
+          <ProfileBtnItem title={t("notifications")} icon={notificationIcon} onClick={() => {}}>
             <div className="profile__option-count">2</div>
           </ProfileBtnItem>
 
