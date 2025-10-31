@@ -12,14 +12,13 @@ import { Entry } from "./entry.entity"
 import { AccountOwnerType } from "./account.entity"
 
 export enum TransactionType {
-  Deposit = "deposit",
+  CreateDeposit = "create-deposit",
   RevertDeposit = "revert-deposit",
-  Withdrawal = "withdrawal",
   EscrowHold = "escrow-hold",
   EscrowRelease = "escrow-release",
   EscrowRefund = "escrow-refund",
-  Fee = "fee",
-  Adjustment = "adjustment"
+  // Fee = "fee",
+  // Adjustment = "adjustment"
 }
 
 export enum TransactionStatus  {
@@ -69,6 +68,9 @@ export class Transaction {
   status: TransactionStatus
 
 
+  @Column("timestamptz", {
+    nullable: true
+  })
   postedAt: Date | null
 
   @Column("enum", {

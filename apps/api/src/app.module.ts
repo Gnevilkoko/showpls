@@ -10,7 +10,7 @@ import { DataSource, DataSourceOptions } from "typeorm"
 import { AuthModule } from "./modules/auth/auth.module"
 import path from "path"
 import { AcceptLanguageResolver, I18nModule } from "nestjs-i18n"
-import { FallbackLanguageCode, Token } from "@share"
+import { FallbackLanguageCode, Token, TokenService } from "@share"
 import { ClsModule } from "nestjs-cls"
 import { TelegrafModule } from "nestjs-telegraf"
 import { BotHandler } from "./modules/bot/bot.handler"
@@ -100,17 +100,17 @@ import { LedgerModule } from "@ledger"
       },
     }),
     LedgerModule.forRootAsync({
-      initialize: async (dataSource, accountService, balanceService, currencyService) => {
+      setup: async (ledger) => {
         if (Token.STARS) {
-          let currency = await currencyService.retrieve({
+          let currency = await ledger.currency.retrieve({
             code: Token.STARS,
             blockchain: null,
           })
           if (!currency) {
-            await currencyService.create({
+            await ledger.currency.create({
               name: Token.STARS,
               code: Token.STARS,
-              scale: 6,
+              scale: TokenService.getDecimals(Token.STARS),
               blockchain: null,
             })
           }

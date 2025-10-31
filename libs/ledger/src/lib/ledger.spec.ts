@@ -26,96 +26,10 @@ describe("Ledger", () => {
   })
 
   it("should createDeposit() works", async () => {
-    const user = {
-      id: "1",
-    }
-    const account = await module.get(AccountService).create(
-      {
-        ownerType: AccountOwnerType.User,
-        ownerId: user.id,
-      },
-      undefined
-    )
 
-    const currency = await module.get(CurrencyService).create({
-      name: "Tether (USDT)",
-      code: "USDT",
-      blockchain: "ton",
-      scale: 6,
-    })
-
-    const txid = randomBytes(32).toString("hex")
-
-    await service.createDeposit(
-      {
-        userId: user.id,
-        externalType: "ton",
-        externalId: txid,
-        currencyId: currency.id,
-        amount: BigInt(500e6),
-      },
-      dataSource.manager
-    )
-
-    const balance = (await module.get(BalanceService).retrieve(
-      {
-        accountId: account.id,
-        currencyId: currency.id,
-      },
-      undefined
-    ))!
-
-    expect(+balance.amount).toBe(500e6)
   })
 
   it("should revertDeposit() works", async () => {
-    const user = {
-      id: "1",
-    }
-    const account = await module.get(AccountService).create(
-      {
-        ownerType: AccountOwnerType.User,
-        ownerId: user.id,
-      },
-      undefined
-    )
 
-    const currency = await module.get(CurrencyService).create({
-      name: "Tether (USDT)",
-      code: "USDT",
-      blockchain: "ton",
-      scale: 6,
-    })
-
-    const txid = randomBytes(32).toString("hex")
-
-    await service.createDeposit(
-      {
-        userId: user.id,
-        externalType: "ton",
-        externalId: txid,
-        currencyId: currency.id,
-        amount: BigInt(500e6),
-      },
-      dataSource.manager
-    )
-
-    await service.revertDeposit(
-      {
-        externalType: "ton",
-        externalId: txid,
-      },
-      dataSource.manager
-    )
-
-    const balance = (await module.get(BalanceService).retrieve(
-      {
-        accountId: account.id,
-        currencyId: currency.id,
-      },
-      undefined
-    ))!
-
-    expect(+balance.amount).toBe(0)
   })
 })

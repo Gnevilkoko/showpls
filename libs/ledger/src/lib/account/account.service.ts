@@ -54,7 +54,7 @@ const schema = z.discriminatedUnion("ownerType", [
   }),
   z.object({
     ownerType: z.literal(AccountOwnerType.Escrow),
-    ownerId: z.coerce.bigint().positive().transform(String),
+    ownerId: z.null(),
   }),
   z.object({ ownerType: z.literal(AccountOwnerType.Platform), ownerId: z.null() }),
   z.object({ ownerType: z.literal(AccountOwnerType.External), ownerId: z.null() }),

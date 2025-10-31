@@ -24,7 +24,7 @@ export class Entry {
   amount: string
 
   @ManyToOne(() => Currency, (currency) => currency.entries, {
-    onDelete: "CASCADE",
+    onDelete: "RESTRICT",
   })
   @JoinColumn({
     name: "currencyId",

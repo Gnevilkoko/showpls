@@ -133,7 +133,7 @@ export class StarsTopUpService {
             }
           )
 
-          await this.ledger.createDeposit(
+          await this.ledger.deposit.create(
             {
               userId: topUp.userId,
               amount: BigInt(topUp.amount),
@@ -192,7 +192,7 @@ export class StarsTopUpService {
             }
           )
 
-          await this.ledger.revertDeposit(
+          await this.ledger.deposit.revert(
             {
               externalId: topUp.id,
               externalType: this.externalType,

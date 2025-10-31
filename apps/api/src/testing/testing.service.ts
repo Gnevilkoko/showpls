@@ -13,7 +13,7 @@ import { TypeOrmModule } from "@nestjs/typeorm"
 import { getWinstonOptions } from "../get-winston-options"
 import { ClsModule } from "nestjs-cls"
 import { LedgerModule } from "@ledger"
-import { Token } from "@share"
+import { Token, TokenService } from "@share"
 
 export class TestingService {
   static async getApp(module: TestingModule) {
@@ -123,17 +123,17 @@ export class TestingService {
       }),
       AuthModule,
       LedgerModule.forRootAsync({
-        initialize: async (dataSource, accountService, balanceService, currencyService) => {
+        setup: async (ledger) => {
           if (Token.STARS) {
-            let currency = await currencyService.retrieve({
+            let currency = await ledger.currency.retrieve({
               code: Token.STARS,
               blockchain: null,
             })
             if (!currency) {
-              await currencyService.create({
+              await ledger.currency.create({
                 name: Token.STARS,
                 code: Token.STARS,
-                scale: 6,
+                scale: TokenService.getDecimals(Token.STARS),
                 blockchain: null,
               })
             }
