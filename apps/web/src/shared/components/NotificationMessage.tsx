@@ -1,10 +1,10 @@
 import { useState } from "react"
 import { useTranslation } from "react-i18next"
-import cameraIcon from "../../../assets/icons/actions/camera.svg"
-import checkGreenIcon from "../../../assets/icons/status/check-green.svg"
-import closeRedIcon from "../../../assets/icons/ui/close-icon-red.svg"
-import verifiedCheckIcon from "../../../assets/icons/status/verified-check.svg"
-import type { Message } from "../../../shared/types"
+import cameraIcon from "../../assets/icons/actions/camera.svg"
+import checkGreenIcon from "../../assets/icons/status/check-green.svg"
+import closeRedIcon from "../../assets/icons/ui/close-icon-red.svg"
+import verifiedCheckIcon from "../../assets/icons/status/verified-check.svg"
+import type { Message } from "../types"
 
 interface NotificationMessageProps {
   message: Message

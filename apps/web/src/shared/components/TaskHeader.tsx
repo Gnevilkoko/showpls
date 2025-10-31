@@ -1,5 +1,5 @@
 import { useTranslation } from "react-i18next"
-import arrowDownGreenIcon from "../../../assets/icons/ui/arrow-down-green.svg"
+import arrowDownGreenIcon from "../../assets/icons/ui/arrow-down-green.svg"
 
 interface TaskHeaderProps {
   isOpen: boolean
@@ -11,7 +11,7 @@ const TaskHeader = ({ isOpen, onToggle, ordersLength }: TaskHeaderProps) => {
   const { t } = useTranslation()
 
   return (
-    <div className="chat__task-heder">
+    <div className="chat__task-header">
       <span>{ordersLength > 1 ? t("tasksDetails", { count: ordersLength }) : t("taskDetails")}</span>
 
       <button className={`chat__task-show-btn ${isOpen ? "rotated" : ""}`} onClick={onToggle} type="button">

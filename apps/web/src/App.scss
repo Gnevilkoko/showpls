@@ -609,13 +609,14 @@ $max-width-all-content: 450px;
 }
 
 .specials-banner__header {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  font-weight: 700;
-  font-size: 16px;
-  line-height: 100%;
-  color: #3c454c;
+  width: 100%;
+  display: flex;
+  justify-content: center;
+}
+
+.specials-logo {
+  width: 100%;
+  max-width: 150px;
 }
 
 .specials__container {
@@ -1991,7 +1992,7 @@ $max-width-all-content: 450px;
 
 .chat {
   width: 100%;
-  min-height: 100%;
+  min-height: 100vh;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -2222,7 +2223,7 @@ $max-width-all-content: 450px;
   align-items: flex-end;
 }
 
-.chat__task-heder {
+.chat__task-header {
   width: 100%;
   display: flex;
   align-items: center;

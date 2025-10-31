@@ -152,7 +152,7 @@ const messagesReciever: Message[] = [
 
 export const chatData: DataMessages[] = [
   {
-    chat_id: 1,
+    chat_id: 0,
     messages: messagesReciever,
     has_more: true,
   },

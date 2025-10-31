@@ -4,19 +4,25 @@ import checkReadIcon from "../../../assets/icons/status/check-read.svg"
 import starBlankIcon from "../../../assets/icons/status/star-blank.svg"
 import starFilledIcon from "../../../assets/icons/status/star-filled.svg"
 import { formatTimeFromEpochMs } from "../../../shared/format"
+import { useNavigate } from "react-router-dom"
+import { memo } from "react"
 
 interface ChatPrevItemProps {
   chat: ChatType
-  callbackOpenChat: (chat: ChatType) => void
 }
 
-const ChatItem = ({ chat, callbackOpenChat }: ChatPrevItemProps) => {
+const ChatItem = memo(({ chat }: ChatPrevItemProps) => {
   const time = formatTimeFromEpochMs(chat.last_update)
+  const navigate = useNavigate()
+
+  const handleClickChat = () => {
+    navigate(`/chat/${chat.chat_id}`)
+  }
 
   return (
     <div
       className={`chats__prev-chat ${chat.count_unread ? "unread" : ""} ${chat.is_active_order ? "active-order" : ""}`}
-      onClick={() => callbackOpenChat(chat)}
+      onClick={handleClickChat}
     >
       <img src={chat.avatar ? chat.avatar : userIcon} alt="User Avatar" className="prev-chat__avatar" loading="lazy" />
 
@@ -49,6 +55,6 @@ const ChatItem = ({ chat, callbackOpenChat }: ChatPrevItemProps) => {
       </div>
     </div>
   )
-}
+})
 
 export default ChatItem
