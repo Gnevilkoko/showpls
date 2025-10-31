@@ -10,6 +10,7 @@ import { EscrowRefundParams, EscrowRefundService } from "@ledger/escrow/escrow-r
 
 @Injectable()
 export class EscrowService {
+
   protected logger = new Logger(EscrowService.name)
   protected holdService: EscrowHoldService
   protected releaseService: EscrowReleaseService

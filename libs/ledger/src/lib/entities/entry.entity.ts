@@ -4,21 +4,10 @@ import { Account } from "./account.entity"
 import { Currency } from "./currency.entity"
 import { Int256Field } from "@ledger/entities/int256.field"
 
-// export enum EntryType {
-//   Credit = "credit",
-//   Debit = "debit",
-// }
-
 @Entity()
 export class Entry {
   @PrimaryGeneratedColumn("increment", { type: "bigint" })
   id: string
-
-  // @Column("enum", {
-  //   enum: EntryType,
-  //   name: "type",
-  // })
-  // type: EntryType
 
   @Int256Field()
   amount: string

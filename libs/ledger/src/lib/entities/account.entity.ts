@@ -6,7 +6,8 @@ export enum AccountOwnerType {
   User = "user",
   Platform = "platform",
   Escrow = "escrow",
-  External = "external"
+  External = "external",
+  // Dust = "dust"
 }
 
 export enum AccountPurpose {

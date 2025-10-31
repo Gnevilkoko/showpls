@@ -5,9 +5,21 @@ import { BalanceService } from "@ledger/balance/balance.service"
 import { CurrencyService } from "@ledger/currency/currency.service"
 import { z } from "zod"
 import LedgerExceptions from "@ledger/ledger.exceptions"
-import { Balance, Currency, Entry, Transaction, TransactionStatus, TransactionType } from "@ledger/entities"
+import {
+  Account,
+  AccountOwnerType,
+  Balance,
+  Currency,
+  Entry,
+  Transaction,
+  TransactionStatus,
+  TransactionType,
+} from "@ledger/entities"
+import Decimal from "decimal.js"
 
 export class EscrowReleaseService {
+  protected static readonly feeInPercentage = 2.5 as number
+
   constructor(
     @InjectDataSource() protected dataSource: DataSource,
     public account: AccountService,
@@ -60,10 +72,9 @@ export class EscrowReleaseService {
       return
     }
 
-    const currency = await this.currency.retrieve({
+    const currency = (await this.currency.retrieve({
       id: currencyId,
-    }) as Currency
-
+    })) as Currency
 
     const transactionInsertResult = await manager
       .createQueryBuilder()
@@ -97,10 +108,71 @@ export class EscrowReleaseService {
       amount: string
     }
 
+    let platformAccount: Account | null = await this.account.retrieve(
+      {
+        ownerType: AccountOwnerType.Platform,
+        ownerId: null,
+      },
+      manager
+    )
+
+    if (!platformAccount) {
+      platformAccount = await this.account.create(
+        {
+          ownerType: AccountOwnerType.Platform,
+          ownerId: null,
+        },
+        manager
+      )
+    }
+
+    let platformBalance: Balance | null = await this.balance.retrieve(
+      {
+        currencyId: currency.id,
+        accountId: platformAccount.id,
+      },
+      manager
+    )
+
+    if (!platformBalance) {
+      platformBalance = await this.balance.create(
+        {
+          currencyId: currency.id,
+          accountId: platformAccount.id,
+        },
+        manager
+      )
+    }
+
     const amount = BigInt(_amount)
+    const feeInBasisPoints = BigInt(new Decimal(EscrowReleaseService.feeInPercentage).mul(100).toString())
+
+    const feeAmount = (amount * feeInBasisPoints) / 10_000n
+
+    const toAmount = amount - feeAmount
+    const escrowAmount = amount - feeAmount
+
+    let dustAmount = 0n
+
+    const total = -amount + toAmount + feeAmount
+
+    if (total !== 0n) {
+      const dust = -total
+      dustAmount = BigInt(Math.abs(Number(dust)))
+
+      await manager.getRepository(Entry).insert({
+        amount: dust.toString(),
+        currencyId: currency.id,
+        accountId: platformAccount.id,
+        transactionId: transaction.id,
+        meta: {
+          description: "Rounding correction",
+        } as any,
+      })
+    }
 
     await manager.getRepository(Entry).insert({
-      amount: (-amount).toString(),
+      amount: (-escrowAmount).toString(),
       currencyId: currency.id,
       accountId: escrow,
       transactionId: transaction.id,
@@ -108,12 +180,38 @@ export class EscrowReleaseService {
     })
 
     await manager.getRepository(Entry).insert({
-      amount: amount.toString(),
+      amount: (-feeAmount).toString(),
+      currencyId: currency.id,
+      accountId: escrow,
+      transactionId: transaction.id,
+      meta: {},
+    })
+
+    await manager.getRepository(Entry).insert({
+      amount: toAmount.toString(),
       currencyId: currency.id,
       accountId: to,
       transactionId: transaction.id,
       meta: {},
     })
+
+    await manager.getRepository(Entry).insert({
+      amount: feeAmount.toString(),
+      currencyId: currency.id,
+      accountId: platformAccount.id,
+      transactionId: transaction.id,
+      meta: {},
+    })
+
+    if (dustAmount !== 0n) {
+      await manager.getRepository(Entry).insert({
+        amount: dustAmount.toString(),
+        currencyId: currency.id,
+        accountId: platformAccount.id,
+        transactionId: transaction.id,
+        meta: {},
+      })
+    }
 
     const escrowBalance = (await this.balance.retrieve(
       {
@@ -133,7 +231,11 @@ export class EscrowReleaseService {
       manager
     )) as Balance
 
-    await manager.getRepository(Balance).increment({ id: toBalance.id }, "amount", amount.toString())
+    await manager.getRepository(Balance).increment({ id: toBalance.id }, "amount", toAmount.toString())
+
+    await manager
+      .getRepository(Balance)
+      .increment({ id: platformBalance.id }, "amount", (feeAmount + dustAmount).toString())
 
     const fromBalance = (await this.balance.retrieve(
       {

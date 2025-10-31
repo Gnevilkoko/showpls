@@ -58,6 +58,7 @@ const schema = z.discriminatedUnion("ownerType", [
   }),
   z.object({ ownerType: z.literal(AccountOwnerType.Platform), ownerId: z.null() }),
   z.object({ ownerType: z.literal(AccountOwnerType.External), ownerId: z.null() }),
+  // z.object({ ownerType: z.literal(AccountOwnerType.Dust), ownerId: z.null() }),
 ])
 
 export type CreateAccountParams = z.infer<typeof schema>

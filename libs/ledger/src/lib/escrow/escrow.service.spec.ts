@@ -3,8 +3,19 @@ import { DataSource } from "typeorm"
 import { Ledger } from "@ledger"
 import { TestingService } from "@ledger/testing/testing.service"
 import { getDataSourceToken } from "@nestjs/typeorm"
-import { Account, AccountOwnerType, Balance, Currency } from "@ledger/entities"
+import { Account, AccountOwnerType, Balance, Currency, Entry } from "@ledger/entities"
 import { CurrencyService } from "@ledger/currency/currency.service"
+import { type EscrowReleaseService } from "@ledger/escrow/escrow-release.service"
+
+jest.mock("./escrow-release.service", () => {
+  const ERService = jest.requireActual("./escrow-release.service").EscrowReleaseService as typeof EscrowReleaseService
+  Reflect.set(ERService, "feeInPercentage", 2.5)
+
+  return {
+    EscrowReleaseService: ERService,
+    __esModule: true,
+  }
+})
 
 describe("Ledger", () => {
   let module: TestingModule
@@ -173,7 +184,7 @@ describe("Ledger", () => {
       undefined
     )) as Balance
 
-    expect(BigInt(toBalance.amount)).toBe(escrowAmount)
+    expect(BigInt(toBalance.amount)).toBe(97500000n)
 
     fromBalance = (await service.balance.retrieve(
       {
@@ -185,8 +196,28 @@ describe("Ledger", () => {
 
     expect(BigInt(fromBalance.lockedAmount)).toBe(BigInt(0))
     expect(BigInt(fromBalance.amount)).toBe(BigInt(900e6))
-  })
 
+    const platformAccount = (await service.account.retrieve(
+      {
+        ownerType: AccountOwnerType.Platform,
+        ownerId: null,
+      },
+      undefined
+    )) as Account
+
+    const platformBalance = (await service.balance.retrieve(
+      {
+        accountId: platformAccount.id,
+        currencyId: currency.id,
+      },
+      undefined
+    )) as Balance
+
+    expect(BigInt(platformBalance.amount)).toBe(2500000n)
+
+    const sum = await dataSource.getRepository(Entry).sum("amount" as never, {})
+    expect(sum).toBe(0)
+  })
 
   it("should refund() works", async () => {
     const fromAccount = await service.account.create(
