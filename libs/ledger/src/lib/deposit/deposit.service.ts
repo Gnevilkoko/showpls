@@ -3,7 +3,7 @@ import { DataSource, EntityManager } from "typeorm"
 import { AccountService } from "@ledger/account/account.service"
 import { BalanceService } from "@ledger/balance/balance.service"
 import { CurrencyService } from "@ledger/currency/currency.service"
-import { Injectable } from "@nestjs/common"
+import { Injectable, Logger } from "@nestjs/common"
 import { z } from "zod"
 import LedgerExceptions from "@ledger/ledger.exceptions"
 import {
@@ -20,6 +20,8 @@ import {
 
 @Injectable()
 export class DepositService {
+  protected logger = new Logger(DepositService.name)
+
   constructor(
     @InjectDataSource() protected dataSource: DataSource,
     public account: AccountService,
@@ -93,8 +95,13 @@ export class DepositService {
       },
     })
 
-    // idempotency
     if (transaction) {
+      this.logger.warn({
+        message: `Transaction already exists`,
+        data: {
+          id: transaction.id,
+        },
+      })
       return
     }
 
@@ -200,6 +207,12 @@ export class DepositService {
     })
 
     if (transaction) {
+      this.logger.warn({
+        message: `Transaction already exists`,
+        data: {
+          id: transaction.id,
+        },
+      })
       return
     }
 

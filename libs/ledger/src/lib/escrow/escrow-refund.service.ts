@@ -7,8 +7,11 @@ import { z } from "zod"
 import LedgerExceptions from "@ledger/ledger.exceptions"
 import { Balance, Currency, Entry, Transaction, TransactionStatus, TransactionType } from "@ledger/entities"
 import EscrowExceptions from "@ledger/escrow/escrow.exceptions"
+import { Logger } from "@nestjs/common"
 
 export class EscrowRefundService {
+  protected logger = new Logger(EscrowRefundService.name)
+
   constructor(
     @InjectDataSource() protected dataSource: DataSource,
     public account: AccountService,
@@ -69,7 +72,13 @@ export class EscrowRefundService {
       },
     })
 
-    if (transaction) {
+      if (transaction) {
+      this.logger.warn({
+        message: `Transaction already exists`,
+        data: {
+          id: transaction.id,
+        },
+      })
       return
     }
 

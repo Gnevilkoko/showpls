@@ -122,6 +122,12 @@ export class StarsTopUpService {
           }
 
           if (topUp.paid) {
+            this.logger.warn({
+              message: "TopUp already marked as paid",
+              data: {
+                id: topUp.id,
+              },
+            })
             return
           }
 
@@ -143,15 +149,6 @@ export class StarsTopUpService {
             },
             manager
           )
-
-          // await this.userService.incrementBalance(
-          //   {
-          //     userId: topUp.userId,
-          //     amount: topUp.amount.toString(),
-          //     token: Token.STARS,
-          //   },
-          //   manager
-          // )
         })
       },
       (e) => DbHelpers.isSerializationFailure(e)
@@ -182,6 +179,12 @@ export class StarsTopUpService {
           }
 
           if (topUp.refunded) {
+            this.logger.warn({
+              message: "TopUp already marked as refunded",
+              data: {
+                id: topUp.id,
+              },
+            })
             return
           }
 
@@ -199,15 +202,6 @@ export class StarsTopUpService {
             },
             manager
           )
-
-          // await this.userService.decrementBalance(
-          //   {
-          //     userId: topUp.userId,
-          //     amount: topUp.amount.toString(),
-          //     token: Token.STARS,
-          //   },
-          //   manager
-          // )
         })
       },
       (e) => DbHelpers.isSerializationFailure(e)

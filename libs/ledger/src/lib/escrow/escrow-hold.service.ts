@@ -16,8 +16,11 @@ import {
   TransactionType,
 } from "@ledger/entities"
 import EscrowExceptions from "@ledger/escrow/escrow.exceptions"
+import { Logger } from "@nestjs/common"
 
 export class EscrowHoldService {
+  protected logger = new Logger(EscrowHoldService.name)
+
   constructor(
     @InjectDataSource() protected dataSource: DataSource,
     public account: AccountService,
@@ -43,6 +46,12 @@ export class EscrowHoldService {
     })
 
     if (transaction) {
+      this.logger.warn({
+        message: `Transaction already exists`,
+        data: {
+          id: transaction.id,
+        },
+      })
       return
     }
 

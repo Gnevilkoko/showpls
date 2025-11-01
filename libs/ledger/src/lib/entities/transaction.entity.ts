@@ -67,7 +67,6 @@ export class Transaction {
   })
   status: TransactionStatus
 
-
   @Column("timestamptz", {
     nullable: true
   })

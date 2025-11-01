@@ -16,8 +16,10 @@ import {
   TransactionType,
 } from "@ledger/entities"
 import Decimal from "decimal.js"
+import { Logger } from "@nestjs/common"
 
 export class EscrowReleaseService {
+  protected logger = new Logger(EscrowReleaseService.name)
   protected static readonly feeInPercentage = 2.5 as number
 
   constructor(
@@ -69,9 +71,14 @@ export class EscrowReleaseService {
     })
 
     if (transaction) {
+      this.logger.warn({
+        message: `Transaction already exists`,
+        data: {
+          id: transaction.id,
+        },
+      })
       return
     }
-
     const currency = (await this.currency.retrieve({
       id: currencyId,
     })) as Currency
