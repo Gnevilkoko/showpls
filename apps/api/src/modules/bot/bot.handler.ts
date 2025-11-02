@@ -1,6 +1,6 @@
 import { Command, InjectBot, On, Start, Update } from "nestjs-telegraf"
 import { Context, Telegraf } from "telegraf"
-import { StarsTopUpService } from "../top-up/stars-top-up.service"
+import { StarsTopUpService } from "../top-up/stars/stars-top-up.service"
 import { z } from "zod"
 import { SuccessfulPayment } from "telegraf/typings/core/types/typegram"
 import { InjectLogger } from "@server/logging"
