@@ -19,6 +19,7 @@ import Chat from "./pages/Chat"
 
 function App() {
   const userData = useAppSelector((state) => state.user.userData)
+  const theme = useAppSelector((state) => state.theme)
 
   return (
     <AppInitializer>
@@ -47,7 +48,7 @@ function App() {
                 pauseOnFocusLoss
                 draggable
                 pauseOnHover
-                theme="light"
+                theme={theme}
               />
             </div>
           </MapProvider>

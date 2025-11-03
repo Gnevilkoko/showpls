@@ -35,13 +35,12 @@ export type UserDataType = {
   firstName: string
   lastName: string | null
   avatar: string | null
+  city: string | null
+  about: string | null
   languageCode: string
   banned: boolean
   lastSeenAt: string
   createdAt: string
-  balances: {
-    XTR: string
-  }
 }
 
 export type ChatOrderType = {

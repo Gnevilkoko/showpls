@@ -21,7 +21,9 @@ const ChatItem = memo(({ chat }: ChatPrevItemProps) => {
 
   return (
     <div
-      className={`chats__prev-chat ${chat.count_unread ? "unread" : ""} ${chat.is_active_order ? "active-order" : ""}`}
+      className={`chats__prev-chat ${chat.chat_id === 0 ? "agent" : ""} ${chat.count_unread ? "unread" : ""} ${
+        chat.is_active_order ? "active-order" : ""
+      }`}
       onClick={handleClickChat}
     >
       <img src={chat.avatar ? chat.avatar : userIcon} alt="User Avatar" className="prev-chat__avatar" loading="lazy" />
