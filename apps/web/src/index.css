@@ -1,5 +1,5 @@
 body {
-  font-family: 'Space Grotesk', sans-serif;
+  font-family: "Space Grotesk", sans-serif;
 }
 
 * {
@@ -13,4 +13,25 @@ body {
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+}
+
+/* CSS переменные для светлой темы (по умолчанию) */
+:root[data-theme="light"],
+:root:not([data-theme]) {
+  --bg-primary: #edf3f7;
+  --bg-secondary: #ffffff;
+  --bg-modal: #0000008c;
+  /* --text-primary: #3c454c;
+  --text-secondary: #6b7280;
+  --border-color: #e5e7eb; */
+}
+
+/* CSS переменные для темной темы */
+:root[data-theme="dark"] {
+  --bg-primary: #0b1d2a;
+  --bg-secondary: #000000;
+  --bg-modal: #ffffff69;
+  /* --text-primary: #ffffff;
+  --text-secondary: #a0a0a0;
+  --border-color: #404040; */
 }

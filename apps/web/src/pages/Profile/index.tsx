@@ -23,14 +23,20 @@ import Navigation from "../../shared/components/Navigation"
 import ProfileBtnItem from "./components/ProfileBtnItem"
 import { AVAILABLE_THEMES } from "../../constants"
 import themeIcon from "../../assets/icons/ui/theme.svg"
+import ModalEditProfile from "./components/ModalEditProfile"
+import ModalReviews from "./components/ModalReviews"
+import { setTheme, type Theme } from "../../store/themeSlice"
 
 const Profile = () => {
   const { t } = useTranslation()
   const dispatch = useAppDispatch()
   const [updateLanguage] = useUpdateLanguageMutation()
 
+  const [isOpenEditProfile, setIsOpenEditProfile] = useState<boolean>(false)
+  const [isOpenReviews, setIsOpenReviews] = useState<boolean>(false)
+
   const selectedLang = useAppSelector((state) => state.language)
-  const [selectedTheme, setSelectedTheme] = useState<"light" | "dark">("light")
+  const selectedTheme = useAppSelector((state) => state.theme)
 
   const userData = useAppSelector((state) => state.user.userData)
 
@@ -54,8 +60,13 @@ const Profile = () => {
     setIsOpenLang(false)
   }
 
-  const handleSelectDropdownTheme = (theme: "light" | "dark") => {
-    setSelectedTheme(theme)
+  const handleSelectDropdownTheme = (theme: Theme) => {
+    dispatch(setTheme(theme))
+
+    // таймаут что бы выпадающее меню закрывалось исправно после выбора темы
+    setTimeout(() => {
+      setIsOpenTheme(false)
+    }, 300)
   }
 
   if (!userData) {
@@ -95,7 +106,7 @@ const Profile = () => {
       </div>
 
       <div className="profile-actions">
-        <button className="profile-actions__button">
+        <button className="profile-actions__button" onClick={() => setIsOpenEditProfile(true)}>
           <img src={penIcon} alt="Pen Icon" />
 
           <span>{t("edit")}</span>
@@ -108,7 +119,7 @@ const Profile = () => {
         </button>
       </div>
 
-      <button className="profile-actions__button">
+      <button className="profile-actions__button" onClick={() => setIsOpenReviews(true)}>
         <img src={likeTagIcon} alt="Like Tag Icon" />
 
         <span>{t("reviews")}</span>
@@ -200,6 +211,10 @@ const Profile = () => {
       <button className="specials_button">{t("logOut")}</button>
 
       <Navigation />
+
+      <ModalEditProfile isOpenEditProfile={isOpenEditProfile} setIsOpenEditProfile={setIsOpenEditProfile} />
+
+      <ModalReviews isOpenReviews={isOpenReviews} setIsOpenReviews={setIsOpenReviews} />
     </div>
   )
 }

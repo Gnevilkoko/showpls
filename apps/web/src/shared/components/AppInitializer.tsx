@@ -24,9 +24,8 @@ const getFallbackUserData = (userFromTg: TelegramWebAppUserType): UserDataType =
     banned: false,
     lastSeenAt: Date.now().toString(),
     createdAt: Date.now().toString(),
-    balances: {
-      XTR: "0",
-    },
+    city: "Istanbul, Turkey",
+    about: "freelancer photographer",
   }
 }
 
