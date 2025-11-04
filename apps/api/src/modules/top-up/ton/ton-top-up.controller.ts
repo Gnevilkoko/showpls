@@ -15,7 +15,7 @@ import { ApiExtraModels, ApiOkResponse, ApiTags, getSchemaPath } from "@nestjs/s
 import { SwaggerUtilities } from "../../../common/swagger.utilities"
 import { IdDto } from "../../../common/dto"
 import { TONTopUpListDto } from "./dto/ton-top-up-list.dto"
-import { StarsTopUpListDto } from "../dto/stars-top-up.list.dto"
+import { StarsTopUpListDto } from "../stars/dto/stars-top-up.list.dto"
 import { plainToInstance } from "class-transformer"
 
 @ApiExtraModels(TONTopUp)

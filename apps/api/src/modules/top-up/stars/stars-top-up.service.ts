@@ -9,7 +9,7 @@ import { DbHelpers } from "../../../db"
 import { UserService } from "../../user"
 
 import { randomUUID } from "crypto"
-import { StarsTopUpListDto } from "../dto/stars-top-up.list.dto"
+import { StarsTopUpListDto } from "./dto/stars-top-up.list.dto"
 import { paginate } from "nestjs-typeorm-paginate"
 import { Ledger } from "@ledger"
 import { Token } from "@share"

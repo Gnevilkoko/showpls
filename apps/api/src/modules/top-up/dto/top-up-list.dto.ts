@@ -1,19 +1,17 @@
-import { createZodDto } from "nestjs-zod"
 import { paginationSchema } from "../../../common/dto"
 import { z } from "zod"
-import { OrderValue, Role } from "@share"
 import { ValidationService } from "../../../common/validation"
+import { OrderValue } from "@share"
+import { createZodDto } from "nestjs-zod"
 
 const schema = paginationSchema.extend({
   filter: z
     .object({
       txid: z.string().min(1).optional(),
       paid: ValidationService.getZodBooleanValidator(true),
-      refunded: ValidationService.getZodBooleanValidator(true),
       userId: z.coerce.number().int().positive().transform(String).optional(),
     })
     .default({
-      refunded: undefined,
       paid: undefined
     }),
   sort: z
@@ -24,4 +22,4 @@ const schema = paginationSchema.extend({
     .default({}),
 })
 
-export class StarsTopUpListDto extends createZodDto(schema) {}
+export class TopUpListDto extends createZodDto(schema) {}

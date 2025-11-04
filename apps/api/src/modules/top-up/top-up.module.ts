@@ -10,6 +10,8 @@ import { ToncoinDaemon } from "./ton/toncoin/toncoin.daemon"
 import { getJettonDaemonProvider } from "./ton/jetton/jetton.daemon"
 import { TONTopUpService } from "./ton/ton-top-up.service"
 import { TONTopUpController } from "./ton/ton-top-up.controller"
+import { TopUpService } from "./top-up.service"
+import { TopUpController } from "./top-up.controller"
 
 @Module({
   imports: [TypeOrmModule.forFeature([StarsTopUp, TONTopUp, TONIgnoredTransaction])],
@@ -27,9 +29,10 @@ import { TONTopUpController } from "./ton/ton-top-up.controller"
       },
     },
     ToncoinDaemon,
-    getJettonDaemonProvider(Token.USDT)
+    getJettonDaemonProvider(Token.USDT),
+    TopUpService
   ],
-  controllers: [StarsTopUpController, TONTopUpController],
+  controllers: [StarsTopUpController, TONTopUpController, TopUpController],
   exports: [StarsTopUpService],
 })
 export class TopUpModule {}
