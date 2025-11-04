@@ -7,9 +7,11 @@ import { TestingService } from "../../../api/src/testing"
 import { getDataSourceToken } from "@nestjs/typeorm"
 import { UserService } from "../../../api/src/modules/user"
 import { faker } from "@faker-js/faker/locale/en"
-import { LanguageCode, Role } from "@share"
+import { Action, LanguageCode, Role } from "@share"
 import AuthService from "../../../api/src/modules/auth/auth.service"
-import { instanceToPlain } from "class-transformer"
+import { instanceToPlain, plainToInstance } from "class-transformer"
+import { AbilityFactory } from "../../../api/src/modules/auth"
+import { User } from "@share/entities"
 
 jest.setTimeout(ms("1m"))
 describe("UserController", () => {
@@ -114,12 +116,18 @@ describe("UserController", () => {
       languageCode: LanguageCode.RU,
     })
 
-    const resp = await instance.post(
+    const ability =await  module.get(AbilityFactory).create(user)
+
+    console.log(ability.can(Action.Read, plainToInstance(User, user)))
+
+
+
+    const resp = await instance.get(
       `get-balances`,
       {
-        id: user.id
-      },
-      {
+        params: {
+          id: user.id
+        },
         headers: {
           Authorization: `Bearer ${AuthService.generateToken(user)}`,
         },

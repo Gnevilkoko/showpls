@@ -4,6 +4,7 @@ import { ApiProperty } from "@nestjs/swagger"
 import { LanguageCode } from "../language-code.enum"
 import { Token } from "../token.enum"
 import { StarsTopUp } from "./stars-top-up.entity"
+import { TONTopUp } from "./ton-top-up.entity"
 
 @Entity()
 export class User {
@@ -64,6 +65,10 @@ export class User {
 
   @OneToMany(() => StarsTopUp, (topUp) => topUp.user)
   starsTopUps: Relation<StarsTopUp>[]
+
+  @OneToMany(() => TONTopUp, (topUp) => topUp.user)
+  tonTopUps: Relation<TONTopUp>[]
+
 
   @ApiProperty({ type: "string" })
   @Column({ type: "timestamptz" })

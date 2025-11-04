@@ -5,17 +5,18 @@ import { User } from "./user.entity"
 @Entity()
 export class StarsTopUp {
   @ApiProperty({ type: "string" })
-  @PrimaryGeneratedColumn("uuid")
+  @PrimaryGeneratedColumn("increment", { type: "bigint" })
   id: string
 
   @Column("varchar", {
     length: 255,
     nullable: true,
+    unique: true
   })
   txid: string | null
 
-  @Column("integer")
-  amount: number
+  @Column("bigint")
+  amount: string
 
   @Column("boolean")
   paid: boolean

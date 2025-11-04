@@ -16,6 +16,9 @@ import { TelegrafModule } from "nestjs-telegraf"
 import { BotHandler } from "./modules/bot/bot.handler"
 import { TopUpModule } from "./modules/top-up/top-up.module"
 import { LedgerModule } from "@ledger"
+import Keyv from "keyv"
+import { CacheModule } from "@nestjs/cache-manager"
+import { CacheableMemory } from "cacheable"
 
 @Module({
   imports: [
@@ -28,19 +31,19 @@ import { LedgerModule } from "@ledger"
     WinstonModule.forRoot({
       ...getWinstonOptions(),
     }),
-    // CacheModule.registerAsync({
-    //   isGlobal: true,
-    //   useFactory: async () => {
-    //     return {
-    //       stores: [
-    //         new Keyv({
-    //           store: new CacheableMemory({ ttl: ms("5m"), lruSize: 500 }),
-    //         }),
-    //         new KeyvRedis(RedisConfig.getDSN())
-    // ],
-    // }
-    // },
-    // }),
+    CacheModule.registerAsync({
+      isGlobal: true,
+      useFactory: async () => {
+        return {
+          stores: [
+            new Keyv({
+              store: new CacheableMemory({ ttl: ms("5m"), lruSize: 500 }),
+            }),
+            // new KeyvRedis(RedisConfig.getDSN())
+          ],
+        }
+      },
+    } as any),
     TypeOrmModule.forRootAsync({
       name: "default",
       inject: [],
@@ -112,6 +115,26 @@ import { LedgerModule } from "@ledger"
               code: Token.STARS,
               scale: TokenService.getDecimals(Token.STARS),
               blockchain: null,
+            })
+          }
+        }
+
+        for (let token of Object.values(Token)) {
+          let blockchain: string | null = null
+          if (token === Token.TON || token === Token.USDT) {
+            blockchain = "ton"
+          }
+
+          let currency = await ledger.currency.retrieve({
+            code: token,
+            blockchain,
+          })
+          if (!currency) {
+            await ledger.currency.create({
+              name: token,
+              code: token,
+              scale: TokenService.getDecimals(token),
+              blockchain,
             })
           }
         }

@@ -34,7 +34,7 @@ export class UserService {
 
       return this.repository.create(insertResult.raw[0] as object)
     } catch (e) {
-      if (e instanceof DbHelpers.isSerializationFailure) {
+      if (DbHelpers.isUniqueError(e)) {
         throw new UserExceptions.AlreadyCreated()
       }
 

@@ -49,7 +49,7 @@ export class StarsTopUpService {
       .into(StarsTopUp)
       .values({
         id,
-        amount: amount * 1e6,
+        amount: (amount * 1e6).toString(),
         paid: false,
         link,
         txid: null,
@@ -121,6 +121,14 @@ export class StarsTopUpService {
             throw new Error(`Not found`)
           }
 
+          if (topUp.refunded) {
+            this.logger.error({
+              message: "Cannot process payment for refunded top-up",
+              data: { id: topUp.id },
+            })
+            return
+          }
+
           if (topUp.paid) {
             this.logger.warn({
               message: "TopUp already marked as paid",
@@ -150,6 +158,8 @@ export class StarsTopUpService {
             manager
           )
         })
+
+
       },
       (e) => DbHelpers.isSerializationFailure(e)
     )
@@ -185,6 +195,10 @@ export class StarsTopUpService {
                 id: topUp.id,
               },
             })
+            return
+          }
+
+          if (!topUp.paid) {
             return
           }
 

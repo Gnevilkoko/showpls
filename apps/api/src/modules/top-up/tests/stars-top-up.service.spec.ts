@@ -60,7 +60,7 @@ describe("StarsTopUpService", () => {
       amount,
       userId: user.id,
     })
-    expect(topUp.amount).toBe(100e6)
+    expect(topUp.amount).toBe((100e6).toString())
     expect(topUp.paid).toBeFalsy()
     expect(topUp.refunded).toBeFalsy()
     expect(topUp.txid).toBeNull()

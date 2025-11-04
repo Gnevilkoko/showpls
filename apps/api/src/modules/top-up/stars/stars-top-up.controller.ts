@@ -5,13 +5,13 @@ import { AuthGuard } from "../../auth/guards"
 import { StarsTopUpService } from "./stars-top-up.service"
 import { AbilityFactory } from "../../auth"
 import { GetUser } from "../../user/decorators"
-import { StarsTopUp, User } from "@share/entities"
+import { StarsTopUp, TONTopUp, User } from "@share/entities"
 import { Action, ErrorCode } from "@share"
 import { APIException } from "@server/api"
 import { CreateStarsTopUpDto } from "../dto/create-stars-top-up.dto"
 import { plainToInstance } from "class-transformer"
 import { StarsTopUpListDto } from "../dto/stars-top-up.list.dto"
-import { ApiExtraModels, ApiOkResponse, ApiTags } from "@nestjs/swagger"
+import { ApiExtraModels, ApiOkResponse, ApiTags, getSchemaPath } from "@nestjs/swagger"
 import { SwaggerUtilities } from "../../../common/swagger.utilities"
 import { IdDto } from "../../../common/dto"
 
@@ -22,7 +22,7 @@ export class StarsTopUpController {
   constructor(protected service: StarsTopUpService, protected abilityFactory: AbilityFactory) {}
 
   @ApiOkResponse({
-    schema: SwaggerUtilities.getPaginatedResponseSchema(StarsTopUp),
+    schema: {$ref: getSchemaPath(StarsTopUp)},
   })
   @RateLimit({
     limit: 1,
@@ -42,11 +42,17 @@ export class StarsTopUpController {
   }
 
   @ApiOkResponse({
-    schema: SwaggerUtilities.getPaginatedResponseSchema(StarsTopUp),
+    schema: {$ref: getSchemaPath(StarsTopUp)},
   })
+  @UseGuards(AuthGuard)
   @Get("retrieve")
-  async retrieve(@Query() { id }: IdDto) {
-    return await this.service.retrieve(id)
+  async retrieve(@Query() { id }: IdDto, @GetUser() user: User) {
+    const ability = await this.abilityFactory.create(user)
+    const topUp = await this.service.retrieve(id)
+    if (ability.cannot(Action.Read, topUp)) {
+      throw new APIException(ErrorCode.ACCESS_DENIED)
+    }
+    return topUp
   }
 
   @ApiOkResponse({

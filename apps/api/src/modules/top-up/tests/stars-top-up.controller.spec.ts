@@ -83,7 +83,7 @@ describe("StarsTopUpController", () => {
     })
     expect(resp.status).toBe(200)
     const topUp = await resp.data as StarsTopUp
-    expect(topUp.amount).toBe(100e6)
+    expect(+topUp.amount).toBe(100e6)
     expect(topUp.paid).toBeFalsy()
     expect(topUp.refunded).toBeFalsy()
     expect(topUp.txid).toBeNull()

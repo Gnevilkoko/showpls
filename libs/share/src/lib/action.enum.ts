@@ -1,5 +1,5 @@
 import { InferSubjects } from "@casl/ability"
-import { StarsTopUp, User } from "./entities"
+import { StarsTopUp, TONTopUp, User } from "./entities"
 
 export enum Action {
   Create = "create",
@@ -8,4 +8,4 @@ export enum Action {
   Delete = "delete",
 }
 
-export type Subjects = InferSubjects<typeof User | typeof StarsTopUp> | "all"
+export type Subjects = InferSubjects<typeof User | typeof StarsTopUp | typeof TONTopUp> | "all"

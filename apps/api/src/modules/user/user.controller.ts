@@ -1,6 +1,6 @@
 import { Body, Controller, Get, Post, Query, UseGuards } from "@nestjs/common"
 import { ApiExtraModels, ApiOkResponse, ApiSecurity, ApiTags, getSchemaPath } from "@nestjs/swagger"
-import { User } from "@share/entities"
+import { StarsTopUp, User } from "@share/entities"
 import { SwaggerUtilities } from "../../common/swagger.utilities"
 import { InjectRepository } from "@nestjs/typeorm"
 import { Repository } from "typeorm"
@@ -27,6 +27,9 @@ export class UserController {
     protected abilityFactory: AbilityFactory
   ) {}
 
+    @ApiOkResponse({
+    schema: {$ref: getSchemaPath(User)},
+  })
   @UseGuards(AuthGuard)
   @Post("create")
   async create(@Body() dto: any, @GetUser() user: User) {
@@ -45,7 +48,7 @@ export class UserController {
   }
 
   @ApiOkResponse({
-    schema: SwaggerUtilities.getPaginatedResponseSchema(User),
+    schema: {$ref: getSchemaPath(User)},
   })
   @Get(`retrieve`)
   async retrieve(@Query() { id }: IdDto) {
@@ -98,10 +101,10 @@ export class UserController {
     },
   })
   @UseGuards(AuthGuard)
-  @Post("get-balances")
-  async getBalances(@GetUser() user: User, @Body() { id }: GetBalancesDto) {
+  @Get("get-balances")
+  async getBalances(@GetUser() user: User, @Query() { id }: GetBalancesDto) {
     const ability = await this.abilityFactory.create(user)
-    if (!ability.cannot(Action.Read, plainToInstance(User, { id }))) {
+    if (ability.cannot(Action.Read, plainToInstance(User, { id }))) {
       throw new APIException(ErrorCode.ACCESS_DENIED)
     }
     return await this.service.getBalances(id)

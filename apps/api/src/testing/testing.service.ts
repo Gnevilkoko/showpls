@@ -13,7 +13,11 @@ import { TypeOrmModule } from "@nestjs/typeorm"
 import { getWinstonOptions } from "../get-winston-options"
 import { ClsModule } from "nestjs-cls"
 import { LedgerModule } from "@ledger"
-import { Token, TokenService } from "@share"
+import { Blockchain, Token, TokenService } from "@share"
+import { CacheModule } from "@nestjs/cache-manager"
+import Keyv from "keyv"
+import { CacheableMemory } from "cacheable"
+
 
 export class TestingService {
   static async getApp(module: TestingModule) {
@@ -58,18 +62,19 @@ export class TestingService {
 
   static getMustHaveModules(): (DynamicModule | { new (): any })[] {
     return [
-      // CacheModule.registerAsync({
-      //   isGlobal: true,
-      //   useFactory: async () => {
-      //     return {
-      //       stores: [
-      //         new Keyv({
-      //           store: new CacheableMemory({ ttl: ms("5m"), lruSize: 500 }),
-      //         }),
-      //       ],
-      //     }
-      //   },
-      // }),
+    CacheModule.registerAsync({
+      isGlobal: true,
+      useFactory: async () => {
+        return {
+          stores: [
+            new Keyv({
+              store: new CacheableMemory({ ttl: ms("5m"), lruSize: 500 }),
+            }),
+            // new KeyvRedis(RedisConfig.getDSN())
+          ],
+        }
+      },
+    } as any),
       ClsModule.forRoot({
         global: true,
         middleware: {
@@ -122,24 +127,44 @@ export class TestingService {
         },
       }),
       AuthModule,
-      LedgerModule.forRootAsync({
-        setup: async (ledger) => {
-          if (Token.STARS) {
-            let currency = await ledger.currency.retrieve({
+    LedgerModule.forRootAsync({
+      setup: async (ledger) => {
+        if (Token.STARS) {
+          let currency = await ledger.currency.retrieve({
+            code: Token.STARS,
+            blockchain: null,
+          })
+          if (!currency) {
+            await ledger.currency.create({
+              name: Token.STARS,
               code: Token.STARS,
+              scale: TokenService.getDecimals(Token.STARS),
               blockchain: null,
             })
-            if (!currency) {
-              await ledger.currency.create({
-                name: Token.STARS,
-                code: Token.STARS,
-                scale: TokenService.getDecimals(Token.STARS),
-                blockchain: null,
-              })
-            }
           }
-        },
-      }),
+        }
+
+        for (let token of Object.values(Token)) {
+          let blockchain: string | null = null
+          if (token === Token.TON || token === Token.USDT) {
+            blockchain = Blockchain.TON
+          }
+
+          let currency = await ledger.currency.retrieve({
+            code: token,
+            blockchain,
+          })
+          if (!currency) {
+            await ledger.currency.create({
+              name: token,
+              code: token,
+              scale: TokenService.getDecimals(token),
+              blockchain,
+            })
+          }
+        }
+      },
+    }),
     ]
   }
 }
