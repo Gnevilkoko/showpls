@@ -1,10 +1,10 @@
-import paperclipIcon from "../../assets/icons/ui/paperclip.svg"
+import attachIcon from "../../assets/icons/actions/attach.svg"
 import emojiIcon from "../../assets/icons/ui/emoji.svg"
 import sendIcon from "../../assets/icons/actions/send.svg"
 import { useEffect, useRef, useState, type ChangeEvent } from "react"
 import { useTranslation } from "react-i18next"
 import type { UploadedImageType } from "../types"
-import plusIcon from "../../assets/icons/ui/plus-gray.svg"
+import plusIcon from "../../assets/icons/ui/plus.svg"
 
 type MessageInputProps = {
   value: string
@@ -88,7 +88,7 @@ const MessageInput = ({ value, onChange, images, onImagesChange, onImageClick }:
       <div className="message-input__container">
         <div ref={dropdownRef} className="message-input__actions-wrapper">
           <button className="added-attachments-btn" onClick={handleDropdownToggle} type="button">
-            <img src={paperclipIcon} alt="Paperclip Icon" />
+            <img src={attachIcon} alt="Attach Icon" />
           </button>
 
           {isDropdownOpen && (

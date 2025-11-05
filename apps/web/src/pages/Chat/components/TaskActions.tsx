@@ -2,7 +2,7 @@ import { useRef, useEffect, useState } from "react"
 import { useTranslation } from "react-i18next"
 import menuDotsIcon from "../../../assets/icons/ui/menu-dots.svg"
 import closeIcon from "../../../assets/icons/ui/close-icon.svg"
-import penIcon from "../../../assets/icons/ui/pen-gray.svg"
+import penIcon from "../../../assets/icons/actions/pen.svg"
 import type { ChatOrderType } from "../../../shared/types"
 
 interface TaskActionsProps {
@@ -53,7 +53,7 @@ const TaskActions = ({ selectedOrder, onRejectOrder, onWriteArbitration }: TaskA
           )}
 
           <button className="chat__task__dropdown-item" onClick={onWriteArbitration} type="button">
-            <img src={penIcon} alt="Pen Icon" />
+            <img src={penIcon} alt="Pencil Icon" />
             <span>{t("writeArbitration")}</span>
           </button>
         </div>

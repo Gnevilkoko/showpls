@@ -148,6 +148,17 @@ const messagesReciever: Message[] = [
     created_at: 1760453955290,
     is_read: true,
   },
+  {
+    id: 8,
+    type: "notification",
+    variant: "challenge",
+    sender_id: 0,
+    receiver_id: 100,
+    text: "",
+    attachments: [],
+    created_at: Date.now(),
+    is_read: true,
+  },
 ]
 
 export const chatData: DataMessages[] = [

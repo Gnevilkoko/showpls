@@ -11,6 +11,7 @@ import TimeLimitField from "../components/TimeLimitField"
 import BudgetField from "../components/BudgetField"
 import Modal from "../../../shared/components/Modal"
 import PerformersMap from "../PerformersMap"
+import VerifProofField from "../components/VerifProofField"
 
 const CustomerTaskForm = () => {
   const { t } = useTranslation()
@@ -28,6 +29,12 @@ const CustomerTaskForm = () => {
   const [timeMinutes, setTimeMinutes] = useState("")
 
   const [budget, setBudget] = useState("")
+
+  const [verifProof, setVerifProof] = useState<"base" | "pro">("base")
+
+  const handleChangeVerifProof = (value: "base" | "pro") => {
+    setVerifProof(value)
+  }
 
   const [isOpenPerformerDiscover, setIsOpenPerformerDiscover] = useState(false)
 
@@ -92,6 +99,8 @@ const CustomerTaskForm = () => {
       />
 
       <BudgetField budget={budget} setBudget={setBudget} />
+
+      <VerifProofField verifProof={verifProof} handleChangeVerifProof={handleChangeVerifProof} />
 
       <CustomerButton img={plusActionBannerIcon} title={t("tasksPage.publishRequest")} color="green" />
 

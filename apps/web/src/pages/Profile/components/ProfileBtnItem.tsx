@@ -1,4 +1,4 @@
-import arrowRightIcon from "../../../assets/icons/ui/arrow-right-white.svg"
+import arrowRightIcon from "../../../assets/icons/ui/arrow-right.svg"
 
 interface ProfileBtnItemProps {
   title: string

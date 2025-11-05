@@ -25,7 +25,7 @@ const TaskSwitcher = ({ ordersLength, selectedIndex, onChangeIndex }: TaskSwitch
         onClick={() => onChangeIndex(selectedIndex + 1)}
         type="button"
       >
-        <img src={arrowLeftIcon} alt="Arrow Right Icon" />
+        <img src={arrowLeftIcon} alt="Arrow Left Icon" />
       </button>
     </div>
   )
