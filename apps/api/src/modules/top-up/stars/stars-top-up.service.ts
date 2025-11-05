@@ -1,8 +1,8 @@
-import { Injectable, Logger } from "@nestjs/common"
-import { InjectRepository } from "@nestjs/typeorm"
+import { Injectable, Logger, Provider } from "@nestjs/common"
+import { getRepositoryToken, InjectRepository } from "@nestjs/typeorm"
 import { Repository } from "typeorm"
 import { Context, Telegraf } from "telegraf"
-import { InjectBot } from "nestjs-telegraf"
+import { getBotToken, InjectBot } from "nestjs-telegraf"
 import { StarsTopUp } from "@share/entities"
 import { retryWithExponentialBackoff } from "@share/utils"
 import { DbHelpers } from "../../../db"
@@ -13,17 +13,19 @@ import { StarsTopUpListDto } from "./dto/stars-top-up.list.dto"
 import { paginate } from "nestjs-typeorm-paginate"
 import { Ledger } from "@ledger"
 import { Token } from "@share"
+import TopUpExceptions from "../top-up.exceptions"
+import { Currency } from "@ledger/entities"
 
 @Injectable()
 export class StarsTopUpService {
   protected logger = new Logger(StarsTopUpService.name)
   protected externalType = "stars"
 
-  constructor(
+  protected constructor(
     @InjectRepository(StarsTopUp) public repository: Repository<StarsTopUp>,
     @InjectBot() protected bot: Telegraf<Context>,
-    protected userService: UserService,
-    protected ledger: Ledger
+    protected ledger: Ledger,
+    protected currency: Currency
   ) {}
 
   async create({ amount, userId }: CreateStarsTopUp) {
@@ -101,11 +103,6 @@ export class StarsTopUpService {
   }
 
   async processSuccessfullPayment({ id, txid }: ProcessPaymentParams) {
-    const currency = (await this.ledger.currency.retrieve({
-      code: Token.STARS,
-      blockchain: null,
-    }))!
-
     await retryWithExponentialBackoff(
       async () => {
         return await this.repository.manager.transaction("SERIALIZABLE", async (manager) => {
@@ -118,7 +115,11 @@ export class StarsTopUpService {
           })
 
           if (!topUp) {
-            throw new Error(`Not found`)
+            throw new TopUpExceptions.NotFound(
+              `TopUp not found by these params: ${JSON.stringify({
+                id,
+              })}`
+            )
           }
 
           if (topUp.refunded) {
@@ -151,7 +152,7 @@ export class StarsTopUpService {
             {
               userId: topUp.userId,
               amount: BigInt(topUp.amount),
-              currencyId: currency.id,
+              currencyId: this.currency.id,
               externalId: topUp.id,
               externalType: this.externalType,
             },
@@ -183,7 +184,11 @@ export class StarsTopUpService {
           })
 
           if (!topUp) {
-            throw new Error(`Not found`)
+            throw new TopUpExceptions.NotFound(
+              `TopUp not found by these params: ${JSON.stringify({
+                id,
+              })}`
+            )
           }
 
           if (topUp.refunded) {
@@ -225,6 +230,14 @@ export class StarsTopUpService {
       },
     })
   }
+
+  public static async initialize(repository: Repository<StarsTopUp>, bot: Telegraf<Context>, ledger: Ledger) {
+    const currency = (await ledger.currency.retrieve({
+      code: Token.STARS,
+      blockchain: null,
+    }))!
+    return new StarsTopUpService(repository, bot, ledger, currency)
+  }
 }
 
 export type ProcessPaymentParams = {
@@ -235,4 +248,12 @@ export type ProcessPaymentParams = {
 export type CreateStarsTopUp = {
   userId: string
   amount: number
+}
+
+export const StarsTopUpServiceProvider: Provider = {
+  provide: StarsTopUpService,
+  inject: [getRepositoryToken(StarsTopUp), getBotToken(), Ledger],
+  useFactory: async (repository: Repository<StarsTopUp>, bot: Telegraf<Context>, ledger: Ledger) => {
+    return await StarsTopUpService.initialize(repository, bot, ledger)
+  },
 }

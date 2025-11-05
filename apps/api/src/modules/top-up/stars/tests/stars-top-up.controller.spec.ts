@@ -1,6 +1,6 @@
 import { Test, TestingModule } from "@nestjs/testing"
 import { DataSource } from "typeorm"
-import { StarsTopUpService } from "../stars-top-up.service"
+import { StarsTopUpService, StarsTopUpServiceProvider } from "../stars-top-up.service"
 import { TestingService } from "../../../../testing"
 import { getDataSourceToken, TypeOrmModule } from "@nestjs/typeorm"
 import { StarsTopUp } from "@share/entities"
@@ -36,7 +36,7 @@ describe("StarsTopUpController", () => {
             },
           },
         },
-        StarsTopUpService,
+        StarsTopUpServiceProvider,
       ],
       controllers: [StarsTopUpController],
     }).compile()

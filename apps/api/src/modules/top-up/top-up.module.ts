@@ -1,7 +1,7 @@
 import { Module } from "@nestjs/common"
 import { TypeOrmModule } from "@nestjs/typeorm"
 import { StarsTopUp, TONIgnoredTransaction, TONTopUp } from "@share/entities"
-import { StarsTopUpService } from "./stars/stars-top-up.service"
+import { StarsTopUpService, StarsTopUpServiceProvider } from "./stars/stars-top-up.service"
 import { StarsTopUpController } from "./stars/stars-top-up.controller"
 import { JettonService } from "./ton/jetton/jetton.service"
 import { getJettonServiceToken } from "./ton/jetton/get-jetton-service-token"
@@ -16,7 +16,7 @@ import { TopUpController } from "./top-up.controller"
 @Module({
   imports: [TypeOrmModule.forFeature([StarsTopUp, TONTopUp, TONIgnoredTransaction])],
   providers: [
-    StarsTopUpService,
+    StarsTopUpServiceProvider,
     TONTopUpService,
     {
       provide: getJettonServiceToken(Token.USDT),

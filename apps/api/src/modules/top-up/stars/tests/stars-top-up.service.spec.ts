@@ -2,7 +2,7 @@ import { Test, TestingModule } from "@nestjs/testing"
 import { DataSource } from "typeorm"
 import { TestingService } from "../../../../testing"
 import { getDataSourceToken, TypeOrmModule } from "@nestjs/typeorm"
-import { StarsTopUpService } from "../stars-top-up.service"
+import { StarsTopUpService, StarsTopUpServiceProvider } from "../stars-top-up.service"
 import { getBotToken } from "nestjs-telegraf"
 import { faker } from "@faker-js/faker/locale/en"
 import { UserService } from "../../../user"
@@ -30,7 +30,7 @@ describe("StarsTopUpService", () => {
             },
           },
         },
-        StarsTopUpService,
+        StarsTopUpServiceProvider,
       ],
     }).compile()
 

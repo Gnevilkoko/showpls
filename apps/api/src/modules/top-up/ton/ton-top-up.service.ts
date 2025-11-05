@@ -9,20 +9,17 @@ import { retryWithExponentialBackoff } from "@share/utils"
 import { DbHelpers } from "../../../db"
 import { paginate } from "nestjs-typeorm-paginate"
 import { TONTopUpListDto } from "./dto/ton-top-up-list.dto"
+import { Currency } from "@ledger/entities"
 
 @Injectable()
 export class TONTopUpService {
   protected logger = new Logger(TONTopUpService.name)
   protected externalType = "ton"
 
-  constructor(
-    @InjectRepository(TONTopUp) protected repository: Repository<TONTopUp>,
-    @InjectDataSource() protected dataSource: DataSource,
-    protected ledger: Ledger
-  ) {}
+  constructor(@InjectRepository(TONTopUp) protected repository: Repository<TONTopUp>, protected ledger: Ledger) {}
 
   async create({ userId }: CreateTONTopUpParams) {
-    const insertResult = await this.dataSource
+    const insertResult = await this.repository
       .createQueryBuilder()
       .insert()
       .into(TONTopUp)
@@ -90,12 +87,12 @@ export class TONTopUpService {
       blockchain: Blockchain.TON,
     }))!
 
-    await retryWithExponentialBackoff(
+    const topUp = await retryWithExponentialBackoff(
       async () => {
-        return await this.dataSource.manager.transaction("SERIALIZABLE", async (manager) => {
+        return await this.repository.manager.transaction("SERIALIZABLE", async (manager) => {
           const repository = manager.getRepository(TONTopUp)
 
-          const topUp: TONTopUp | null = await repository.findOne({
+          const topUp = await repository.findOne({
             where: {
               memo: memo.toString(),
             },
@@ -151,10 +148,20 @@ export class TONTopUpService {
             txid,
             reason: "successfully processed",
           })
+          return topUp
         })
       },
       (e) => DbHelpers.isSerializationFailure(e)
     )
+
+    if (topUp) {
+      this.logger.log({
+        message: "TopUp is paid",
+        data: {
+          id: topUp.id,
+        },
+      })
+    }
   }
 }
 

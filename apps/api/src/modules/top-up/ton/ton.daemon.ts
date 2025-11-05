@@ -29,8 +29,9 @@ export abstract class TONDaemon implements OnModuleInit, OnModuleDestroy {
     protected service: TONTopUpService
   ) {
     this.provider = new TonClient({
-      endpoint: "https://toncenter.com/api/v2/jsonRPC",
-      apiKey: "cc187e363ec5dd1467ab563c4f4ce0fa55b35b95a7ed30b3b0d14ad510e1d58f",
+      endpoint: process.env.TON_API_ENDPOINT as string,
+      apiKey: process.env.TON_API_KEY as string,
+      timeout: ms("10s")
     })
   }
 

@@ -20,7 +20,7 @@ import { CacheableMemory } from "cacheable"
 import { StarsTopUp, TONIgnoredTransaction, TONTopUp } from "@share/entities"
 import { TopUpService } from "../modules/top-up/top-up.service"
 import { faker } from "@faker-js/faker/locale/en"
-import { StarsTopUpService } from "../modules/top-up/stars/stars-top-up.service"
+import { StarsTopUpService, StarsTopUpServiceProvider } from "../modules/top-up/stars/stars-top-up.service"
 import { TONTopUpService } from "../modules/top-up/ton/ton-top-up.service"
 import { getJettonServiceToken } from "../modules/top-up/ton/jetton/get-jetton-service-token"
 import { JettonService } from "../modules/top-up/ton/jetton/jetton.service"
@@ -198,7 +198,7 @@ export class TestingService {
               },
             },
           },
-          StarsTopUpService,
+          StarsTopUpServiceProvider,
           TONTopUpService,
           {
             provide: getJettonServiceToken(Token.USDT),
