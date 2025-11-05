@@ -3,6 +3,7 @@ import { color, colorize } from "json-colorizer"
 import { serializeError } from "serialize-error-cjs"
 import { ConfigService } from "./config"
 import { ClsServiceManager } from 'nestjs-cls';
+import { isEmpty } from "lodash"
 
 
 function deepSerializeError(err: unknown): unknown {
@@ -42,7 +43,7 @@ const jsonColorFormat = format.printf(({ level, message, timestamp, context, dat
   }
 
   return colorize(logObject, {
-    indent: 2,
+    indent: 0,
     colors: {
       StringKey: color.magenta,
       StringLiteral: color.yellow,
@@ -54,19 +55,9 @@ const jsonColorFormat = format.printf(({ level, message, timestamp, context, dat
 })
 
 const serializeErrorsFormat = format((info) => {
-  if (info instanceof Error) {
-    return {
-      ...info,
-      // error: deepSerializeError(info),
-      message: info.message,
-      test: "here",
-    }
+  if (isEmpty(info.error)) {
+    delete info.error
   }
-
-  if (info.error instanceof Error) {
-    info.error = deepSerializeError(info.error)
-  }
-
   return info
 })
 

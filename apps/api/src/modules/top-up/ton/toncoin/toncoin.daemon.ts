@@ -1,19 +1,12 @@
-import { Address, TonClient, Transaction } from "@ton/ton"
-import { Injectable, Logger, OnModuleDestroy, OnModuleInit } from "@nestjs/common"
-import { Subscription } from "rxjs"
-import { InjectDataSource, InjectRepository } from "@nestjs/typeorm"
-import { DataSource, In, Repository } from "typeorm"
-import { isEmpty } from "lodash"
+import { Address, Transaction } from "@ton/ton"
+import { Injectable, Logger } from "@nestjs/common"
+import { InjectRepository } from "@nestjs/typeorm"
+import { Repository } from "typeorm"
 import { TONIgnoredTransaction } from "@share/entities"
-import { TONTransactionIterator } from "../ton-transaction.iterator"
-import { sleep } from "@share/utils"
-import ms from "ms"
 import { TONUtilities } from "../ton.utilities"
-import z from "zod"
 import { Token } from "@share"
 import { TONTopUpService } from "../ton-top-up.service"
 import { TONDaemon } from "../ton.daemon"
-import { serializeError } from "serialize-error-cjs"
 
 @Injectable()
 export class ToncoinDaemon extends TONDaemon {
@@ -49,7 +42,7 @@ export class ToncoinDaemon extends TONDaemon {
             message: "Transaction with incorrect [dest] detected",
             txid,
           })
-          await this.ignore(txid, "Incorrect address in dest")
+          await this.ignore(txid, "incorrect address in dest")
           continue
         }
 
@@ -67,10 +60,9 @@ export class ToncoinDaemon extends TONDaemon {
             message: "Transaction without payload detected",
             txid,
           })
-          await this.ignore(txid, "Payload isn't exists")
+          await this.ignore(txid, "memo isn't exists")
           continue
         }
-
 
         try {
           const _comment = body.loadStringTail()

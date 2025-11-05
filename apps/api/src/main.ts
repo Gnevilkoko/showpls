@@ -39,6 +39,7 @@ async function bootstrap() {
         )
         .build(),
       {
+        deepScanRoutes: true,
         extraModels: [APIExceptionResponse],
       }
     )

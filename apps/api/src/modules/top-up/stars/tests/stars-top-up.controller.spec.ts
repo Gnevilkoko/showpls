@@ -59,7 +59,6 @@ describe("StarsTopUpController", () => {
 
   afterEach(async () => {
     await app.close()
-    // whyIsNodeRunning();
   })
 
   async function createUser() {

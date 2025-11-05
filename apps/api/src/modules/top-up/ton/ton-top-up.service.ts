@@ -111,12 +111,19 @@ export class TONTopUpService {
           }
 
           if (topUp.paid) {
-            this.logger.warn({
-              message: "TopUp already marked as paid",
-              data: {
-                id: topUp.id,
-              },
-            })
+            if (topUp.txid !== txid) {
+              await manager.getRepository(TONIgnoredTransaction).insert({
+                txid,
+                reason: "transaction contains the memo that is associated with another transaction",
+              })
+            } else {
+              this.logger.warn({
+                message: "TopUp already marked as paid",
+                data: {
+                  id: topUp.id,
+                },
+              })
+            }
             return
           }
 

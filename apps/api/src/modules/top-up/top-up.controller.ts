@@ -16,7 +16,7 @@ import { TopUp } from "./top-up"
 export class TopUpController {
   constructor(protected service: TopUpService) {}
 
-  @ApiOkResponse(SwaggerUtilities.getPaginatedResponseSchema(TopUp))
+  // @ApiOkResponse(SwaggerUtilities.getPaginatedResponseSchema(TopUp))
   @UseGuards(AuthGuard)
   @Get("list")
   async list(@Query() dto: TopUpListDto, @GetUser() user: User) {

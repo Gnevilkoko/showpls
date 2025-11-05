@@ -1,7 +1,7 @@
 ## Launch backend
 
 ```shell
-docker-compose -f dev-docker-compose.yaml up
+docker-compose -f dev-docker-compose.yaml up -d
 nx run api:dev 
 ```
 
@@ -10,7 +10,6 @@ nx run api:dev
 
 ```shell
 docker-compose -f dev-docker-compose.yaml up -d 
-nx test api --runInBand
-nx e2e api-e2e --runInBand  
-nx test ledger --runInBand
+nx test api --runInBand --silent
+nx test ledger --runInBand --silent
 ```

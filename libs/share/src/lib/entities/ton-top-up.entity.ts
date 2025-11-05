@@ -48,7 +48,6 @@ export class TONTopUp {
       @ApiProperty({ type: "string"})
   @Generated("increment")
   @Column("bigint", {
-    nullable: true,
     unique: true
   })
   memo: string

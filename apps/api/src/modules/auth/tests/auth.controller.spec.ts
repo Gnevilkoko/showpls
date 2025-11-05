@@ -4,22 +4,22 @@ import axios, { AxiosInstance } from "axios"
 import { DataSource, Repository } from "typeorm"
 import { getDataSourceToken, getRepositoryToken } from "@nestjs/typeorm"
 import ms from "ms"
-import { TestingService } from "../../../api/src/testing"
-import { AppModule } from "../../../api/src/app.module"
-import AuthService from "../../../api/src/modules/auth/auth.service"
+import { TestingService } from "../../../testing"
+import { AppModule } from "../../../app.module"
+import AuthService from "../auth.service"
 import { User } from "@share/entities"
-import { UserService } from "../../../api/src/modules/user"
-import { SignInDto } from "../../../api/src/modules/auth/dto/sign-in.dto"
+import { UserService } from "../../user"
+import { SignInDto } from "../dto/sign-in.dto"
 import request from "supertest"
 import { ErrorCode } from "@share"
 import { APIExceptionResponse } from "@server/api"
 import { getLoggerToken } from "@server/logging"
 import { Logger } from "winston"
-import { AbilityFactory } from "../../../api/src/modules/auth"
+import { AbilityFactory } from "../index"
 import { getBotToken } from "nestjs-telegraf"
 
-jest.mock("../../../api/src/config/bot.config", () => {
-  const actual = jest.requireActual("../../../api/src/config/bot.config")
+jest.mock("../../../config/bot.config", () => {
+  const actual = jest.requireActual("../../../config/bot.config")
   return {
     ...actual,
     default: () => {

@@ -16,6 +16,7 @@ export class TopUp {
 
   @ApiProperty({ type: "string" })
   userId: string
+
   @ApiProperty({ type: "string", format: "date" })
   createdAt: string
 }

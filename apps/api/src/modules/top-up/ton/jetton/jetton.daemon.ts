@@ -74,7 +74,7 @@ export class JettonDaemon extends TONDaemon {
             message: "Wrong jetton master,",
             txid,
           })
-          await this.ignore(txid, "Scam transaction, wrong jetton master")
+          await this.ignore(txid, "scam transaction, wrong jetton master")
           continue
         }
 
@@ -101,7 +101,7 @@ export class JettonDaemon extends TONDaemon {
               message: "Transaction without payload detected",
               txid,
             })
-            await this.ignore(txid, "Payload isn't exists")
+            await this.ignore(txid, "memo isn't exists")
             continue
           }
 
