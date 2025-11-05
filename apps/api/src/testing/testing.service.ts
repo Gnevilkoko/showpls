@@ -21,7 +21,7 @@ import { StarsTopUp, TONIgnoredTransaction, TONTopUp } from "@share/entities"
 import { TopUpService } from "../modules/top-up/top-up.service"
 import { faker } from "@faker-js/faker/locale/en"
 import { StarsTopUpService, StarsTopUpServiceProvider } from "../modules/top-up/stars/stars-top-up.service"
-import { TONTopUpService } from "../modules/top-up/ton/ton-top-up.service"
+import { TONTopUpService, TONTopUpServiceProvider } from "../modules/top-up/ton/ton-top-up.service"
 import { getJettonServiceToken } from "../modules/top-up/ton/jetton/get-jetton-service-token"
 import { JettonService } from "../modules/top-up/ton/jetton/jetton.service"
 import { getJettonDaemonProvider } from "../modules/top-up/ton/jetton/jetton.daemon"
@@ -199,7 +199,7 @@ export class TestingService {
             },
           },
           StarsTopUpServiceProvider,
-          TONTopUpService,
+          TONTopUpServiceProvider,
           {
             provide: getJettonServiceToken(Token.USDT),
             useFactory: async () => {

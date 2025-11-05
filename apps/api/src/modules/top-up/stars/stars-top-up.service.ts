@@ -232,10 +232,13 @@ export class StarsTopUpService {
   }
 
   public static async initialize(repository: Repository<StarsTopUp>, bot: Telegraf<Context>, ledger: Ledger) {
-    const currency = (await ledger.currency.retrieve({
+    const currency = await ledger.currency.retrieve({
       code: Token.STARS,
       blockchain: null,
-    }))!
+    })
+    if (!currency) {
+      throw new Error(`Currency not found by these params: ${JSON.stringify({ code: Token.STARS, blockchain: null })}`)
+    }
     return new StarsTopUpService(repository, bot, ledger, currency)
   }
 }

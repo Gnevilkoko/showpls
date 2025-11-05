@@ -4,7 +4,7 @@ import { TestingService } from "../../../../testing"
 import { getDataSourceToken, TypeOrmModule } from "@nestjs/typeorm"
 import { ToncoinDaemon } from "./toncoin.daemon"
 import { TONIgnoredTransaction, TONTopUp } from "@share/entities"
-import { TONTopUpService } from "../ton-top-up.service"
+import { TONTopUpService, TONTopUpServiceProvider } from "../ton-top-up.service"
 import ms from "ms"
 import { UserService } from "../../../user"
 import { faker } from "@faker-js/faker/locale/en"
@@ -22,7 +22,7 @@ describe("ToncoinDaemon", () => {
     module = await TestingService.compileModule(
       Test.createTestingModule({
         imports: [...TestingService.getMustHaveModules(), TypeOrmModule.forFeature([TONTopUp, TONIgnoredTransaction])],
-        providers: [TONTopUpService, ToncoinDaemon],
+        providers: [TONTopUpServiceProvider, ToncoinDaemon],
       })
     )
 

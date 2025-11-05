@@ -1,7 +1,7 @@
-import { Injectable, Logger } from "@nestjs/common"
+import { Injectable, Logger, Provider } from "@nestjs/common"
 import { Blockchain, Token } from "@share"
-import { InjectDataSource, InjectRepository } from "@nestjs/typeorm"
-import { TONIgnoredTransaction, TONTopUp } from "@share/entities"
+import { getRepositoryToken, InjectDataSource, InjectRepository } from "@nestjs/typeorm"
+import { StarsTopUp, TONIgnoredTransaction, TONTopUp } from "@share/entities"
 import { DataSource, Repository } from "typeorm"
 import { Ledger } from "@ledger"
 import { z } from "zod"
@@ -10,13 +10,19 @@ import { DbHelpers } from "../../../db"
 import { paginate } from "nestjs-typeorm-paginate"
 import { TONTopUpListDto } from "./dto/ton-top-up-list.dto"
 import { Currency } from "@ledger/entities"
+import { Context, Telegraf } from "telegraf"
+import { StarsTopUpService } from "../stars/stars-top-up.service"
 
 @Injectable()
 export class TONTopUpService {
   protected logger = new Logger(TONTopUpService.name)
   protected externalType = "ton"
 
-  constructor(@InjectRepository(TONTopUp) protected repository: Repository<TONTopUp>, protected ledger: Ledger) {}
+  protected constructor(
+    @InjectRepository(TONTopUp) protected repository: Repository<TONTopUp>,
+    protected ledger: Ledger,
+    protected currencies: Record<Token.TON | Token.USDT, Currency>
+  ) {}
 
   async create({ userId }: CreateTONTopUpParams) {
     const insertResult = await this.repository
@@ -82,10 +88,7 @@ export class TONTopUpService {
 
     const { txid, amount, token, memo } = result.data
 
-    const currency = (await this.ledger.currency.retrieve({
-      code: token,
-      blockchain: Blockchain.TON,
-    }))!
+    const currency = this.currencies[token]
 
     const topUp = await retryWithExponentialBackoff(
       async () => {
@@ -163,12 +166,35 @@ export class TONTopUpService {
       })
     }
   }
+
+  public static async initialize(repository: Repository<TONTopUp>, ledger: Ledger) {
+    const TON = await ledger.currency.retrieve({
+      blockchain: Blockchain.TON,
+      code: Token.TON,
+    })
+    const USDT = await ledger.currency.retrieve({
+      blockchain: Blockchain.TON,
+      code: Token.USDT,
+    })
+    if (!TON) {
+      throw new Error(`Currency not found by code: ${Token.TON}`)
+    }
+
+    if (!USDT) {
+      throw new Error(`Currency not found by code: ${Token.USDT}`)
+    }
+
+    return new TONTopUpService(repository, ledger, {
+      [Token.TON]: TON,
+      [Token.USDT]: USDT,
+    })
+  }
 }
 
 const schema = z.object({
   txid: z.string().min(1),
   amount: z.bigint().positive(),
-  token: z.enum(Token),
+  token: z.enum([Token.TON, Token.USDT]),
   memo: z.bigint().positive(),
 })
 
@@ -176,4 +202,12 @@ type ProcessPaymentParams = z.infer<typeof schema>
 
 export type CreateTONTopUpParams = {
   userId: string
+}
+
+export const TONTopUpServiceProvider: Provider = {
+  provide: TONTopUpService,
+  inject: [getRepositoryToken(TONTopUp), Ledger],
+  useFactory: async (repository: Repository<TONTopUp>, ledger: Ledger) => {
+    return await TONTopUpService.initialize(repository, ledger)
+  },
 }

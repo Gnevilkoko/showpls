@@ -12,7 +12,7 @@ import { TONDaemon } from "../ton.daemon"
 export class ToncoinDaemon extends TONDaemon {
   protected logger = new Logger(ToncoinDaemon.name)
   protected address = Address.parse(process.env.TON_ADDRESS_FOR_ACCEPT_PAYMENTS as string)
-  protected token = Token.TON
+  protected token = Token.TON as const
 
   constructor(
     @InjectRepository(TONIgnoredTransaction) protected repository: Repository<TONIgnoredTransaction>,

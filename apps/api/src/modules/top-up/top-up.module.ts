@@ -8,7 +8,7 @@ import { getJettonServiceToken } from "./ton/jetton/get-jetton-service-token"
 import { Token } from "@share"
 import { ToncoinDaemon } from "./ton/toncoin/toncoin.daemon"
 import { getJettonDaemonProvider } from "./ton/jetton/jetton.daemon"
-import { TONTopUpService } from "./ton/ton-top-up.service"
+import { TONTopUpService, TONTopUpServiceProvider } from "./ton/ton-top-up.service"
 import { TONTopUpController } from "./ton/ton-top-up.controller"
 import { TopUpService } from "./top-up.service"
 import { TopUpController } from "./top-up.controller"
@@ -17,7 +17,7 @@ import { TopUpController } from "./top-up.controller"
   imports: [TypeOrmModule.forFeature([StarsTopUp, TONTopUp, TONIgnoredTransaction])],
   providers: [
     StarsTopUpServiceProvider,
-    TONTopUpService,
+    TONTopUpServiceProvider,
     {
       provide: getJettonServiceToken(Token.USDT),
       useFactory: async () => {

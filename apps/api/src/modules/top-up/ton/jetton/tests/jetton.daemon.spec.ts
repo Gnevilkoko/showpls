@@ -3,7 +3,7 @@ import { DataSource } from "typeorm"
 import { TestingService } from "../../../../../testing"
 import { getDataSourceToken, TypeOrmModule } from "@nestjs/typeorm"
 import { TONIgnoredTransaction, TONTopUp } from "@share/entities"
-import { TONTopUpService } from "../../ton-top-up.service"
+import { TONTopUpService, TONTopUpServiceProvider } from "../../ton-top-up.service"
 import ms from "ms"
 import { getJettonDaemonProvider, JettonDaemon } from "../jetton.daemon"
 import { LanguageCode, Role, Token } from "@share"
@@ -26,7 +26,7 @@ describe("JettonDaemon", () => {
       Test.createTestingModule({
         imports: [...TestingService.getMustHaveModules(), TypeOrmModule.forFeature([TONTopUp, TONIgnoredTransaction])],
         providers: [
-          TONTopUpService,
+          TONTopUpServiceProvider,
           {
             provide: getJettonServiceToken(Token.USDT),
             useFactory: async () => {

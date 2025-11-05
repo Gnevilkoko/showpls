@@ -13,7 +13,7 @@ import { TONUtilities } from "../ton.utilities"
 
 export class JettonDaemon extends TONDaemon {
   protected logger: Logger
-  protected token = Token.USDT
+  protected token = Token.USDT as const
 
   constructor(
     protected address: Address,
