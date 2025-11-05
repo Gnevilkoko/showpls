@@ -48,7 +48,7 @@ const ImageViewer = ({ images, currentImageIndex = 0, onClose }: ImageViewerProp
           </>
         )}
 
-        <button className="image-modal__close" onClick={onClose}>
+        <button className="modal__close" onClick={onClose}>
           ×
         </button>
       </div>

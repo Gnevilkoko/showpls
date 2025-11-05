@@ -2,9 +2,13 @@ $max-width-all-content: 450px;
 $bg-primary: var(--bg-primary);
 $bg-secondary: var(--bg-secondary);
 $bg-modal: var(--bg-modal);
+$bg-active-order: var(--bg-active-order);
+$bg-unread: var(--bg-unread);
 $text-primary: var(--text-primary);
+$text-placeholder: var(--text-placeholder);
 $text-secondary: var(--text-secondary);
 $border-color: var(--border-color);
+$border-color-active-order: var(--border-color-active-order);
 
 .app {
   width: 100%;
@@ -29,7 +33,7 @@ $border-color: var(--border-color);
   font-family: Space Grotesk, sans-serif;
   font-weight: 700;
   font-size: 18px;
-  color: #3c454c;
+  color: $text-secondary;
   animation: pulse 1.5s ease-in-out infinite;
 }
 
@@ -254,7 +258,7 @@ $border-color: var(--border-color);
   font-family: Inter;
   font-weight: 400;
   font-size: 16px;
-  color: #3c454c;
+  color: $text-secondary;
   gap: 4px;
   text-transform: uppercase;
 }
@@ -267,8 +271,7 @@ $border-color: var(--border-color);
   top: 0;
   right: 0;
   // margin-top: 4px;
-  background-color: #e2ebf0;
-  gap: 1px;
+  background-color: $bg-secondary;
   border-radius: 8px;
   overflow: hidden;
   opacity: 0;
@@ -276,7 +279,7 @@ $border-color: var(--border-color);
   transition: opacity 0.3s ease;
   text-transform: uppercase;
   z-index: 1;
-  border: 1px solid #e2ebf0;
+  border: 1px solid $border-color;
   box-sizing: border-box;
 
   &.visible {
@@ -288,7 +291,7 @@ $border-color: var(--border-color);
   font-weight: 400;
   font-size: 14px;
   line-height: 100%;
-  color: #3c454c;
+  color: $text-secondary;
 
   box-shadow: 0px 2px 5px 0px #262b3108, 0px 10px 10px 0px #262b3105, 0px 22px 13px 0px #262b3103,
     0px 40px 16px 0px #262b3100, 0px 62px 17px 0px #262b3100;
@@ -303,6 +306,11 @@ $border-color: var(--border-color);
 
     cursor: pointer;
     background-color: $bg-secondary;
+    border-bottom: 1px solid $border-color;
+  }
+
+  :last-child {
+    border-bottom: none;
   }
 }
 
@@ -312,11 +320,11 @@ $border-color: var(--border-color);
   box-sizing: border-box;
   border-radius: 100px;
   background-color: $bg-secondary;
-  box-shadow: 0 0 0 2px #e1eaef; // имитация под внешний бордер
+  box-shadow: 0 0 0 2px $border-color; // имитация под внешний бордер
 
   &.active {
     background-color: #2cd896;
-    border: 2px solid #ffffff;
+    border: 2px solid $bg-secondary;
     box-shadow: 0 0 0 2px #2cd896; // имитация под внешний бордер
   }
 }
@@ -335,7 +343,7 @@ $border-color: var(--border-color);
   width: 44px;
   height: 44px;
   border-radius: 50%;
-  border: 2px solid #ffffff;
+  border: 2px solid $bg-primary;
   outline: 2px solid #2cd896; /* внешнняя рамка */
   background-color: $bg-secondary;
   box-sizing: border-box;
@@ -385,7 +393,7 @@ $border-color: var(--border-color);
   font-size: 12px;
   line-height: 100%;
 
-  color: #5b6674;
+  color: $text-secondary;
 
   &.active {
     background-color: #ff8b00;
@@ -497,12 +505,12 @@ $border-color: var(--border-color);
   gap: 10px;
   font-weight: 700;
   font-size: 16px;
-  color: #3c454c;
+  color: $text-secondary;
 }
 
 .wallet__stars-status {
   max-height: max-content;
-  border: 1px solid #dfeaf0;
+  border: 1px solid $border-color;
   border-radius: 16px;
   padding: 7px 10px 7px 10px;
   display: flex;
@@ -514,7 +522,7 @@ $border-color: var(--border-color);
   line-height: 100%;
   font-weight: 700;
   font-size: 14px;
-  color: #3c454c;
+  color: $text-secondary;
 }
 
 .tg-stars-icon {
@@ -525,7 +533,7 @@ $border-color: var(--border-color);
   line-height: 100%;
   font-weight: 300;
   font-size: 14px;
-  color: #3c454c;
+  color: $text-secondary;
 }
 
 .wallet-content__container {
@@ -552,14 +560,14 @@ $border-color: var(--border-color);
   font-style: Medium;
   font-size: 13px;
   line-height: 100%;
-  color: #a8b0ba;
+  color: $text-placeholder;
 }
 
 .count-stars {
   line-height: 100%;
   font-weight: 700;
   font-size: 40px;
-  color: #3c454c;
+  color: $text-secondary;
 }
 
 .tg-stars-icon__container {
@@ -646,11 +654,11 @@ $border-color: var(--border-color);
   font-size: 16px;
   line-height: 100%;
 
-  color: #263140;
+  color: $text-primary;
   padding: 14px 0 10px 0;
   background-color: rgba(0, 0, 0, 0);
   border: none;
-  border-bottom: 1px solid #d8e2ee;
+  border-bottom: 1px solid $border-color;
   transition: border-color 0.5s ease, color 0.5s ease;
 
   cursor: pointer;
@@ -680,7 +688,7 @@ $border-color: var(--border-color);
   justify-content: start;
   background-color: $bg-secondary;
 
-  border: 1px solid #d8e2ee;
+  border: 1px solid $border-color;
   border-radius: 10px;
   padding: 12px;
   gap: 12px;
@@ -689,8 +697,8 @@ $border-color: var(--border-color);
 .partner-logo {
   width: 40px;
   border-radius: 8px;
-  border: 1px solid #d8e2ee;
-  background-color: $bg-secondary;
+  border: 1px solid $border-color;
+  background-color: #ffffff;
   box-sizing: border-box;
 }
 
@@ -704,7 +712,7 @@ $border-color: var(--border-color);
   font-weight: 500;
   font-size: 14px;
 
-  color: #263140;
+  color: $text-secondary;
 }
 
 .option__price {
@@ -745,7 +753,7 @@ $border-color: var(--border-color);
   font-weight: 700;
   font-size: 18px;
   line-height: 100%;
-  color: #263140;
+  color: $text-primary;
   cursor: pointer;
 
   border-radius: 100px;
@@ -760,7 +768,7 @@ $border-color: var(--border-color);
   width: 100%;
   font-weight: 700;
   font-size: 26px;
-  color: #263140;
+  color: $text-primary;
 }
 
 .customer-banner {
@@ -812,7 +820,7 @@ $border-color: var(--border-color);
   gap: 10px;
   font-weight: 700;
   font-size: 16px;
-  color: #263140;
+  color: $text-primary;
 }
 
 .describe__input {
@@ -821,17 +829,17 @@ $border-color: var(--border-color);
   min-height: 94px;
   padding: 12px;
   background-color: $bg-secondary;
-  border: 1px solid #d8e2ee;
+  border: 1px solid $border-color;
   border-radius: 10px;
 
   font-family: Inter;
   font-weight: 400;
   font-size: 14px;
-  color: #263140;
+  color: $text-primary;
 }
 
 .describe__input::placeholder {
-  color: #a8b0ba;
+  color: $text-placeholder;
   white-space: pre-wrap;
 }
 
@@ -845,7 +853,8 @@ $border-color: var(--border-color);
   width: 40px;
   height: 40px;
   padding: 10px;
-  border: 1px solid #d8e2ee;
+  border: 1px solid $border-color;
+  background-color: $bg-secondary;
   border-radius: 10px;
   cursor: pointer;
 }
@@ -868,31 +877,31 @@ $border-color: var(--border-color);
   font-family: Inter;
   font-weight: 500;
   font-size: 13px;
-  color: #68757e;
+  color: $text-placeholder;
 }
 
 .description__title {
   font-family: Space Grotesk, sans-serif;
   font-weight: 700;
   font-size: 16px;
-  color: #263140;
+  color: $text-primary;
 }
 
 .input-location {
   all: unset;
   background-color: $bg-secondary;
-  border: 1px solid #d8e2ee;
+  border: 1px solid $border-color;
   border-radius: 10px;
   padding: 12px 16px 12px 16px;
 
   font-family: Inter;
   font-weight: 400;
   font-size: 14px;
-  color: #263140;
+  color: $text-primary;
 }
 
 .input-location::placeholder {
-  color: #a8b0ba;
+  color: $text-placeholder;
   white-space: pre-wrap;
 }
 
@@ -902,7 +911,7 @@ $border-color: var(--border-color);
   font-size: 14px;
   line-height: 100%;
   text-align: center;
-  color: #68757e;
+  color: $text-placeholder;
 }
 
 .mini-map-wrapper {
@@ -940,7 +949,7 @@ $border-color: var(--border-color);
   width: 100%;
   box-sizing: border-box;
   background-color: $bg-secondary;
-  border: 1px solid #d8e2ee;
+  border: 1px solid $border-color;
   border-radius: 10px;
   padding: 12px 30px 12px 16px;
   cursor: pointer;
@@ -948,7 +957,7 @@ $border-color: var(--border-color);
   font-family: Inter;
   font-weight: 400;
   font-size: 14px;
-  color: #263140;
+  color: $text-primary;
 
   background-image: url("./assets/arrow-down.svg");
   background-repeat: no-repeat;
@@ -956,17 +965,7 @@ $border-color: var(--border-color);
 }
 
 .dropdown-input::placeholder {
-  color: #a8b0ba;
-}
-
-.dropdown-item {
-  padding: 12px 16px;
-  cursor: pointer;
-  transition: background 0.15s;
-
-  &:hover {
-    background-color: #f0f0f0;
-  }
+  color: $text-placeholder;
 }
 
 .toggle-switch-urgent {
@@ -988,7 +987,7 @@ $border-color: var(--border-color);
     left: 0;
     right: 0;
     bottom: 0;
-    background-color: #d8e2ee; // цвет выключено
+    background-color: $border-color;
     border-radius: 34px;
     transition: background-color 0.3s;
 
@@ -1020,7 +1019,7 @@ $border-color: var(--border-color);
   width: 100%;
   box-sizing: border-box;
   background-color: $bg-secondary;
-  border: 1px solid #d8e2ee;
+  border: 1px solid $border-color;
   border-radius: 10px;
   padding: 12px 30px 12px 16px;
   cursor: pointer;
@@ -1028,7 +1027,7 @@ $border-color: var(--border-color);
   font-family: Inter;
   font-weight: 400;
   font-size: 14px;
-  color: #263140;
+  color: $text-primary;
 
   background-image: url("./assets/stars-budget.svg");
   background-repeat: no-repeat;
@@ -1036,7 +1035,7 @@ $border-color: var(--border-color);
 }
 
 .budget-input::placeholder {
-  color: #a8b0ba;
+  color: $text-placeholder;
 }
 
 .budget-input::-webkit-outer-spin-button,
@@ -1126,11 +1125,11 @@ $border-color: var(--border-color);
   font-size: 16px;
   line-height: 100%;
 
-  color: #263140;
+  color: $text-primary;
   padding: 5px 0 9px 0;
   background-color: rgba(0, 0, 0, 0);
   border: none;
-  border-bottom: 1px solid #d8e2ee;
+  border-bottom: 1px solid $border-color;
   transition: border-color 0.5s ease, color 0.5s ease;
 
   cursor: pointer;
@@ -1154,10 +1153,7 @@ $border-color: var(--border-color);
   box-sizing: border-box;
   padding: 14px;
   border-radius: 20px;
-  border: 1px solid #d8e2ee;
-  // box-shadow: 0px 2px 5px 0px #262b3108, 0px 10px 10px 0px #262b3105,
-  //   0px 22px 13px 0px #262b3103, 0px 40px 16px 0px #262b3100,
-  //   0px 62px 17px 0px #262b3100;
+  border: 1px solid $border-color;
 }
 
 .task__header {
@@ -1165,7 +1161,7 @@ $border-color: var(--border-color);
   font-weight: 700;
   font-size: 16px;
   line-height: 130%;
-  color: #3c454c;
+  color: $text-secondary;
 }
 
 .task__container {
@@ -1184,7 +1180,7 @@ $border-color: var(--border-color);
   font-size: 14px;
   line-height: 140%;
 
-  color: #3c454c;
+  color: $text-secondary;
 }
 
 .task__tags-container {
@@ -1205,8 +1201,8 @@ $border-color: var(--border-color);
   font-family: Inter;
   font-weight: 500;
   font-size: 14px;
-  background-color: #e9f2ff;
-  color: #263140;
+  background-color: $bg-primary;
+  color: $text-primary;
 
   &.badge {
     font-weight: 700;
@@ -1336,7 +1332,7 @@ $border-color: var(--border-color);
   line-height: 100%;
   letter-spacing: 0px;
 
-  color: #263140;
+  color: $text-primary;
   transition: color 0.5s ease;
 
   &.active {
@@ -1363,7 +1359,7 @@ $border-color: var(--border-color);
   font-weight: 700;
   font-size: 24px;
   line-height: 100%;
-  color: #3c454c;
+  color: $text-secondary;
 }
 
 .wallet-container {
@@ -1392,7 +1388,7 @@ $border-color: var(--border-color);
     font-weight: 700;
     font-size: 24px;
     line-height: 100%;
-    color: #3c454c;
+    color: $text-secondary;
   }
 }
 
@@ -1415,9 +1411,11 @@ $border-color: var(--border-color);
 }
 
 .transaction_item {
+  width: 100%;
   display: flex;
   align-items: center;
   padding: 8px;
+  box-sizing: border-box;
   padding-right: 16px;
   border-radius: 14px;
   gap: 12px;
@@ -1460,7 +1458,7 @@ $border-color: var(--border-color);
   font-weight: 600;
   font-size: 17px;
   line-height: 100%;
-  color: #3c454c;
+  color: $text-secondary;
 
   img {
     width: 16px;
@@ -1473,7 +1471,7 @@ $border-color: var(--border-color);
   font-size: 14px;
   line-height: 100%;
   letter-spacing: 0px;
-  color: #3c454c;
+  color: $text-secondary;
 }
 
 .modal__wrapper {
@@ -1504,7 +1502,7 @@ $border-color: var(--border-color);
   font-family: Space Grotesk, sans-serif;
   font-weight: 700;
   font-size: 18px;
-  color: #3c454c;
+  color: $text-secondary;
 }
 
 .modal {
@@ -1516,8 +1514,7 @@ $border-color: var(--border-color);
   background-color: $bg-secondary;
   width: 90%;
   height: max-content;
-  max-height: 90vh;
-  overflow-y: auto;
+  max-height: 88vh;
   padding: 20px;
   box-sizing: border-box;
   border-radius: 20px;
@@ -1594,7 +1591,7 @@ $border-color: var(--border-color);
   font-weight: 700;
   font-size: 24px;
   line-height: 100%;
-  color: #263140;
+  color: $text-primary;
 }
 
 .profile__location {
@@ -1614,7 +1611,7 @@ $border-color: var(--border-color);
   font-weight: 500;
   font-size: 14px;
   line-height: 100%;
-  color: #68757e;
+  color: $text-placeholder;
 }
 
 .profile-actions {
@@ -1640,7 +1637,7 @@ $border-color: var(--border-color);
   font-weight: 700;
   font-size: 18px;
   line-height: 100%;
-  color: #3c454c;
+  color: $text-secondary;
 
   background-color: $bg-secondary;
   box-shadow: 0px 2px 5px 0px #262b3108, 0px 10px 10px 0px #262b3105, 0px 22px 13px 0px #262b3103,
@@ -1652,7 +1649,7 @@ $border-color: var(--border-color);
   font-weight: 700;
   font-size: 24px;
   line-height: 100%;
-  color: #263140;
+  color: $text-primary;
 }
 
 .modal__avatar-container {
@@ -1683,25 +1680,36 @@ $border-color: var(--border-color);
 
   font-weight: 700;
   font-size: 16px;
-  color: #263140;
+  color: $text-primary;
 }
 
 .input-profile {
   all: unset;
   background-color: $bg-secondary;
-  border: 1px solid #d8e2ee;
+  border: 1px solid $border-color;
   border-radius: 10px;
   padding: 12px 16px 12px 16px;
 
   font-family: Inter;
   font-weight: 400;
   font-size: 14px;
-  color: #263140;
+  color: $text-primary;
 }
 
 .input-profile::placeholder {
-  color: #a8b0ba;
+  color: $text-placeholder;
   white-space: pre-wrap;
+}
+
+.modal-content-container {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 15px;
+  overflow-y: auto;
+  scrollbar-width: none;
 }
 
 .review-item__title {
@@ -1712,7 +1720,7 @@ $border-color: var(--border-color);
   font-weight: 700;
   font-size: 24px;
   line-height: 100%;
-  color: #3c454c;
+  color: $text-secondary;
 }
 
 .review-item__wrapper {
@@ -1739,7 +1747,7 @@ $border-color: var(--border-color);
   font-family: Inter;
   font-weight: 400;
   font-size: 14px;
-  color: #3c454c;
+  color: $text-secondary;
 }
 
 .review-item__user-info {
@@ -1769,7 +1777,7 @@ $border-color: var(--border-color);
   font-weight: 700;
   font-size: 18px;
   line-height: 100%;
-  color: #3c454c;
+  color: $text-secondary;
 }
 
 .review-item__grade {
@@ -1784,7 +1792,7 @@ $border-color: var(--border-color);
   font-weight: 400;
   font-size: 14px;
   line-height: 100%;
-  color: #3c454c;
+  color: $text-secondary;
 }
 
 .review-item__date {
@@ -1797,7 +1805,7 @@ $border-color: var(--border-color);
   font-weight: 400;
   font-size: 14px;
   line-height: 100%;
-  color: #3c454c;
+  color: $text-secondary;
 }
 
 .profile__menu {
@@ -1829,17 +1837,17 @@ $border-color: var(--border-color);
   font-family: Inter;
   font-weight: 500;
   font-size: 13px;
-  color: #68757e;
+  color: $text-placeholder;
 
   .description__title {
-    color: #3c454c;
+    color: $text-secondary;
   }
 }
 
 .dash {
   width: 100%;
   height: 1px;
-  background-color: #d8e2ee;
+  background-color: $border-color;
   margin: 7px 0;
 }
 
@@ -1869,7 +1877,7 @@ $border-color: var(--border-color);
   font-weight: 700;
   font-size: 16px;
   line-height: 100%;
-  color: #3c454c;
+  color: $text-secondary;
 }
 
 .profile__option-count {
@@ -1897,7 +1905,7 @@ $border-color: var(--border-color);
   font-weight: 500;
   font-size: 14px;
   line-height: 100%;
-  color: #3c454c;
+  color: $text-secondary;
 }
 
 // =========== chats ===========
@@ -1933,7 +1941,7 @@ $border-color: var(--border-color);
   font-weight: 700;
   font-size: 24px;
   line-height: 100%;
-  color: #3c454c;
+  color: $text-secondary;
 }
 
 .chats__count {
@@ -2016,7 +2024,7 @@ $border-color: var(--border-color);
   padding: 20px;
   font-weight: 700;
   font-size: 16px;
-  color: #3c454c;
+  color: $text-secondary;
 }
 
 .chats-list {
@@ -2034,18 +2042,18 @@ $border-color: var(--border-color);
   box-sizing: border-box;
   gap: 10px;
   cursor: pointer;
-  border-top: 1px solid #d5d7db;
-  background-color: #e4e7ec;
+  border-top: 1px solid $border-color;
+  background-color: $bg-primary;
 
   &.unread {
-    background-color: #ffffff;
+    background-color: $bg-unread;
     box-shadow: 0px 2px 5px 0px #262b310d, 0px 10px 10px 0px #262b310a, 0px 22px 13px 0px #262b3108,
       0px 40px 16px 0px #262b3105, 0px 62px 17px 0px #262b3103;
   }
 
   &.active-order {
-    border-top: 1px solid #5feeb2;
-    background-color: #b4ffc6;
+    border-top: 1px solid $border-color-active-order;
+    background-color: $bg-active-order;
     border-left: 8px solid #ff8b00;
     padding-left: 8px;
     box-shadow: 0px 2px 5px 0px #262b310d, 0px 10px 10px 0px #262b310a, 0px 22px 13px 0px #262b3108,
@@ -2087,7 +2095,7 @@ $border-color: var(--border-color);
   font-weight: 700;
   font-size: 16px;
   line-height: 100%;
-  color: #3c454c;
+  color: $text-secondary;
 }
 
 .prev-chat__info {
@@ -2099,7 +2107,7 @@ $border-color: var(--border-color);
   font-weight: 400;
   font-size: 12px;
   line-height: 100%;
-  color: #3c454cb2;
+  color: $text-secondary;
 }
 
 .prev-chat__favorite-btn {
@@ -2128,7 +2136,7 @@ $border-color: var(--border-color);
   font-family: Inter;
   font-weight: 400;
   font-size: 13px;
-  color: #3c454c;
+  color: $text-secondary;
 }
 
 .loading-chats-paragraph {
@@ -2138,7 +2146,7 @@ $border-color: var(--border-color);
 
   font-weight: 700;
   font-size: 16px;
-  color: #3c454c;
+  color: $text-secondary;
 
   &.visible {
     height: auto;
@@ -2184,7 +2192,7 @@ $border-color: var(--border-color);
   font-weight: 700;
   font-size: 24px;
   line-height: 100%;
-  color: #3c454c;
+  color: $text-secondary;
 }
 
 .chat-header__back-arrow {
@@ -2220,7 +2228,7 @@ $border-color: var(--border-color);
   font-weight: 700;
   font-size: 18px;
   line-height: 100%;
-  color: #3c454c;
+  color: $text-secondary;
 }
 
 .chat-header__online-status {
@@ -2235,7 +2243,7 @@ $border-color: var(--border-color);
   font-weight: 400;
   font-size: 14px;
   line-height: 100%;
-  color: #3c454c;
+  color: $text-secondary;
 }
 
 .chats__header-wrapper {
@@ -2322,7 +2330,7 @@ $border-color: var(--border-color);
   font-weight: 700;
   font-size: 16px;
   line-height: 100%;
-  color: #3c454c;
+  color: $text-secondary;
 }
 
 .chat__task-switcher-btn {
@@ -2345,9 +2353,11 @@ $border-color: var(--border-color);
 }
 
 .chat__task-info__wrapper {
+  width: 100%;
   display: flex;
   gap: 4px;
   padding: 10px;
+  box-sizing: border-box;
   border-radius: 16px;
   background-color: $bg-primary;
 }
@@ -2364,14 +2374,14 @@ $border-color: var(--border-color);
   font-weight: 700;
   font-size: 16px;
   line-height: 100%;
-  color: #3c454c;
+  color: $text-secondary;
 }
 
 .chat__task-info__description {
   font-family: Inter;
   font-weight: 400;
   font-size: 14px;
-  color: #3c454c;
+  color: $text-secondary;
 }
 
 .chat__task-tags {
@@ -2414,7 +2424,7 @@ $border-color: var(--border-color);
   width: 60px;
   height: 60px;
   flex-shrink: 0;
-  border: 1px solid #d8e2ee;
+  border: 1px solid $border-color;
   border-radius: 10px;
   overflow: hidden;
   cursor: pointer;
@@ -2498,12 +2508,11 @@ $border-color: var(--border-color);
   position: absolute;
   display: flex;
   flex-direction: column;
-  gap: 1px;
   top: 36px;
   right: 0px;
   z-index: 1000;
-  background: #e1eaef;
-  border: 1px solid #e1eaef;
+  background: $bg-secondary;
+  border: 1px solid $border-color;
   border-radius: 10px;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
   overflow: hidden;
@@ -2511,6 +2520,10 @@ $border-color: var(--border-color);
 
   &::-webkit-scrollbar {
     width: 0px;
+  }
+
+  :last-child {
+    border-bottom: none;
   }
 }
 
@@ -2522,7 +2535,7 @@ $border-color: var(--border-color);
   padding: 10px 10px 10px 8px;
   cursor: pointer;
   font-size: 14px;
-  color: #3c454c;
+  color: $text-secondary;
   background-color: $bg-secondary;
   white-space: nowrap; /* Предотвращает перенос строк */
 
@@ -2530,6 +2543,8 @@ $border-color: var(--border-color);
   font-weight: 500;
   font-size: 14px;
   line-height: 100%;
+
+  border-bottom: 1px solid $border-color;
 }
 
 .chat__container {
@@ -2572,12 +2587,12 @@ $border-color: var(--border-color);
   padding: 16px 24px;
   box-sizing: border-box;
   border-radius: 20px;
-  border: 1px solid #d4dfe5;
+  border: 1px solid $border-color;
 
   font-weight: 700;
   font-size: 14px;
   line-height: 100%;
-  color: #3c454c;
+  color: $text-secondary;
 }
 
 .message-notification-actions {
@@ -2717,14 +2732,14 @@ $border-color: var(--border-color);
   align-items: center;
   gap: 4px;
   padding: 5px 10px 5px 8px;
-  background-color: #ffffff;
+  background-color: $bg-secondary;
   border-radius: 40px;
-  border: 1px solid #e6eef9;
+  border: 1px solid $border-color;
 
   font-family: Inter;
   font-weight: 400;
   font-size: 11px;
-  color: #64748b;
+  color: $text-secondary;
 
   box-shadow: 0px 2px 5px 0px #262b3108, 0px 10px 10px 0px #262b3105, 0px 22px 13px 0px #262b3103,
     0px 40px 16px 0px #262b3100, 0px 62px 17px 0px #262b3100;
@@ -2754,12 +2769,11 @@ $border-color: var(--border-color);
   position: absolute;
   display: flex;
   flex-direction: column;
-  gap: 1px;
   bottom: 36px;
   left: 0px;
   z-index: 1000;
-  background: #e1eaef;
-  border: 1px solid #e1eaef;
+  background: $bg-secondary;
+  border: 1px solid $border-color;
   border-radius: 10px;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
   overflow: hidden;
@@ -2767,6 +2781,10 @@ $border-color: var(--border-color);
 
   &::-webkit-scrollbar {
     width: 0px;
+  }
+
+  :last-child {
+    border-bottom: none;
   }
 }
 
@@ -2778,7 +2796,7 @@ $border-color: var(--border-color);
   padding: 10px 10px 10px 8px;
   cursor: pointer;
   font-size: 14px;
-  color: #3c454c;
+  color: $text-secondary;
   background-color: $bg-secondary;
   white-space: nowrap; /* Предотвращает перенос строк */
 
@@ -2786,6 +2804,8 @@ $border-color: var(--border-color);
   font-weight: 500;
   font-size: 14px;
   line-height: 100%;
+
+  border-bottom: 1px solid $border-color;
 }
 
 .message-input-attachments {
@@ -2835,11 +2855,15 @@ $border-color: var(--border-color);
   font-family: Inter;
   font-weight: 400;
   font-size: 14px;
-  color: #0f172a;
+  color: $text-primary;
 
   overflow: hidden;
   max-height: 100px;
   overflow-y: auto;
+}
+
+.message-input::placeholder {
+  color: $text-placeholder;
 }
 
 .message-input__emoji-btn {
@@ -2888,13 +2912,13 @@ $border-color: var(--border-color);
   border-radius: 8px;
 }
 
-.image-modal__close {
+.modal__close {
   position: absolute;
   top: -40px;
   right: 0;
   background: none;
   border: none;
-  color: white;
+  color: $bg-secondary;
   font-size: 30px;
   cursor: pointer;
   z-index: 1001;
@@ -2957,7 +2981,7 @@ $border-color: var(--border-color);
 
   .time-dropdown-trigger {
     padding: 12px 16px;
-    border: 1px solid #d8e2ee;
+    border: 1px solid $border-color;
     border-radius: 10px;
     background: $bg-secondary;
     cursor: pointer;
@@ -2968,7 +2992,7 @@ $border-color: var(--border-color);
     font-family: Inter;
     font-weight: 400;
     font-size: 14px;
-    color: #263140;
+    color: $text-primary;
 
     span {
       flex: 1;
@@ -2977,7 +3001,7 @@ $border-color: var(--border-color);
 
     .dropdown-arrow {
       transition: transform 0.2s ease;
-      color: #666;
+      color: $text-secondary;
     }
 
     &.open {
@@ -2994,7 +3018,7 @@ $border-color: var(--border-color);
     right: 0;
     z-index: 1;
     background: $bg-secondary;
-    border: 1px solid #d8e2ee;
+    border: 1px solid $border-color;
     border-radius: 10px;
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
     max-height: 150px;
@@ -3013,7 +3037,7 @@ $border-color: var(--border-color);
     font-family: Inter;
     font-weight: 400;
     font-size: 14px;
-    color: #263140;
+    color: $text-primary;
     text-align: center;
 
     &.selected {
@@ -3025,7 +3049,7 @@ $border-color: var(--border-color);
   .time-separator {
     font-size: 24px;
     font-weight: bold;
-    color: #263140;
+    color: $text-primary;
     line-height: 100%;
   }
 }
@@ -3059,14 +3083,14 @@ $border-color: var(--border-color);
     font-weight: 700;
     font-size: 20px;
     line-height: 100%;
-    color: #3c454c;
+    color: $text-secondary;
   }
 
   span {
     font-weight: 400;
     font-size: 14px;
     line-height: 100%;
-    color: #3c454c;
+    color: $text-secondary;
   }
 }
 
@@ -3094,7 +3118,7 @@ $border-color: var(--border-color);
     font-weight: 700;
     font-size: 16px;
     line-height: 100%;
-    color: #3c454c;
+    color: $text-secondary;
   }
 
   textarea {
@@ -3104,15 +3128,15 @@ $border-color: var(--border-color);
     padding: 11px 13px;
     box-sizing: border-box;
     border-radius: 8px;
-    border: 1px solid #d8e2ee;
+    border: 1px solid $border-color;
 
     font-family: Inter;
     font-weight: 500;
     font-size: 14px;
-    color: #3c454c;
+    color: $text-secondary;
 
     &::placeholder {
-      color: #26314080;
+      color: $text-placeholder;
     }
   }
 }
@@ -3159,7 +3183,7 @@ $border-color: var(--border-color);
   gap: 7px;
   background-color: $bg-secondary;
   border-radius: 20px;
-  border: 1px solid #d8e2ee;
+  border: 1px solid $border-color;
   padding: 14px;
   box-sizing: border-box;
   cursor: pointer;
@@ -3180,7 +3204,7 @@ $border-color: var(--border-color);
   font-weight: 700;
   font-size: 24px;
   line-height: 100%;
-  color: #3c454c;
+  color: $text-secondary;
 }
 
 .performer-item__user-info {
@@ -3210,7 +3234,7 @@ $border-color: var(--border-color);
   font-weight: 700;
   font-size: 18px;
   line-height: 100%;
-  color: #3c454c;
+  color: $text-secondary;
 }
 
 .performer-item__online-status {
@@ -3225,7 +3249,7 @@ $border-color: var(--border-color);
   font-weight: 400;
   font-size: 14px;
   line-height: 100%;
-  color: #3c454c;
+  color: $text-secondary;
 }
 
 .performer-item__rating {
