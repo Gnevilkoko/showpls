@@ -10,7 +10,7 @@ import { DataSource, DataSourceOptions } from "typeorm"
 import { AuthModule } from "./modules/auth/auth.module"
 import path from "path"
 import { AcceptLanguageResolver, I18nModule } from "nestjs-i18n"
-import { FallbackLanguageCode, Token, TokenService } from "@share"
+import { Blockchain, FallbackLanguageCode, Token, TokenService } from "@share"
 import { ClsModule } from "nestjs-cls"
 import { TelegrafModule } from "nestjs-telegraf"
 import { BotHandler } from "./modules/bot/bot.handler"
@@ -102,45 +102,46 @@ import { CacheableMemory } from "cacheable"
           : undefined,
       },
     }),
-    LedgerModule.forRootAsync({
-      setup: async (ledger) => {
-        if (Token.STARS) {
-          let currency = await ledger.currency.retrieve({
-            code: Token.STARS,
-            blockchain: null,
-          })
-          if (!currency) {
-            await ledger.currency.create({
-              name: Token.STARS,
+    AuthModule,
+
+      LedgerModule.forRootAsync({
+        setup: async (ledger) => {
+          if (Token.STARS) {
+            let currency = await ledger.currency.retrieve({
               code: Token.STARS,
-              scale: TokenService.getDecimals(Token.STARS),
               blockchain: null,
             })
+            if (!currency) {
+              await ledger.currency.create({
+                name: Token.STARS,
+                code: Token.STARS,
+                scale: TokenService.getDecimals(Token.STARS),
+                blockchain: null,
+              })
+            }
           }
-        }
 
-        for (let token of Object.values(Token)) {
-          let blockchain: string | null = null
-          if (token === Token.TON || token === Token.USDT) {
-            blockchain = "ton"
-          }
+          for (let token of Object.values(Token)) {
+            let blockchain: string | null = null
+            if (token === Token.TON || token === Token.USDT) {
+              blockchain = Blockchain.TON
+            }
 
-          let currency = await ledger.currency.retrieve({
-            code: token,
-            blockchain,
-          })
-          if (!currency) {
-            await ledger.currency.create({
-              name: token,
+            let currency = await ledger.currency.retrieve({
               code: token,
-              scale: TokenService.getDecimals(token),
               blockchain,
             })
+            if (!currency) {
+              await ledger.currency.create({
+                name: token,
+                code: token,
+                scale: TokenService.getDecimals(token),
+                blockchain,
+              })
+            }
           }
-        }
-      },
-    }),
-    AuthModule,
+        },
+      }),
     TopUpModule,
   ],
   providers: [BotHandler],
