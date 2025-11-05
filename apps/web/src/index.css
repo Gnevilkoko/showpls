@@ -21,17 +21,25 @@ body {
   --bg-primary: #edf3f7;
   --bg-secondary: #ffffff;
   --bg-modal: #0000008c;
-  /* --text-primary: #3c454c;
-  --text-secondary: #6b7280;
-  --border-color: #e5e7eb; */
+  --bg-active-order: #b4ffc6;
+  --bg-unread: #ffffff;
+  --text-primary: #263140;
+  --text-placeholder: #26314080;
+  --text-secondary: #3c454c;
+  --border-color: #d8e2ee;
+  --border-color-active-order: #5feeb2;
 }
 
 /* CSS переменные для темной темы */
 :root[data-theme="dark"] {
-  --bg-primary: #0b1d2a;
-  --bg-secondary: #000000;
-  --bg-modal: #ffffff69;
-  /* --text-primary: #ffffff;
-  --text-secondary: #a0a0a0;
-  --border-color: #404040; */
+  --bg-primary: #08151f;
+  --bg-secondary: #0b1d2a;
+  --bg-modal: #ffffff1f;
+  --bg-active-order: #314d37;
+  --bg-unread: #163b57;
+  --text-primary: #ffffff;
+  --text-placeholder: #ffffff80;
+  --text-secondary: #ffffff;
+  --border-color: #ffffff80;
+  --border-color-active-order: #ffffff80;
 }

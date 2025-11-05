@@ -55,7 +55,7 @@ export const chatList: ChatType[] = [
   },
   {
     chat_id: 3,
-    avatar: "https://t.me/i/userpic/320/q4sKbvOxAfs1GzG1BvCxGsS2dLs62WaTHYUrqguxs_M.svg",
+    avatar: null,
     first_name: "Name",
     last_name: "Surname",
     last_message:

@@ -1,4 +1,5 @@
 import profileBg from "../../assets/images/profile-bg.webp"
+import profileBgDark from "../../assets/images/profile-bg-dark.webp"
 import userIcon from "../../assets/icons/navigation/user.svg"
 import locationGreenIcon from "../../assets/icons/ui/location-green.svg"
 import statsStarWhiteIcon from "../../assets/icons/status/stats-star-white.svg"
@@ -26,14 +27,20 @@ import themeIcon from "../../assets/icons/ui/theme.svg"
 import ModalEditProfile from "./components/ModalEditProfile"
 import ModalReviews from "./components/ModalReviews"
 import { setTheme, type Theme } from "../../store/themeSlice"
+import Modal from "../../shared/components/Modal"
+import TransactionsList from "../Wallet/components/TransactionsList"
+import { useSelector } from "react-redux"
+import type { RootState } from "../../store"
 
 const Profile = () => {
   const { t } = useTranslation()
+  const theme: Theme = useSelector((state: RootState) => state.theme)
   const dispatch = useAppDispatch()
   const [updateLanguage] = useUpdateLanguageMutation()
 
   const [isOpenEditProfile, setIsOpenEditProfile] = useState<boolean>(false)
   const [isOpenReviews, setIsOpenReviews] = useState<boolean>(false)
+  const [isOpenNotifications, setIsOpenNotifications] = useState<boolean>(false)
 
   const selectedLang = useAppSelector((state) => state.language)
   const selectedTheme = useAppSelector((state) => state.theme)
@@ -75,7 +82,7 @@ const Profile = () => {
 
   return (
     <div className="page profile">
-      <img src={profileBg} alt="Background Profile" className="profile-bg" />
+      <img src={theme === "dark" ? profileBgDark : profileBg} alt="Background Profile" className="profile-bg" />
 
       <div className="profile-data_container">
         <div className="profile__avatar-container">
@@ -154,7 +161,11 @@ const Profile = () => {
 
           <ProfileBtnItem title={t("verification")} icon={securitySafeIcon} onClick={() => {}} />
 
-          <ProfileBtnItem title={t("notifications")} icon={notificationIcon} onClick={() => {}}>
+          <ProfileBtnItem
+            title={t("notifications")}
+            icon={notificationIcon}
+            onClick={() => setIsOpenNotifications(true)}
+          >
             <div className="profile__option-count">2</div>
           </ProfileBtnItem>
 
@@ -215,6 +226,10 @@ const Profile = () => {
       <ModalEditProfile isOpenEditProfile={isOpenEditProfile} setIsOpenEditProfile={setIsOpenEditProfile} />
 
       <ModalReviews isOpenReviews={isOpenReviews} setIsOpenReviews={setIsOpenReviews} />
+
+      <Modal isOpen={isOpenNotifications} onClose={() => setIsOpenNotifications(false)}>
+        <TransactionsList />
+      </Modal>
     </div>
   )
 }

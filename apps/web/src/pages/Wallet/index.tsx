@@ -1,67 +1,16 @@
 import walletIcon from "../../assets/images/wallet-new.svg"
 import starsIcon from "../../assets/icons/status/stars.svg"
 import lockIcon from "../../assets/icons/status/lock.svg"
-import checkMarkWhiteIcon from "../../assets/icons/status/check-mark-white.svg"
-import lockKeyholeWhiteIcon from "../../assets/icons/status/lock-keyhole-white.svg"
 import { useTranslation } from "react-i18next"
 import { useState } from "react"
 import { tgService } from "../../services/webApp"
 import TonWalletConnect from "./TonWalletConnect"
-import type { TransactionType } from "../../shared/types"
 import Navigation from "../../shared/components/Navigation"
 import Modal from "../../shared/components/Modal"
 import { useAppSelector } from "../../store"
 import OpenTelegramButton from "../AccessGate/OpenTelegramButton"
 import { useNotification } from "../../shared/hooks/useNotification"
-
-const transactionList: TransactionType[] = [
-  {
-    id: "1",
-    type: "founded",
-    stars: 200,
-    status: "verified",
-    isStars: true,
-    date: "10 Apr",
-  },
-  {
-    id: "2",
-    type: "escrowHold",
-    stars: 120,
-    status: "hold",
-    isStars: true,
-    date: "9 Apr",
-  },
-  {
-    id: "3",
-    type: "releasedExecutor",
-    status: "verified",
-    isStars: false,
-    date: "8 Apr",
-  },
-  {
-    id: "4",
-    type: "refundedCustomer",
-    status: "verified",
-    isStars: false,
-    date: "7 Apr",
-  },
-  {
-    id: "5",
-    type: "founded",
-    stars: 200,
-    status: "verified",
-    isStars: true,
-    date: "6 Apr",
-  },
-  {
-    id: "6",
-    type: "escrowHold",
-    stars: 120,
-    status: "hold",
-    isStars: true,
-    date: "5 Apr",
-  },
-]
+import TransactionsList from "./components/TransactionsList"
 
 const Wallet = () => {
   const { t } = useTranslation()
@@ -167,21 +116,7 @@ const Wallet = () => {
           <span>{t("escrowClue")}</span>
         </div>
 
-        {transactionList.map((item: TransactionType) => (
-          <div className="transaction_item" key={item.id}>
-            <div className={`trans-status-icon ${item.status === "verified" ? "green" : "gold"}`}>
-              <img src={item.status === "verified" ? checkMarkWhiteIcon : lockKeyholeWhiteIcon} alt="Check Mark Icon" />
-            </div>
-
-            <div className="transaction_item-content">
-              <span>{t(item.type, { count: item.stars })}</span>
-
-              {item.isStars && <img src={starsIcon} alt="Telegram Stars Icon" />}
-            </div>
-
-            <div className="trans-date">{item.date}</div>
-          </div>
-        ))}
+        <TransactionsList />
       </div>
 
       <Modal isOpen={isOpenModalTopUp} onClose={() => setIsOpenModalTopUp(false)}>
