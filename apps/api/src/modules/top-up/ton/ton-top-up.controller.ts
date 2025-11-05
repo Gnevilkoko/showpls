@@ -16,6 +16,7 @@ import { SwaggerUtilities } from "../../../common/swagger.utilities"
 import { IdDto } from "../../../common/dto"
 import { TONTopUpListDto } from "./dto/ton-top-up-list.dto"
 import { plainToInstance } from "class-transformer"
+import { RateLimit } from "../../../common/rate-limit"
 
 @ApiExtraModels(TONTopUp)
 @ApiTags("TONTopUp")
@@ -29,6 +30,10 @@ export class TONTopUpController {
 
   @ApiOkResponse({
     schema: { $ref: getSchemaPath(TONTopUp) },
+  })
+  @RateLimit({
+    limit: 1,
+    ttl: ms("30s"),
   })
   @UseGuards(AuthGuard)
   @Post("create")

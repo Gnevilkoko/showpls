@@ -5,20 +5,6 @@ import { ConfigService } from "./config"
 import { ClsServiceManager } from "nestjs-cls"
 import { isEmpty } from "lodash"
 
-function deepSerializeError(err: unknown): unknown {
-  if (!(err instanceof Error)) return err
-
-  const serialized = serializeError(err) as Record<string, unknown>
-
-  if (err.cause instanceof Error) {
-    serialized.cause = deepSerializeError(err.cause)
-  } else if (err.cause && typeof err.cause === "object") {
-    serialized.cause = err.cause
-  }
-
-  return serialized
-}
-
 export const clsFormat = format((info) => {
   const cls = ClsServiceManager.getClsService();
   if (cls) {
