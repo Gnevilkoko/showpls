@@ -1,6 +1,5 @@
 import { User } from "@share/entities"
 import "express-session"
-import {Request} from "express"
 
 declare module "express-session" {
   interface SessionData {

@@ -9,7 +9,7 @@ export default function () {
         .string()
         .trim()
         .base64()
-        .transform((base64) => Buffer.from(base64, "base64").toString("utf-8")),
+        .transform((base64) => Buffer.from(base64, "base64").toString("utf-8"))
     ),
     publicKey: z.preprocess(
       (v: any) => v.replace(/(\r\n|\n|\r)/gm, ""),
@@ -17,7 +17,7 @@ export default function () {
         .string()
         .trim()
         .base64()
-        .transform((base64) => Buffer.from(base64, "base64").toString("utf-8")),
+        .transform((base64) => Buffer.from(base64, "base64").toString("utf-8"))
     ),
   })
   return schema.parse({

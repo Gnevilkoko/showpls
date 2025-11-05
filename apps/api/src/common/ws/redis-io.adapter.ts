@@ -7,10 +7,7 @@ import { Server, ServerOptions } from "socket.io"
 export class RedisIoAdapter extends IoAdapter {
   private adapterConstructor: ReturnType<typeof createAdapter>
 
-  constructor(
-    app: INestApplication,
-    protected redisDsn: string,
-  ) {
+  constructor(app: INestApplication, protected redisDsn: string) {
     super(app)
   }
 

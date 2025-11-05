@@ -2,22 +2,21 @@ import { format, LoggerOptions, transports } from "winston"
 import { color, colorize } from "json-colorizer"
 import { serializeError } from "serialize-error-cjs"
 import { ConfigService } from "./config"
-import { ClsServiceManager } from 'nestjs-cls';
+import { ClsServiceManager } from "nestjs-cls"
 import { isEmpty } from "lodash"
 
-
 function deepSerializeError(err: unknown): unknown {
-  if (!(err instanceof Error)) return err;
+  if (!(err instanceof Error)) return err
 
-  const serialized = serializeError(err) as Record<string, unknown>;
+  const serialized = serializeError(err) as Record<string, unknown>
 
   if (err.cause instanceof Error) {
-    serialized.cause = deepSerializeError(err.cause);
-  } else if (err.cause && typeof err.cause === 'object') {
-    serialized.cause = err.cause;
+    serialized.cause = deepSerializeError(err.cause)
+  } else if (err.cause && typeof err.cause === "object") {
+    serialized.cause = err.cause
   }
 
-  return serialized;
+  return serialized
 }
 
 export const clsFormat = format((info) => {

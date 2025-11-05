@@ -1,4 +1,4 @@
-import { Ability, AbilityBuilder, AbilityClass, ExtractSubjectType, MongoQuery } from "@casl/ability"
+import { Ability, AbilityBuilder, AbilityClass, ExtractSubjectType } from "@casl/ability"
 import { Injectable } from "@nestjs/common"
 import { Action, Role } from "@share"
 import { Subjects } from "@share/action.enum"

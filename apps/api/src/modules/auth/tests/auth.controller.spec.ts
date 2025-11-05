@@ -1,11 +1,10 @@
-import { INestApplication, Module } from "@nestjs/common"
+import { INestApplication } from "@nestjs/common"
 import { Test, TestingModule } from "@nestjs/testing"
 import axios, { AxiosInstance } from "axios"
 import { DataSource, Repository } from "typeorm"
 import { getDataSourceToken, getRepositoryToken } from "@nestjs/typeorm"
 import ms from "ms"
 import { TestingService } from "../../../testing"
-import { AppModule } from "../../../app.module"
 import AuthService from "../auth.service"
 import { User } from "@share/entities"
 import { UserService } from "../../user"
@@ -16,7 +15,6 @@ import { APIExceptionResponse } from "@server/api"
 import { getLoggerToken } from "@server/logging"
 import { Logger } from "winston"
 import { AbilityFactory } from "../index"
-import { getBotToken } from "nestjs-telegraf"
 
 jest.mock("../../../config/bot.config", () => {
   const actual = jest.requireActual("../../../config/bot.config")

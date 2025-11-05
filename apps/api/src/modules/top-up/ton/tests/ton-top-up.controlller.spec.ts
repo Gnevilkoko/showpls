@@ -1,14 +1,9 @@
-import { Test, TestingModule } from "@nestjs/testing"
-import { DataSource } from "typeorm"
-import { StarsTopUpService } from "../../stars/stars-top-up.service"
+import { TestingModule } from "@nestjs/testing"
 import { INestApplication } from "@nestjs/common"
-import axios, { AxiosInstance } from "axios"
+import axios from "axios"
 import { TONTopUpService } from "../ton-top-up.service"
 import { FixtureService, TestingService } from "../../../../testing"
-import { getDataSourceToken, TypeOrmModule } from "@nestjs/typeorm"
-import { StarsTopUp, TONTopUp } from "@share/entities"
-import { faker } from "@faker-js/faker/locale/en"
-import { StarsTopUpController } from "../../stars/stars-top-up.controller"
+import { TONTopUp } from "@share/entities"
 import AuthService from "../../../auth/auth.service"
 
 describe("TONTonUpController", () => {

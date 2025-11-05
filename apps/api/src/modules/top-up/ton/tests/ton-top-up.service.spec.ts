@@ -59,6 +59,4 @@ describe("TONTopUpService", () => {
 
     expect(await getBalance(user.id, Token.TON)).toBe(amount)
   })
-
-
 })

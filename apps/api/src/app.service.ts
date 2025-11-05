@@ -1,5 +1,5 @@
 import { INestApplication, Injectable } from "@nestjs/common"
-import { getLoggerToken, InjectLogger, RequestLoggingMiddleware, ResponseLoggingInterceptor } from "@server/logging"
+import { getLoggerToken, InjectLogger, ResponseLoggingInterceptor } from "@server/logging"
 import fs from "fs"
 import { ConfigService, SessionConfig } from "./config"
 import cookieParser from "cookie-parser"
@@ -8,7 +8,6 @@ import { RedisService } from "@liaoliaots/nestjs-redis"
 import { ValidationPipe } from "./common/validation"
 import { Logger } from "winston"
 import { APIExceptionFilter } from "@server/api/api.exception-filter"
-import { AsyncLocalStorage } from "node:async_hooks"
 import { ClsService } from "nestjs-cls"
 
 @Injectable()

@@ -1,6 +1,5 @@
-import { Logger, OnModuleDestroy, OnModuleInit, Provider } from "@nestjs/common"
-import { Address, TonClient, Transaction } from "@ton/ton"
-import { Subscription } from "rxjs"
+import { Logger, Provider } from "@nestjs/common"
+import { Address, Transaction } from "@ton/ton"
 import { JettonService } from "./jetton.service"
 import { TONDaemon } from "../ton.daemon"
 import { Token } from "@share"
@@ -25,7 +24,6 @@ export class JettonDaemon extends TONDaemon {
     super(repository, service)
     this.logger = new Logger(`${JettonDaemon.name}-${this.token}`)
   }
-
 
   async handlePage(transactions: Transaction[]) {
     for (let tx of transactions) {
@@ -64,7 +62,6 @@ export class JettonDaemon extends TONDaemon {
         const balance = BigInt(stack.readBigNumber())
         const owner = stack.readAddress()
         const jettonMaster = stack.readAddress()
-
 
         if (
           TONUtilities.standardizeAddress(jettonMaster) !==

@@ -7,7 +7,6 @@ import { Ledger } from "@ledger"
 import { z } from "zod"
 import { retryWithExponentialBackoff } from "@share/utils"
 import { DbHelpers } from "../../../db"
-import { StarsTopUpListDto } from "../stars/dto/stars-top-up.list.dto"
 import { paginate } from "nestjs-typeorm-paginate"
 import { TONTopUpListDto } from "./dto/ton-top-up-list.dto"
 

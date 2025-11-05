@@ -11,11 +11,7 @@ import { get } from "lodash"
 
 @Injectable()
 export class AuthMiddleware implements NestMiddleware {
-
-  constructor(
-    @InjectLogger() protected logger: Logger,
-    protected cls: ClsService
-  ) {}
+  constructor(@InjectLogger() protected logger: Logger, protected cls: ClsService) {}
 
   async use(req: Request, res: Response, next: NextFunction) {
     // if (req.originalUrl === "/api/auth/sign-in" || req.originalUrl === "/api/auth/refresh-token") {
@@ -24,8 +20,6 @@ export class AuthMiddleware implements NestMiddleware {
     // }
 
     const token = AuthMiddleware.extractToken(req)
-
-
 
     if (!token) {
       next()

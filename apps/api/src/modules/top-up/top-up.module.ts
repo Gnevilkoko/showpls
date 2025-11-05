@@ -30,7 +30,7 @@ import { TopUpController } from "./top-up.controller"
     },
     ToncoinDaemon,
     getJettonDaemonProvider(Token.USDT),
-    TopUpService
+    TopUpService,
   ],
   controllers: [StarsTopUpController, TONTopUpController, TopUpController],
   exports: [StarsTopUpService],

@@ -79,7 +79,6 @@ export class UserService {
     await this.repository.update({ id }, { languageCode })
   }
 
-
   async getBalances(userId: string): Promise<Balance[]> {
     const currencies = await this.ledger.currency.list()
     const account = await this.ledger.account.retrieve(

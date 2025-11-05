@@ -1,7 +1,5 @@
 import { JettonService } from "../jetton.service"
 import { TONUtilities } from "../../ton.utilities"
-import { TonClient } from "@ton/ton"
-import { serializeError } from "serialize-error-cjs"
 
 describe("JettonService", () => {
   let service: JettonService

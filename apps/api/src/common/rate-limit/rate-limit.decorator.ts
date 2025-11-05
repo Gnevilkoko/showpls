@@ -9,6 +9,6 @@ export const RateLimit = (options: { ttl: number; limit: number }) => {
       default: {
         ...options,
       },
-    }),
+    })
   )
 }

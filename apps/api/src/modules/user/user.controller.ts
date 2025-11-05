@@ -1,6 +1,6 @@
 import { Body, Controller, Get, Post, Query, UseGuards } from "@nestjs/common"
 import { ApiExtraModels, ApiOkResponse, ApiSecurity, ApiTags, getSchemaPath } from "@nestjs/swagger"
-import { StarsTopUp, User } from "@share/entities"
+import { User } from "@share/entities"
 import { SwaggerUtilities } from "../../common/swagger.utilities"
 import { InjectRepository } from "@nestjs/typeorm"
 import { Repository } from "typeorm"
@@ -27,8 +27,8 @@ export class UserController {
     protected abilityFactory: AbilityFactory
   ) {}
 
-    @ApiOkResponse({
-    schema: {$ref: getSchemaPath(User)},
+  @ApiOkResponse({
+    schema: { $ref: getSchemaPath(User) },
   })
   @UseGuards(AuthGuard)
   @Post("create")
@@ -48,7 +48,7 @@ export class UserController {
   }
 
   @ApiOkResponse({
-    schema: {$ref: getSchemaPath(User)},
+    schema: { $ref: getSchemaPath(User) },
   })
   @Get(`retrieve`)
   async retrieve(@Query() { id }: IdDto) {

@@ -9,8 +9,6 @@ import { UserService } from "../../../user"
 import { LanguageCode, Role, Token } from "@share"
 import { StarsTopUp } from "@share/entities"
 import { randomBytes } from "node:crypto"
-import { RedisService } from "@liaoliaots/nestjs-redis"
-
 
 describe("StarsTopUpService", () => {
   let module: TestingModule
@@ -68,7 +66,7 @@ describe("StarsTopUpService", () => {
   })
 
   async function getBalance(id: string) {
-   const balances = await module.get(UserService).getBalances(id)
+    const balances = await module.get(UserService).getBalances(id)
     return +balances.find((balance) => balance.code === Token.STARS)!.balance
   }
 
@@ -79,7 +77,6 @@ describe("StarsTopUpService", () => {
       amount,
       userId: userId,
     })
-
 
     expect(await getBalance(userId)).toBe(0)
     await service.processSuccessfullPayment({ id, txid: randomBytes(32).toString("hex") })
@@ -149,11 +146,25 @@ describe("StarsTopUpService", () => {
       userId: userId,
     })
 
-    expect((await service.list({page: 1, limit: 10, filter: { refunded: undefined,
-      paid: undefined}, sort: {}})).items.length).toBe(3)
-    expect((await service.list({page: 1, limit: 10, filter: {paid: true, refunded: undefined}, sort: {}})).items.length).toBe(1)
-    expect((await service.list({page: 1, limit: 10, filter: {paid: false, refunded: undefined}, sort: {}})).items.length).toBe(2)
-    expect((await service.list({page: 1, limit: 10, filter: {userId: userId, refunded: undefined,
-      paid: undefined}, sort: {}})).items.length).toBe(3)
+    expect(
+      (await service.list({ page: 1, limit: 10, filter: { refunded: undefined, paid: undefined }, sort: {} })).items
+        .length
+    ).toBe(3)
+    expect(
+      (await service.list({ page: 1, limit: 10, filter: { paid: true, refunded: undefined }, sort: {} })).items.length
+    ).toBe(1)
+    expect(
+      (await service.list({ page: 1, limit: 10, filter: { paid: false, refunded: undefined }, sort: {} })).items.length
+    ).toBe(2)
+    expect(
+      (
+        await service.list({
+          page: 1,
+          limit: 10,
+          filter: { userId: userId, refunded: undefined, paid: undefined },
+          sort: {},
+        })
+      ).items.length
+    ).toBe(3)
   })
 })

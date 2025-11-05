@@ -1,19 +1,16 @@
 import { createZodDto } from "nestjs-zod"
 import { z } from "zod"
-import { OrderValue, Role } from "@share"
-import { ValidationService } from "../../../../common/validation"
+import { OrderValue } from "@share"
 import { paginationSchema } from "../../../../common/dto"
 
 const schema = paginationSchema.extend({
   filter: z
     .object({
       txid: z.string().min(1).optional(),
-      paid: ValidationService.getZodBooleanValidator(true),
+      paid: z.union([z.stringbool(), z.boolean()]).optional(),
       userId: z.coerce.number().int().positive().transform(String).optional(),
     })
-    .default({
-      paid: undefined
-    }),
+    .default({}),
   sort: z
     .object({
       createdAt: z.enum(OrderValue).optional(),

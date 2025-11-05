@@ -7,7 +7,7 @@ import ms from "ms"
 import { GetJettonWalletDto } from "./dto/get-jetton-wallet.dto"
 import { AuthGuard } from "../../auth/guards"
 import { GetUser } from "../../user/decorators"
-import { StarsTopUp, TONTopUp, User } from "@share/entities"
+import { TONTopUp, User } from "@share/entities"
 import { TONTopUpService } from "./ton-top-up.service"
 import { APIException } from "@server/api"
 import { AbilityFactory } from "../../auth"
@@ -15,7 +15,6 @@ import { ApiExtraModels, ApiOkResponse, ApiTags, getSchemaPath } from "@nestjs/s
 import { SwaggerUtilities } from "../../../common/swagger.utilities"
 import { IdDto } from "../../../common/dto"
 import { TONTopUpListDto } from "./dto/ton-top-up-list.dto"
-import { StarsTopUpListDto } from "../stars/dto/stars-top-up.list.dto"
 import { plainToInstance } from "class-transformer"
 
 @ApiExtraModels(TONTopUp)

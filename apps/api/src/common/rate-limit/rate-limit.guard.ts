@@ -27,7 +27,7 @@ export class RateLimitGuard extends ThrottlerGuard {
 
   protected async throwThrottlingException(
     context: ExecutionContext,
-    throttlerLimitDetail: ThrottlerLimitDetail,
+    throttlerLimitDetail: ThrottlerLimitDetail
   ): Promise<void> {
     throw new APIException(ErrorCode.RATE_LIMITED, {
       wait: throttlerLimitDetail.timeToExpire * 1000,

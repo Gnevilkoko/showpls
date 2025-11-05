@@ -1,6 +1,6 @@
 import { TONTransactionIterator } from "../ton-transaction.iterator"
 import { Address, TonClient } from "@ton/ton"
-import { uniq, uniqBy } from "lodash"
+import { uniq } from "lodash"
 
 const address = "UQDjL08aXGQIjXWyJmI6XW_Ce2gEDuKbbUDh0VcCos4N-cY7"
 describe.skip("TONTransactionIterator", () => {

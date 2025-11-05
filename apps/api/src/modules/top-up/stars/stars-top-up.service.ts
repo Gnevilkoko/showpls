@@ -158,8 +158,6 @@ export class StarsTopUpService {
             manager
           )
         })
-
-
       },
       (e) => DbHelpers.isSerializationFailure(e)
     )

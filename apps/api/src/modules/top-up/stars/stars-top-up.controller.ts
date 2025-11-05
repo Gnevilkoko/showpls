@@ -5,7 +5,7 @@ import { AuthGuard } from "../../auth/guards"
 import { StarsTopUpService } from "./stars-top-up.service"
 import { AbilityFactory } from "../../auth"
 import { GetUser } from "../../user/decorators"
-import { StarsTopUp, TONTopUp, User } from "@share/entities"
+import { StarsTopUp, User } from "@share/entities"
 import { Action, ErrorCode } from "@share"
 import { APIException } from "@server/api"
 import { CreateStarsTopUpDto } from "./dto/create-stars-top-up.dto"
@@ -22,7 +22,7 @@ export class StarsTopUpController {
   constructor(protected service: StarsTopUpService, protected abilityFactory: AbilityFactory) {}
 
   @ApiOkResponse({
-    schema: {$ref: getSchemaPath(StarsTopUp)},
+    schema: { $ref: getSchemaPath(StarsTopUp) },
   })
   @RateLimit({
     limit: 1,
@@ -42,7 +42,7 @@ export class StarsTopUpController {
   }
 
   @ApiOkResponse({
-    schema: {$ref: getSchemaPath(StarsTopUp)},
+    schema: { $ref: getSchemaPath(StarsTopUp) },
   })
   @UseGuards(AuthGuard)
   @Get("retrieve")

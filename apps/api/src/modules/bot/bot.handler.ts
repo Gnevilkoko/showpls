@@ -3,17 +3,12 @@ import { Context, Telegraf } from "telegraf"
 import { StarsTopUpService } from "../top-up/stars/stars-top-up.service"
 import { z } from "zod"
 import { SuccessfulPayment } from "telegraf/typings/core/types/typegram"
-import { InjectLogger } from "@server/logging"
 import { Logger } from "@nestjs/common"
-
 
 @Update()
 export class BotHandler {
   protected logger: Logger = new Logger(BotHandler.name)
-  constructor(
-    @InjectBot() protected bot: Telegraf<Context>,
-    protected starsTopUpService: StarsTopUpService
-  ) {}
+  constructor(@InjectBot() protected bot: Telegraf<Context>, protected starsTopUpService: StarsTopUpService) {}
 
   @Start()
   async onStart(ctx: Context & { payload?: string }) {}

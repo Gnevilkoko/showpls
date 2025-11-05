@@ -4,7 +4,6 @@ import path from "path"
 import { ConfigService } from "../../config"
 import { randomUUID } from "crypto"
 
-
 type UploadFileParams = {
   file: Buffer
   location?: string

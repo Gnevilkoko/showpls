@@ -12,10 +12,6 @@ import { LanguageCode, Role } from "@share"
 import { INestApplication } from "@nestjs/common"
 import axios, { AxiosInstance } from "axios"
 import AuthService from "../../../auth/auth.service"
-import { ClsModule } from "nestjs-cls"
-import { ClsService } from "nestjs-cls"
-
-
 
 describe("StarsTopUpController", () => {
   let module: TestingModule
@@ -25,9 +21,8 @@ describe("StarsTopUpController", () => {
   let url: string = "http://localhost:8000"
   let instance: AxiosInstance
 
-
   beforeEach(async () => {
-     await TestingService.dropDataSources()
+    await TestingService.dropDataSources()
     module = await Test.createTestingModule({
       imports: [...TestingService.getMustHaveModules(), TypeOrmModule.forFeature([StarsTopUp])],
       providers: [
@@ -44,8 +39,7 @@ describe("StarsTopUpController", () => {
         StarsTopUpService,
       ],
       controllers: [StarsTopUpController],
-    })
-      .compile()
+    }).compile()
 
     service = module.get(StarsTopUpService)
     app = await TestingService.getApp(module)
@@ -73,20 +67,23 @@ describe("StarsTopUpController", () => {
   it("POST /stars-top-up/create 200", async () => {
     const user = await createUser()
     const amount = 100
-    const resp = await instance.post("create", {
-      amount
-    }, {
-      headers: {
-        Authorization: `Bearer ${AuthService.generateToken(user)}`
+    const resp = await instance.post(
+      "create",
+      {
+        amount,
+      },
+      {
+        headers: {
+          Authorization: `Bearer ${AuthService.generateToken(user)}`,
+        },
       }
-    })
+    )
     expect(resp.status).toBe(200)
-    const topUp = await resp.data as StarsTopUp
+    const topUp = (await resp.data) as StarsTopUp
     expect(+topUp.amount).toBe(100e6)
     expect(topUp.paid).toBeFalsy()
     expect(topUp.refunded).toBeFalsy()
     expect(topUp.txid).toBeNull()
     expect(topUp.userId).toBe(user.id)
-
   })
 })

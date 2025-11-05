@@ -1,18 +1,9 @@
-import { Test, TestingModule } from "@nestjs/testing"
+import { TestingModule } from "@nestjs/testing"
 import { DataSource } from "typeorm"
-import { getJettonDaemonProvider, JettonDaemon } from "../ton/jetton/jetton.daemon"
 import { FixtureService, TestingService } from "../../../testing"
-import { getDataSourceToken, TypeOrmModule } from "@nestjs/typeorm"
-import { StarsTopUp, TONIgnoredTransaction, TONTopUp } from "@share/entities"
+import { getDataSourceToken } from "@nestjs/typeorm"
 import { TONTopUpService } from "../ton/ton-top-up.service"
-import { getJettonServiceToken } from "../ton/jetton/get-jetton-service-token"
-import { LanguageCode, Role, Token } from "@share"
-import { JettonService } from "../ton/jetton/jetton.service"
-import { getJettonDaemonToken } from "../ton/jetton/get-jetton-daemon-token"
-import { UserService } from "../../user"
-import { faker } from "@faker-js/faker/locale/en"
 import { StarsTopUpService } from "../stars/stars-top-up.service"
-import { getBotToken } from "nestjs-telegraf"
 import { TopUpService } from "../top-up.service"
 
 describe("TopUpService", () => {
@@ -32,8 +23,6 @@ describe("TopUpService", () => {
   afterEach(async () => {
     await module.close()
   })
-
-
 
   it("should list() works", async () => {
     const user = await fixtureService.createUser()
