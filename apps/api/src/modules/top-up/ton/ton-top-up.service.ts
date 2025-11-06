@@ -1,8 +1,8 @@
 import { Injectable, Logger, Provider } from "@nestjs/common"
-import { Blockchain, Token } from "@share"
-import { getRepositoryToken, InjectDataSource, InjectRepository } from "@nestjs/typeorm"
-import { StarsTopUp, TONIgnoredTransaction, TONTopUp } from "@share/entities"
-import { DataSource, Repository } from "typeorm"
+import { Blockchain, Token, TokenService } from "@share"
+import { getRepositoryToken, InjectRepository } from "@nestjs/typeorm"
+import { TONIgnoredTransaction, TONTopUp } from "@share/entities"
+import { Repository } from "typeorm"
 import { Ledger } from "@ledger"
 import { z } from "zod"
 import { retryWithExponentialBackoff } from "@share/utils"
@@ -10,13 +10,16 @@ import { DbHelpers } from "../../../db"
 import { paginate } from "nestjs-typeorm-paginate"
 import { TONTopUpListDto } from "./dto/ton-top-up-list.dto"
 import { Currency } from "@ledger/entities"
-import { Context, Telegraf } from "telegraf"
-import { StarsTopUpService } from "../stars/stars-top-up.service"
 
 @Injectable()
 export class TONTopUpService {
   protected logger = new Logger(TONTopUpService.name)
   protected externalType = "ton"
+
+  protected minAmounts: Record<Token.TON | Token.USDT, bigint> = {
+    [Token.TON]: TokenService.parse(0.1, { token: Token.TON }),
+    [Token.USDT]: TokenService.parse(0.1, { token: Token.USDT }),
+  }
 
   protected constructor(
     @InjectRepository(TONTopUp) protected repository: Repository<TONTopUp>,
@@ -123,6 +126,18 @@ export class TONTopUpService {
                 },
               })
             }
+            return
+          }
+
+          if (amount < this.minAmounts[token]) {
+            await manager.getRepository(TONIgnoredTransaction).insert({
+              txid,
+              reason: "transaction contains an amount less than the minimum",
+            })
+            this.logger.warn({
+              message: "the transaction contains an amount less than the minimum",
+              txid,
+            })
             return
           }
 

@@ -20,7 +20,7 @@ if (!DOMAIN) {
 export const BotConfig = {
   ...botConfig(),
   domain: DOMAIN,
-  webhookSecretPath: `/api/bot/${randomBytes(32).toString("hex")}`,
+  webhookSecretPath: `/api/bot/${botConfig().webhookPath}`,
 }
 export const CorsConfig = corsConfig()
 export const DatabaseConfig = databaseConfig()
