@@ -23,7 +23,7 @@ describe("TONTopUpService", () => {
 
   async function getBalance(id: string, token: Token) {
     const balances = await module.get(UserService).getBalances(id)
-    return BigInt(balances.find((balance) => balance.code === token)!.balance)
+    return BigInt(balances.find((balance) => balance.token === token)!.balance)
   }
 
   it("should create() works", async () => {

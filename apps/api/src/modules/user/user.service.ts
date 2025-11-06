@@ -2,7 +2,7 @@ import { Injectable, Logger } from "@nestjs/common"
 import { InjectRepository } from "@nestjs/typeorm"
 import { EntityManager, Repository } from "typeorm"
 import { User } from "@share/entities"
-import { LanguageCode, Role, Token } from "@share"
+import { Blockchain, LanguageCode, Role, Token } from "@share"
 import { DbHelpers } from "../../db"
 import UserExceptions from "./user.exceptions"
 import { NotImplemented } from "@share/errors"
@@ -103,9 +103,8 @@ export class UserService {
       }
 
       balances.push({
-        code: currency.code,
-        name: currency.name,
-        blockchain: currency.blockchain,
+        token: currency.code as Token,
+        blockchain: currency.blockchain as Blockchain | null,
         balance: balance,
         lockedBalance: lockedBalance,
       })
@@ -116,9 +115,8 @@ export class UserService {
 }
 
 type Balance = {
-  code: string
-  name: string
-  blockchain: string | null
+  token: Token
+  blockchain: Blockchain | null
   balance: string
   lockedBalance: string
 }

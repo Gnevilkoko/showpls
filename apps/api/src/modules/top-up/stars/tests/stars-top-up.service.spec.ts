@@ -67,7 +67,7 @@ describe("StarsTopUpService", () => {
 
   async function getBalance(id: string) {
     const balances = await module.get(UserService).getBalances(id)
-    return +balances.find((balance) => balance.code === Token.STARS)!.balance
+    return +balances.find((balance) => balance.token === Token.STARS)!.balance
   }
 
   it("should processSuccessfullPayment() works", async () => {

@@ -6,6 +6,7 @@ import jwtConfig from "./jwt.config"
 import redisConfig from "./redis.config"
 import sessionConfig from "./session.config"
 import botConfig from "./bot.config"
+import { randomBytes } from "node:crypto"
 
 z.enum(["development", "production", "test"]).parse(process.env.NODE_ENV)
 
@@ -19,13 +20,10 @@ if (!DOMAIN) {
 export const BotConfig = {
   ...botConfig(),
   domain: DOMAIN,
-  // webhookSecretPath: `/api/bot/${crypto.randomBytes(32).toString("hex")}`, // traefik router /api
-  webhookSecretPath: `/api/bot/default`, // traefik router /api
+  webhookSecretPath: `/api/bot/${randomBytes(32).toString("hex")}`,
 }
 export const CorsConfig = corsConfig()
 export const DatabaseConfig = databaseConfig()
 export const RedisConfig = redisConfig()
 export const JwtConfig = jwtConfig()
 export const SessionConfig = sessionConfig()
-
-
