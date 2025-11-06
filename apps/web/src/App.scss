@@ -219,12 +219,33 @@ $border-color-active-order: var(--border-color-active-order);
   justify-content: space-between;
   padding: 13px 0px 3px 0px;
   box-sizing: border-box;
-  gap: 16px;
+  gap: 8px;
 }
 
 .default-logo {
   width: 100%;
-  max-width: 183px;
+  max-width: 130px;
+}
+
+.header-content {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.theme-toggle {
+  all: unset;
+  cursor: pointer;
+  width: 24px;
+  height: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  background-color: $bg-secondary;
+  box-shadow: 0px 2px 5px 0px #262b3108, 0px 10px 10px 0px #262b3105, 0px 22px 13px 0px #262b3103,
+    0px 40px 16px 0px #262b3100, 0px 62px 17px 0px #262b3100;
+  padding: 8px;
 }
 
 .header__dropdown-wrapper {
@@ -238,12 +259,13 @@ $border-color-active-order: var(--border-color-active-order);
   background-color: $bg-secondary;
   padding: 10px;
   border-radius: 8px;
-  gap: 9px;
+  gap: 4px;
 
   box-shadow: 0px 2px 5px 0px #262b3108, 0px 10px 10px 0px #262b3105, 0px 22px 13px 0px #262b3103,
     0px 40px 16px 0px #262b3100, 0px 62px 17px 0px #262b3100;
 
-  img {
+  svg {
+    color: #5b6674;
     transition: transform 0.3s ease;
 
     &.rotated {
@@ -264,7 +286,7 @@ $border-color-active-order: var(--border-color-active-order);
 }
 
 .dropdown-menu {
-  min-width: 85px;
+  min-width: 82px;
   display: flex;
   flex-direction: column;
   position: absolute;
@@ -1014,6 +1036,92 @@ $border-color-active-order: var(--border-color-active-order);
   }
 }
 
+// Time selectors styles
+.time-selectors {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+
+  .time-selector {
+    flex: 1;
+    position: relative;
+  }
+
+  .time-dropdown-trigger {
+    padding: 12px 16px;
+    border: 1px solid $border-color;
+    border-radius: 10px;
+    background: $bg-secondary;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    font-family: Inter;
+    font-weight: 400;
+    font-size: 14px;
+    color: $text-primary;
+
+    span {
+      flex: 1;
+      text-align: center;
+    }
+
+    .dropdown-arrow {
+      transition: transform 0.2s ease;
+      color: #5b6674;
+    }
+
+    &.open {
+      .dropdown-arrow {
+        transform: rotate(180deg);
+      }
+    }
+  }
+
+  .time-dropdown-menu {
+    position: absolute;
+    top: 100%;
+    left: 0;
+    right: 0;
+    z-index: 1;
+    background: $bg-secondary;
+    border: 1px solid $border-color;
+    border-radius: 10px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    max-height: 150px;
+    overflow-y: auto;
+    margin-top: 4px;
+
+    &::-webkit-scrollbar {
+      width: 0px;
+    }
+  }
+
+  .time-dropdown-item {
+    padding: 12px 16px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    font-family: Inter;
+    font-weight: 400;
+    font-size: 14px;
+    color: $text-primary;
+    text-align: center;
+
+    &.selected {
+      background: #2cd896;
+      color: white;
+    }
+  }
+
+  .time-separator {
+    font-size: 24px;
+    font-weight: bold;
+    color: $text-primary;
+    line-height: 100%;
+  }
+}
+
 .budget-input {
   all: unset;
   width: 100%;
@@ -1094,6 +1202,42 @@ $border-color-active-order: var(--border-color-active-order);
     font-size: 13px;
     text-align: center;
     color: #ffffff;
+  }
+}
+
+.verification-proof-item {
+  display: flex;
+  gap: 10px;
+}
+
+.verification-proof-button {
+  all: unset;
+  cursor: pointer;
+  box-sizing: border-box;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  padding: 8px 12px;
+  border: 1px solid $border-color;
+  border-radius: 50px;
+  background: $bg-secondary;
+
+  transition: all 0.3s ease;
+
+  font-family: Space Grotesk, sans-serif;
+  font-weight: 700;
+  font-size: 16px;
+  color: $text-primary;
+}
+
+.verification-proof-button.active {
+  background: #49b4fb;
+  color: #ffffff;
+  border: 1px solid rgba(255, 255, 255, 0);
+
+  &.pro {
+    background: #2cd896;
   }
 }
 
@@ -1972,6 +2116,22 @@ $border-color-active-order: var(--border-color-active-order);
   gap: 4px;
 }
 
+.start-work-btn {
+  all: unset;
+  cursor: pointer;
+  text-align: center;
+  white-space: nowrap;
+  padding: 8px 12px;
+  box-sizing: border-box;
+  background-color: #ff8b00;
+  border-radius: 50px;
+
+  font-weight: 700;
+  font-size: 14px;
+  line-height: 100%;
+  color: #ffffff;
+}
+
 .chats__search-wrapper {
   all: unset;
   display: flex;
@@ -2545,6 +2705,10 @@ $border-color-active-order: var(--border-color-active-order);
   line-height: 100%;
 
   border-bottom: 1px solid $border-color;
+
+  img {
+    width: 16px;
+  }
 }
 
 .chat__container {
@@ -2600,6 +2764,19 @@ $border-color-active-order: var(--border-color-active-order);
   display: flex;
   justify-content: center;
   gap: 10px;
+
+  &.challenge {
+    flex-direction: column;
+  }
+}
+
+.message-notification-description {
+  color: $text-secondary;
+  font-size: 13px;
+  line-height: 100%;
+  font-weight: 400;
+  font-family: Inter;
+  text-align: center;
 }
 
 .message-notification-action-btn {
@@ -2607,6 +2784,7 @@ $border-color-active-order: var(--border-color-active-order);
   width: 100%;
   display: flex;
   justify-content: center;
+  text-align: center;
   padding: 12px;
   box-sizing: border-box;
   border-radius: 20px;
@@ -2835,6 +3013,11 @@ $border-color-active-order: var(--border-color-active-order);
   display: flex;
   padding-bottom: 6px;
   cursor: pointer;
+
+  img {
+    width: 24px;
+    height: 24px;
+  }
 }
 
 .message-input__wrapper {
@@ -2918,7 +3101,7 @@ $border-color-active-order: var(--border-color-active-order);
   right: 0;
   background: none;
   border: none;
-  color: $bg-secondary;
+  color: $border-color;
   font-size: 30px;
   cursor: pointer;
   z-index: 1001;
@@ -2966,92 +3149,6 @@ $border-color-active-order: var(--border-color-active-order);
   background: rgba(0, 0, 0, 0.5);
   padding: 5px 10px;
   border-radius: 15px;
-}
-
-// Time selectors styles
-.time-selectors {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-
-  .time-selector {
-    flex: 1;
-    position: relative;
-  }
-
-  .time-dropdown-trigger {
-    padding: 12px 16px;
-    border: 1px solid $border-color;
-    border-radius: 10px;
-    background: $bg-secondary;
-    cursor: pointer;
-    transition: all 0.2s ease;
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    font-family: Inter;
-    font-weight: 400;
-    font-size: 14px;
-    color: $text-primary;
-
-    span {
-      flex: 1;
-      text-align: center;
-    }
-
-    .dropdown-arrow {
-      transition: transform 0.2s ease;
-      color: $text-secondary;
-    }
-
-    &.open {
-      .dropdown-arrow {
-        transform: rotate(180deg);
-      }
-    }
-  }
-
-  .time-dropdown-menu {
-    position: absolute;
-    top: 100%;
-    left: 0;
-    right: 0;
-    z-index: 1;
-    background: $bg-secondary;
-    border: 1px solid $border-color;
-    border-radius: 10px;
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
-    max-height: 150px;
-    overflow-y: auto;
-    margin-top: 4px;
-
-    &::-webkit-scrollbar {
-      width: 0px;
-    }
-  }
-
-  .time-dropdown-item {
-    padding: 12px 16px;
-    cursor: pointer;
-    transition: all 0.2s ease;
-    font-family: Inter;
-    font-weight: 400;
-    font-size: 14px;
-    color: $text-primary;
-    text-align: center;
-
-    &.selected {
-      background: #2cd896;
-      color: white;
-    }
-  }
-
-  .time-separator {
-    font-size: 24px;
-    font-weight: bold;
-    color: $text-primary;
-    line-height: 100%;
-  }
 }
 
 // Chat Map styles
@@ -3294,5 +3391,130 @@ $border-color-active-order: var(--border-color-active-order);
   .tasks__task {
     flex: 0 0 77vw;
     max-width: 450px;
+  }
+}
+
+// =========== Camera ===========
+
+.camera-modal {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.9);
+  z-index: 1000;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+}
+
+.camera-modal__controls {
+  position: absolute;
+  top: 20px;
+  right: 20px;
+  display: flex;
+  gap: 10px;
+  z-index: 1001;
+}
+
+.camera-modal__control-btn {
+  all: unset;
+  box-sizing: border-box;
+  padding: 10px 16px;
+  background-color: rgba(255, 255, 255, 0.2);
+  color: white;
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 14px;
+  backdrop-filter: blur(10px);
+  transition: background-color 0.2s ease, border-color 0.2s ease;
+
+  &:hover {
+    background-color: rgba(255, 255, 255, 0.3);
+    border-color: rgba(255, 255, 255, 0.5);
+  }
+
+  &:active {
+    transform: scale(0.95);
+  }
+}
+
+.camera-modal__video {
+  width: 100%;
+  max-width: 640px;
+  max-height: 80vh;
+  object-fit: contain;
+}
+
+.camera-modal__recording-indicator {
+  position: absolute;
+  top: 20px;
+  left: 20px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background-color: rgba(244, 67, 54, 0.8);
+  padding: 8px 16px;
+  border-radius: 8px;
+  color: white;
+  font-family: Inter;
+  font-weight: 600;
+  font-size: 14px;
+  line-height: 100%;
+  z-index: 1001;
+}
+
+.camera-modal__recording-dot {
+  width: 12px;
+  height: 12px;
+  background-color: white;
+  border-radius: 50%;
+  animation: pulse 1s infinite;
+}
+
+.camera-modal__actions {
+  margin-top: 20px;
+  display: flex;
+  gap: 10px;
+  align-items: center;
+}
+
+.camera-modal__action-btn {
+  all: unset;
+  box-sizing: border-box;
+  padding: 12px 24px;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  font-family: Inter;
+  font-weight: 500;
+  font-size: 16px;
+  line-height: 100%;
+  color: white;
+  transition: transform 0.2s ease, opacity 0.2s ease;
+
+  &:hover {
+    opacity: 0.9;
+  }
+
+  &:active {
+    transform: scale(0.95);
+  }
+
+  &--green {
+    background: linear-gradient(180deg, #54febd 0%, #2eca8e 100%);
+    box-shadow: 0px 5vw 4vw -2vw #00a7674d;
+  }
+
+  &--red {
+    background: linear-gradient(180deg, #ff6b6b 0%, #f44336 100%);
+    box-shadow: 0px 5vw 4vw -2vw #f443364d;
+  }
+
+  &--gray {
+    background-color: #666;
   }
 }

@@ -80,7 +80,7 @@ const Chat = () => {
     [chat?.orders]
   )
 
-  const chatdataItem = chatData.find((i) => i.chat_id === chat?.chat_id)
+  const chatDataItem = chatData.find((i) => i.chat_id === chat?.chat_id)
 
   useEffect(() => {
     if (!chat) {
@@ -105,7 +105,13 @@ const Chat = () => {
   return (
     <div className="chat">
       <div className="chats__header-wrapper">
-        <ChatHeader chat={chat} searchValue={searchValue} onSearchChange={setSearchValue} onBack={handleBack} />
+        <ChatHeader
+          selectedOrder={selectedOrder as ChatOrderType}
+          chat={chat}
+          searchValue={searchValue}
+          onSearchChange={setSearchValue}
+          onBack={handleBack}
+        />
 
         {chat.orders?.[selectedOrderIndex] && (
           <div className="chat__task-wrapper">
@@ -151,7 +157,7 @@ const Chat = () => {
       </div>
 
       <div className="chat__container">
-        {chatdataItem?.messages.map((msg: Message) => (
+        {chatDataItem?.messages.map((msg: Message) => (
           <MessageItem key={msg.id} message={msg} userId={userId} />
         ))}
       </div>

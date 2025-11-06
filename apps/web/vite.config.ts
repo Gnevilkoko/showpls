@@ -15,7 +15,7 @@ export default defineConfig({
     // Добавляем только в режиме разработки
     ...(isDev && {
       strictPort: false,
-      allowedHosts: ["shakia-entrepreneurial-asley.ngrok-free.dev"],
+      allowedHosts: ["scotopic-dorothy-neustonic.ngrok-free.dev"],
     }),
     fs: {
       allow: [".."],

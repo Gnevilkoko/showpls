@@ -1,7 +1,7 @@
 import type { ChatType } from "../../../shared/types"
 import userIcon from "../../../assets/icons/navigation/user.svg"
 import checkReadIcon from "../../../assets/icons/status/check-read.svg"
-import starBlankIcon from "../../../assets/icons/status/star-blank.svg"
+import starOutlineIcon from "../../../assets/icons/status/star-outline.svg"
 import starFilledIcon from "../../../assets/icons/status/star-filled.svg"
 import { formatTimeFromEpochMs } from "../../../shared/format"
 import { useNavigate } from "react-router-dom"
@@ -40,7 +40,7 @@ const ChatItem = memo(({ chat }: ChatPrevItemProps) => {
             <span>{time}</span>
 
             <button className="prev-chat__favorite-btn">
-              <img src={chat.is_favorite ? starFilledIcon : starBlankIcon} alt="Favorite Icon" />
+              <img src={chat.is_favorite ? starFilledIcon : starOutlineIcon} alt="Favorite Icon" />
             </button>
           </div>
         </div>

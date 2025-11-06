@@ -18,6 +18,7 @@ export const TasksList: TaskType[] = [
     ],
     isUrgent: true,
     price: 20,
+    verifProof: "base",
     position: { lat: 37.758749, lng: -122.461771 },
     tags: [
       { type: "hLeft", count: 2 },
@@ -34,6 +35,7 @@ export const TasksList: TaskType[] = [
     attachments: [],
     isUrgent: true,
     price: 35,
+    verifProof: "base",
     position: { lat: 37.75254, lng: -122.472629 },
     tags: [{ type: "km", count: 1.2 }],
     customer_id: 100,
@@ -48,6 +50,7 @@ export const TasksList: TaskType[] = [
     attachments: [],
     isUrgent: false,
     price: 50,
+    verifProof: "pro",
     position: { lat: 37.749859, lng: -122.465076 },
     tags: [{ type: "km", count: 1.2 }],
     customer_id: 200,
