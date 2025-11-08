@@ -23,6 +23,6 @@ export class TokenService {
 
   public static parse(value: number | string, { token }: { token: Token }) {
     const decimals = TokenService.getDecimals(token)
-    return ethers.parseUnits(typeof value === "number" ? value.toFixed(18) : value, decimals)
+    return ethers.parseUnits(typeof value === "number" ? value.toFixed(decimals) : value, decimals)
   }
 }
