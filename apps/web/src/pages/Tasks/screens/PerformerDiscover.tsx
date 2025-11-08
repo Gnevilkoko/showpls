@@ -8,14 +8,30 @@ import ToggleSectionButton from "../components/ToggleSectionButton"
 import TaskItem from "../components/TaskItem"
 import TaskPrimaryButton from "../../../shared/components/TaskPrimaryButton"
 import penWhiteIcon from "../../../assets/icons/actions/pen-white.svg"
+import loupeWhiteIcon from "../../../assets/icons/ui/loupe-white.svg"
+import closeIcon from "../../../assets/icons/ui/close-icon.svg"
 import TasksMap from "../TasksMap"
+import PerformersMap from "../PerformersMap"
 
 const PerformerDiscover = () => {
+  const userId = 100
   const { t } = useTranslation()
 
   const [activeSection, setActiveSection] = useState<"list" | "map">("list")
   const [selectedTask, setSelectedTask] = useState<TaskType | null>(null)
   const [isOpenModal, setIsOpenModal] = useState<boolean>(false)
+
+  const [isOpenPerformerDiscover, setIsOpenPerformerDiscover] = useState(false)
+
+  const handleOpenPerformerDiscover = () => {
+    setIsOpenModal(false)
+    setIsOpenPerformerDiscover(true)
+  }
+
+  const handleClosePerformerDiscover = () => {
+    setIsOpenModal(true)
+    setIsOpenPerformerDiscover(false)
+  }
 
   // Создаём ref для каждой таски в списке и на карте
   const listTaskRefs = useRef<Record<string, HTMLDivElement | null>>({})
@@ -73,7 +89,26 @@ const PerformerDiscover = () => {
       <Modal isOpen={isOpenModal} onClose={handleCloseTask}>
         <TaskInfo selectedOrder={selectedTask as TaskType} />
 
-        <TaskPrimaryButton onClick={() => {}} icon={penWhiteIcon} text={t("respondToTask")} />
+        {selectedTask?.customer_id === userId ? (
+          <>
+            <TaskPrimaryButton color="green" onClick={() => {}} icon={penWhiteIcon} text={t("editToTask")} />
+
+            <TaskPrimaryButton
+              color="blue"
+              onClick={handleOpenPerformerDiscover}
+              icon={loupeWhiteIcon}
+              text={t("performerDiscovery")}
+            />
+
+            <TaskPrimaryButton color="none" onClick={() => {}} icon={closeIcon} text={t("deleteTask")} />
+          </>
+        ) : (
+          <TaskPrimaryButton color="green" onClick={() => {}} icon={penWhiteIcon} text={t("sendTheOrder")} />
+        )}
+      </Modal>
+
+      <Modal isOpen={isOpenPerformerDiscover} onClose={handleClosePerformerDiscover}>
+        <PerformersMap />
       </Modal>
     </div>
   )

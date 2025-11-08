@@ -11,7 +11,7 @@ const VerifProofField = ({ verifProof, handleChangeVerifProof }: VerifProofField
   const { t } = useTranslation()
 
   return (
-    <CustomerBanner icon={securityProofIcon} title={t("tasksPage.verifProof")} isValid={true}>
+    <CustomerBanner icon={securityProofIcon} title={t("tasksPage.verifProof")} isValid={verifProof === "base"}>
       <div className="verification-proof-item">
         <button
           className={`verification-proof-button ${verifProof === "base" ? "active" : ""}`}
@@ -25,6 +25,8 @@ const VerifProofField = ({ verifProof, handleChangeVerifProof }: VerifProofField
           onClick={() => handleChangeVerifProof("pro")}
         >
           <span>{t("tasksPage.pro")}</span>
+
+          <span className="coming-soon">{t("comingSoon")}</span>
         </button>
       </div>
 

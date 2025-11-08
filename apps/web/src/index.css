@@ -32,11 +32,11 @@ body {
 
 /* CSS переменные для темной темы */
 :root[data-theme="dark"] {
-  --bg-primary: #08151f;
+  --bg-primary: #050d13;
   --bg-secondary: #0b1d2a;
   --bg-modal: #ffffff1f;
-  --bg-active-order: #314d37;
-  --bg-unread: #163b57;
+  --bg-active-order: #173d5a;
+  --bg-unread: #132938;
   --text-primary: #ffffff;
   --text-placeholder: #ffffff80;
   --text-secondary: #ffffff;

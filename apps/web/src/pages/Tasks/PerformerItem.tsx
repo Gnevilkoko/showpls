@@ -42,7 +42,7 @@ const PerformerItem = ({ performer, ref, handleSelectPerformer }: PerformerItemP
         </div>
       </div>
 
-      <TaskPrimaryButton onClick={() => {}} icon={penWhiteIcon} text={t("sendTheOrder")} />
+      <TaskPrimaryButton color="green" onClick={() => {}} icon={penWhiteIcon} text={t("sendTheOrder")} />
     </div>
   )
 }

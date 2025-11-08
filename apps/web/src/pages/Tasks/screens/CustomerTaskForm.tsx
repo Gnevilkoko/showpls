@@ -98,9 +98,9 @@ const CustomerTaskForm = () => {
         setTimeMinutes={setTimeMinutes}
       />
 
-      <BudgetField budget={budget} setBudget={setBudget} />
-
       <VerifProofField verifProof={verifProof} handleChangeVerifProof={handleChangeVerifProof} />
+
+      <BudgetField budget={budget} setBudget={setBudget} />
 
       <CustomerButton img={plusActionBannerIcon} title={t("tasksPage.publishRequest")} color="green" />
 

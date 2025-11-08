@@ -1,4 +1,5 @@
 import type { DataMessages, Message } from "../../../shared/types"
+import { TasksList } from "../../Tasks/tasks"
 
 const messagesSender: Message[] = [
   {
@@ -65,7 +66,8 @@ const messagesSender: Message[] = [
   {
     id: 7,
     type: "notification",
-    variant: "newTask",
+    variant: "newOffer",
+    order: TasksList[0],
     sender_id: 100,
     receiver_id: 200,
     text: "You have received a new task(s).",
@@ -140,23 +142,13 @@ const messagesReciever: Message[] = [
   {
     id: 7,
     type: "notification",
-    variant: "newTask",
+    variant: "newOffer",
+    order: TasksList[0],
     sender_id: 200,
     receiver_id: 100,
     text: "You have received a new task(s).",
     attachments: [],
     created_at: 1760453955290,
-    is_read: true,
-  },
-  {
-    id: 8,
-    type: "notification",
-    variant: "challenge",
-    sender_id: 0,
-    receiver_id: 100,
-    text: "",
-    attachments: [],
-    created_at: Date.now(),
     is_read: true,
   },
 ]
