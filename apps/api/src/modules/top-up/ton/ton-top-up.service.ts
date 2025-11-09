@@ -135,7 +135,7 @@ export class TONTopUpService {
               reason: "transaction contains an amount less than the minimum",
             })
             this.logger.warn({
-              message: "the transaction contains an amount less than the minimum",
+              message: "transaction contains an amount less than the minimum",
               txid,
             })
             return

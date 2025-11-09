@@ -1,5 +1,17 @@
 import { TypeOrmModuleOptions } from "@nestjs/typeorm"
-import { StarsTopUp, TONIgnoredTransaction, TONTopUp, User } from "@share/entities"
+import {
+  Chat,
+  ChatMessage,
+  Deal,
+  FileAttachment,
+  Request,
+  Response,
+  StarsTopUp,
+  Submission,
+  TONIgnoredTransaction,
+  TONTopUp,
+  User,
+} from "@share/entities"
 import process from "process"
 import { LoggerOptions } from "typeorm"
 import { MixedList } from "typeorm/common/MixedList"
@@ -48,6 +60,13 @@ export default function () {
       TONTopUp,
       TONIgnoredTransaction,
       ...Object.values(Models),
+      Request,
+      Response,
+      Deal,
+      Chat,
+      ChatMessage,
+      Submission,
+      FileAttachment,
     ] as MixedList<Function>,
     migrations: [] as MixedList<Function>,
     migrationsTableName: "migrations",
