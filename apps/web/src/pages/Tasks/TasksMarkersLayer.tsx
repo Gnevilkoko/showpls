@@ -50,7 +50,7 @@ const TasksMarkersLayer = ({ map, selectedTask, onClick, tasksList }: MarkersLay
 
         // Создаем DOM элемент для контента маркера
         const content = document.createElement("div")
-        content.className = `custom-marker ${task.isUrgent ? "urgent" : ""}`
+        content.className = `custom-marker ${task.mode === "pro" ? "accent" : ""}`
 
         // Создаем React root для рендера React компонента внутрь DOM элемента маркера
         const root = createRoot(content)

@@ -65,13 +65,14 @@ export type ChatType = {
 export type Message = {
   id: number
   type: "notification" | "message"
-  variant?: "upload" | "newTask" | "permissionToCancel" | "challenge"
+  variant?: "upload" | "permissionToCancel" | "newOffer"
   sender_id: number
   receiver_id: number
   text: string | null
   attachments: string[]
   created_at: number
   is_read: boolean
+  order?: TaskType
 }
 
 export type DataMessages = {
@@ -101,7 +102,7 @@ export type TaskType = {
   description: string
   attachments: string[]
   price: number
-  verifProof: "base" | "pro"
+  mode: "base" | "pro"
   position: google.maps.LatLngLiteral
   isUrgent: boolean
   tags: {

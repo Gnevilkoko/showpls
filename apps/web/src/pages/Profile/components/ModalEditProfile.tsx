@@ -117,7 +117,7 @@ const ModalEditProfile = ({ isOpenEditProfile, setIsOpenEditProfile }: ModalEdit
         />
       </div>
 
-      <TaskPrimaryButton icon={penWhiteIcon} text={t("saveChanges")} onClick={handleSaveChanges} />
+      <TaskPrimaryButton color="green" icon={penWhiteIcon} text={t("saveChanges")} onClick={handleSaveChanges} />
     </Modal>
   )
 }

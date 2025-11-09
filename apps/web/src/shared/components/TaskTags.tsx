@@ -11,7 +11,8 @@ const TaskTags = ({ task }: TaskTagsProps) => {
 
   return (
     <div className="task__tags-container">
-      {task.isUrgent && <div className="tag badge">{t("urgent")}</div>}
+      {task.mode === "pro" && <div className="tag badge green">{t("tasksPage.pro")}</div>}
+      {task.mode === "base" && <div className="tag badge blue">{t("tasksPage.base")}</div>}
 
       <div className="tag stars">
         {task.price}

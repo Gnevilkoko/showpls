@@ -106,7 +106,7 @@ const Chat = () => {
     <div className="chat">
       <div className="chats__header-wrapper">
         <ChatHeader
-          selectedOrder={selectedOrder as ChatOrderType}
+          // selectedOrder={selectedOrder as ChatOrderType}
           chat={chat}
           searchValue={searchValue}
           onSearchChange={setSearchValue}
@@ -133,6 +133,7 @@ const Chat = () => {
 
                 <div className="chat__task__actions">
                   <TaskPrimaryButton
+                    color="green"
                     onClick={() =>
                       selectedOrder?.order.customer_id === userId
                         ? setIsOpenModalAcceptOrder(true)

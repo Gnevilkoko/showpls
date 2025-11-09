@@ -71,7 +71,7 @@ const TasksMap = memo(({ selectedTask, handleSelectTask, tasksList }: MapContain
 
         // Создаем DOM элемент для контента маркера
         const content = document.createElement("div")
-        content.className = `custom-marker ${task.isUrgent ? "accent" : ""}`
+        content.className = `custom-marker ${task.mode === "pro" ? "accent" : ""}`
 
         // Создаем React root для рендера React компонента внутрь DOM элемента маркера
         const root = createRoot(content)
