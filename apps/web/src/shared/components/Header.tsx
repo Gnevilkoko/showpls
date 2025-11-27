@@ -1,6 +1,7 @@
 import { useNavigate } from "react-router-dom"
 import globalTransIcon from "../../assets/icons/ui/global-lang.svg"
-import logoWithoutIcon from "../../assets/images/logo-without-icon.svg"
+// import logoWithoutIcon from "../../assets/images/logo-without-icon.svg"
+import newMainLogo from "../../assets/images/new-main-logo.svg"
 import checkIcon from "../../assets/icons/status/check-icon.svg"
 import userIcon from "../../assets/icons/navigation/user.svg"
 import { useState } from "react"
@@ -51,7 +52,7 @@ const Header = () => {
   return (
     <div className="main-header">
       {/* <img src={logo} alt="Showpls Logo" className="default-logo" /> */}
-      <img src={logoWithoutIcon} alt="Showpls Logo" className="default-logo" />
+      <img src={newMainLogo} alt="Showpls Logo" className="default-logo" />
 
       <div className="header-content">
         <button className="theme-toggle" onClick={handleToggleTheme}>
