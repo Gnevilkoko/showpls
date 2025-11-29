@@ -5,6 +5,8 @@ import { LanguageCode } from "../language-code.enum"
 import { Token } from "../token.enum"
 import { StarsTopUp } from "./stars-top-up.entity"
 import { TONTopUp } from "./ton-top-up.entity"
+import { Request } from "./request.entity"
+import { Response } from "./response.entity"
 
 @Entity()
 export class User {
@@ -69,6 +71,11 @@ export class User {
   @OneToMany(() => TONTopUp, (topUp) => topUp.user)
   tonTopUps: Relation<TONTopUp>[]
 
+  @OneToMany(() => Request, (request) => request.customer)
+  requests: Relation<Request>[]
+
+  @OneToMany(() => Response, (response) => response.performer)
+  responses: Relation<Response>[]
 
   @ApiProperty({ type: "string" })
   @Column({ type: "timestamptz" })

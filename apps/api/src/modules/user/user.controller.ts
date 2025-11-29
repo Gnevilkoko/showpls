@@ -1,5 +1,5 @@
-import { Body, Controller, Get, Post, Query, UseGuards } from "@nestjs/common"
-import { ApiExtraModels, ApiOkResponse, ApiSecurity, ApiTags, getSchemaPath } from "@nestjs/swagger"
+import { Body, Controller, Get, NotFoundException, Param, Post, Query, UseGuards } from "@nestjs/common"
+import { ApiExtraModels, ApiOkResponse, ApiOperation, ApiSecurity, ApiTags, getSchemaPath } from "@nestjs/swagger"
 import { User } from "@share/entities"
 import { SwaggerUtilities } from "../../common/swagger.utilities"
 import { InjectRepository } from "@nestjs/typeorm"
@@ -16,6 +16,8 @@ import UserExceptions from "./user.exceptions"
 import { SetLanguageCodeDto } from "./dto/set-language-code.dto"
 import { GetBalancesDto } from "./dto/get-balances.dto"
 import { plainToInstance } from "class-transformer"
+import { ResponseService } from "../response/response.service"
+import { DealService } from "../deal/deal.service"
 
 @ApiExtraModels(User)
 @ApiTags("User")
@@ -24,7 +26,9 @@ export class UserController {
   constructor(
     @InjectRepository(User) protected repository: Repository<User>,
     protected service: UserService,
-    protected abilityFactory: AbilityFactory
+    protected abilityFactory: AbilityFactory,
+    protected responseService: ResponseService,
+    protected dealService: DealService
   ) {}
 
   @ApiOkResponse({
@@ -108,5 +112,33 @@ export class UserController {
       throw new APIException(ErrorCode.ACCESS_DENIED)
     }
     return await this.service.getBalances(id)
+  }
+
+  @ApiSecurity("jwt-auth")
+  @UseGuards(AuthGuard)
+  @Get(":id/responses")
+  @ApiOperation({ summary: "Get all responses from a specific user" })
+  async getUserResponses(@Param("id") id: string) {
+    try {
+      // Check if user exists
+      await this.service.retrieve(id)
+    } catch {
+      throw new NotFoundException("User not found")
+    }
+    return this.responseService.findByUserId(id)
+  }
+
+  @ApiSecurity("jwt-auth")
+  @UseGuards(AuthGuard)
+  @Get(":id/deals")
+  @ApiOperation({ summary: "Get all deals from a specific user" })
+  async getUserDeals(@Param("id") id: string) {
+    try {
+      // Check if user exists
+      await this.service.retrieve(id)
+    } catch {
+      throw new NotFoundException("User not found")
+    }
+    return this.dealService.findByUserId(id)
   }
 }

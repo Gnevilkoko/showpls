@@ -8,6 +8,10 @@ import { RedisModule } from "@liaoliaots/nestjs-redis"
 import { ThrottlerModule, ThrottlerModuleOptions } from "@nestjs/throttler"
 import { DataSource, DataSourceOptions } from "typeorm"
 import { AuthModule } from "./modules/auth/auth.module"
+import { RequestModule } from "./modules/request/request.module"
+import { ResponseModule } from "./modules/response/response.module"
+import { DealModule } from "./modules/deal/deal.module"
+import { UploadModule } from "./modules/upload/upload.module"
 import path from "path"
 import { AcceptLanguageResolver, I18nModule } from "nestjs-i18n"
 import { Blockchain, FallbackLanguageCode, Token, TokenService } from "@share"
@@ -103,6 +107,10 @@ import { CacheableMemory } from "cacheable"
       },
     }),
     AuthModule,
+    RequestModule,
+    ResponseModule,
+    DealModule,
+    UploadModule,
 
       LedgerModule.forRootAsync({
         setup: async (ledger) => {
