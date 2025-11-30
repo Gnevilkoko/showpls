@@ -1,31 +1,47 @@
-import { Column, CreateDateColumn, Entity, ManyToOne, PrimaryGeneratedColumn, type Relation } from "typeorm"
-import { ApiProperty } from "@nestjs/swagger"
+import { Column, CreateDateColumn, Entity, ManyToOne, PrimaryGeneratedColumn, UpdateDateColumn, type Relation } from "typeorm"
 import { Request } from "./request.entity"
 import { Response } from "./response.entity"
+import { User } from "./user.entity"
 import { DealStatus } from "../deal-status.enum"
 
 @Entity()
 export class Deal {
-  @ApiProperty({ type: "string" })
-  @PrimaryGeneratedColumn("increment", { type: "bigint" })
-  id: string
+   @PrimaryGeneratedColumn("uuid")
+   id: string
 
-  @ApiProperty({ type: Request })
-  @ManyToOne(() => Request, { nullable: false })
-  request: Relation<Request>
+   @ManyToOne(() => Request)
+   request: Request
 
-  @ApiProperty({ type: Response })
-  @ManyToOne(() => Response, { nullable: false })
-  response: Relation<Response>
+   @ManyToOne(() => Response)
+   response: Response
 
-  @ApiProperty({ enum: DealStatus })
-  @Column("enum", {
-    enum: DealStatus,
-    default: DealStatus.Created,
-  })
-  status: DealStatus
+   @ManyToOne(() => User)
+   customer: User
 
-  @ApiProperty({ type: "string", format: "date" })
-  @CreateDateColumn({ type: "timestamptz" })
-  createdAt: Date
+   @ManyToOne(() => User)
+   performer: User
+
+   // @ManyToOne(() => Chat)
+   // chat: Chat
+
+   @Column("enum", {
+     enum: ["accepted", "in_progress", "completed", "cancelled"],
+     default: "accepted",
+   })
+   status: DealStatus
+
+   @Column("enum", {
+     enum: ["locked", "released", "rejected"],
+     nullable: true,
+   })
+   escrowStatus: "locked" | "released" | "rejected" | null
+
+   @Column("boolean", { default: false })
+   arbitrationApproved: boolean // Разрешение на отмену от арбитража
+
+   @CreateDateColumn()
+   createdAt: Date
+
+   @UpdateDateColumn()
+   updatedAt: Date
 }

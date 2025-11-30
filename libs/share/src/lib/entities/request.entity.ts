@@ -1,59 +1,76 @@
-import { Column, CreateDateColumn, Entity, ManyToOne, OneToMany, PrimaryGeneratedColumn, type Relation } from "typeorm"
-import { ApiProperty } from "@nestjs/swagger"
+import { Column, CreateDateColumn, Entity, ManyToOne, OneToMany, PrimaryGeneratedColumn, UpdateDateColumn, type Relation } from "typeorm"
 import { User } from "./user.entity"
 import { Response } from "./response.entity"
 import { RequestStatus } from "../request-status.enum"
+import { FileAttachment } from "./file-attachment.entity"
+import { Deal } from "./deal.entity"
+import { Submission } from "./submission.entity"
 
 @Entity()
 export class Request {
-  @ApiProperty({ type: "string" })
-  @PrimaryGeneratedColumn("increment", { type: "bigint" })
-  id: string
+   @PrimaryGeneratedColumn("uuid")
+   id: string
 
-  @ApiProperty({ type: "string" })
-  @Column("varchar", { length: 255 })
-  title: string
+   @ManyToOne(() => User, { nullable: false })
+   customer: Relation<User>
 
-  @ApiProperty({ type: "string" })
-  @Column("text")
-  description: string
+   @Column("varchar", { length: 255 })
+   title: string
 
-  @ApiProperty({ type: User })
-  @ManyToOne(() => User, { nullable: false })
-  customer: Relation<User>
+   @Column("text")
+   description: string
 
-  @ApiProperty({ enum: RequestStatus })
-  @Column("enum", {
-    enum: RequestStatus,
-    default: RequestStatus.Open,
-  })
-  status: RequestStatus
+   @Column("decimal", { precision: 10, scale: 2 })
+   price: number
 
-  @ApiProperty({ type: "string" })
-  @Column("varchar", { length: 255 })
-  price: string
+   @Column("geometry", { spatialFeatureType: "Point", srid: 4326 })
+   location: any // PostGIS Point
 
-  @ApiProperty({ type: "string" })
-  @Column("varchar", { length: 10 })
-  currencyId: string
+   @Column("enum", {
+     enum: ["draft", "published", "accepted", "in_progress", "completed", "cancelled", "arbitration"],
+     default: "draft",
+   })
+   status: RequestStatus
 
-  @ApiProperty({ type: "string" })
-  @Column("geometry", { spatialFeatureType: "Point", srid: 4326 })
-  location: any // PostGIS Point
+  @OneToMany(() => FileAttachment, (fileAttachment) => fileAttachment.request)
+  attachments: Relation<FileAttachment>[]
 
-  @ApiProperty({ type: "string" })
-  @Column("varchar", { length: 500 })
-  address: string
+  @Column("timestamp", { nullable: true })
+  expiresAt: Date | null // Время жизни задачи (168 часов для обычных, deadlineAt для urgent)
 
-  @ApiProperty({ type: "string", format: "date" })
-  @Column("timestamptz")
-  expiresAt: Date
+  @Column("timestamp", { nullable: true })
+  deadlineAt: Date | null // Для urgent задач: часы (0-24), минуты (0-50 с шагом 10)
 
-  @ApiProperty({ type: Response, isArray: true })
+  @Column("timestamp", { nullable: true })
+  acceptedAt: Date | null
+
+  @Column("timestamp", { nullable: true })
+  completedAt: Date | null
+
+  @Column("timestamp", { nullable: true })
+  cancelledAt: Date | null
+
+  @Column("varchar", { length: 500, nullable: true })
+  address: string | null // Опциональный адрес для отображения
+
+  @Column("jsonb", { nullable: true })
+  metadata: Record<string, any>
+
+  @Column("boolean", { default: false })
+  isUrgent: boolean
+
+  @CreateDateColumn()
+  createdAt: Date
+
+  @UpdateDateColumn()
+  updatedAt: Date
+
   @OneToMany(() => Response, (response) => response.request)
   responses: Relation<Response>[]
 
-  @ApiProperty({ type: "string", format: "date" })
-  @CreateDateColumn({ type: "timestamptz" })
-  createdAt: Date
+  @OneToMany(() => Deal, (deal) => deal.request)
+  deals: Relation<Deal>[]
+
+  @OneToMany(() => Submission, (submission) => submission.request)
+  submissions: Relation<Submission>[]
 }

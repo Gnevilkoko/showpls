@@ -1,7 +1,9 @@
 export enum RequestStatus {
-  Open = "open",
-  Active = "active",
+  Draft = "draft",
+  Published = "published",
+  Accepted = "accepted",
+  InProgress = "in_progress",
   Completed = "completed",
   Cancelled = "cancelled",
-  Expired = "expired",
+  Arbitration = "arbitration",
 }

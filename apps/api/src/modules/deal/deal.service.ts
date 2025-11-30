@@ -3,10 +3,9 @@ import { InjectRepository } from "@nestjs/typeorm"
 import { DataSource, Repository } from "typeorm"
 import { Deal, Request, Response, User } from "@share/entities"
 import { CreateDealDto } from "./dto/create-deal.dto"
+import { ListDealsDto } from "./dto/list-deals.dto"
 import { DealStatus } from "@share/deal-status.enum"
 import { RequestStatus } from "@share/request-status.enum"
-import { EscrowHoldService } from "@ledger/escrow/escrow-hold.service"
-import { Ledger } from "@ledger"
 
 @Injectable()
 export class DealService {
@@ -17,9 +16,7 @@ export class DealService {
     private readonly requestRepository: Repository<Request>,
     @InjectRepository(Response)
     private readonly responseRepository: Repository<Response>,
-    private readonly escrowHoldService: EscrowHoldService,
-    private readonly dataSource: DataSource,
-    private readonly ledger: Ledger
+    private readonly dataSource: DataSource
   ) {}
 
   async create(user: User, dto: CreateDealDto): Promise<Deal> {
@@ -33,9 +30,9 @@ export class DealService {
       throw new NotFoundException("Request not found")
     }
 
-    // 2. Check if Request status is OPEN
-    if (request.status !== RequestStatus.Open) {
-      throw new BadRequestException("Request is not open")
+    // 2. Check if Request status is PUBLISHED
+    if (request.status !== RequestStatus.Published) {
+      throw new BadRequestException("Request is not published")
     }
 
     // 3. Check if User is the Customer (only customer can accept a response)
@@ -45,7 +42,7 @@ export class DealService {
 
     // 4. Check if Response exists and belongs to this Request
     const response = await this.responseRepository.findOne({
-      where: { id: dto.responseId, requestId: request.id },
+      where: { id: dto.responseId, request: request },
       relations: ["performer"],
     })
 
@@ -62,54 +59,22 @@ export class DealService {
       throw new BadRequestException("A deal already exists for this response")
     }
 
-    // 6. Create Deal and Hold Funds in a transaction
+    // 6. Create Deal in a transaction
     return this.dataSource.transaction(async (manager) => {
       // Create Deal
       const deal = this.dealRepository.create({
+        customer: request.customer,
+        performer: response.performer,
         request,
         response,
-        status: DealStatus.Created,
+        status: DealStatus.Accepted,
+        escrowStatus: dto.escrowStatus,
+        arbitrationApproved: dto.arbitrationApproved,
       })
       const savedDeal = await manager.save(Deal, deal)
 
-      // Hold Funds (Ledger Integration) with proper error handling
-      try {
-        // Retrieve currency by code to get its ID
-        const currency = await this.ledger.currency.retrieve({
-          code: request.currencyId,
-          blockchain: null, // Assuming fiat currencies like RUB have null blockchain
-        })
-        
-        if (!currency) {
-          throw new BadRequestException(`Currency ${request.currencyId} not found`)
-        }
-
-        // Convert price to smallest unit (e.g., rubles to kopecks)
-        const priceInKopecks = BigInt(Math.round(parseFloat(request.price) * 100))
-        
-        await this.escrowHoldService.hold(
-          {
-            externalType: "deal",
-            externalId: savedDeal.id,
-            from: request.customer.id,
-            to: response.performer.id,
-            currencyId: currency.id,
-            amount: priceInKopecks,
-          },
-          manager
-        )
-      } catch (error) {
-        // Handle ledger-specific errors gracefully
-        const errorMessage = error instanceof Error ? error.message : String(error)
-        if (errorMessage.toLowerCase().includes("insufficient funds")) {
-          throw new BadRequestException("Insufficient funds")
-        }
-        // Re-throw other errors as BadRequestException with descriptive message
-        throw new BadRequestException(errorMessage || "Failed to hold funds in escrow")
-      }
-
-      // Update Request Status to Active
-      request.status = RequestStatus.Active
+      // Update Request Status to Accepted
+      request.status = RequestStatus.Accepted
       await manager.save(Request, request)
 
       return savedDeal
@@ -145,5 +110,42 @@ export class DealService {
       relations: ["request", "response", "request.customer", "response.performer"],
       order: { createdAt: "DESC" },
     })
+  }
+
+  async findAllForUser(user: User, query: ListDealsDto): Promise<{ items: Deal[], total: number }> {
+    const qb = this.dealRepository.createQueryBuilder('deal')
+      .leftJoinAndSelect('deal.request', 'request')
+      .leftJoinAndSelect('deal.response', 'response')
+      .leftJoinAndSelect('request.customer', 'customer')
+      .leftJoinAndSelect('response.performer', 'performer')
+
+    // Filter by user role
+    if (query.myRole === 'customer') {
+      qb.andWhere('customer.id = :userId', { userId: user.id })
+    } else if (query.myRole === 'performer') {
+      qb.andWhere('performer.id = :userId', { userId: user.id })
+    } else {
+      // both
+      qb.andWhere('(customer.id = :userId OR performer.id = :userId)', { userId: user.id })
+    }
+
+    // Filter by status
+    if (query.status) {
+      qb.andWhere('deal.status = :status', { status: query.status })
+    }
+
+    // Order
+    qb.orderBy('deal.createdAt', 'DESC')
+
+    // Count total
+    const total = await qb.getCount()
+
+    // Pagination
+    qb.take(query.limit || 20)
+    qb.skip(query.offset || 0)
+
+    const items = await qb.getMany()
+
+    return { items, total }
   }
 }

@@ -1,36 +1,35 @@
-import { Column, CreateDateColumn, Entity, JoinColumn, ManyToOne, PrimaryGeneratedColumn, type Relation } from "typeorm"
-import { ApiProperty } from "@nestjs/swagger"
+import { Column, CreateDateColumn, Entity, ManyToOne, OneToMany, PrimaryGeneratedColumn, UpdateDateColumn, type Relation } from "typeorm"
 import { User } from "./user.entity"
 import { Request } from "./request.entity"
 import { ResponseStatus } from "../response-status.enum"
+import { Deal } from "./deal.entity"
 
 @Entity()
 export class Response {
-  @ApiProperty({ type: "string" })
-  @PrimaryGeneratedColumn("increment", { type: "bigint" })
-  id: string
+   @PrimaryGeneratedColumn("uuid")
+   id: string
 
-  @ApiProperty({ type: User })
-  @ManyToOne(() => User, { nullable: false })
-  performer: Relation<User>
+   @ManyToOne(() => Request)
+   request: Request
 
-  @ApiProperty({ type: "string" })
-  @Column("bigint")
-  requestId: string
+   @ManyToOne(() => User)
+   performer: User
 
-  @ApiProperty({ type: Request })
-  @ManyToOne(() => Request, { nullable: false })
-  @JoinColumn({ name: "requestId" })
-  request: Relation<Request>
+   @Column("enum", {
+     enum: ["pending", "accepted", "rejected", "cancelled"],
+     default: "pending",
+   })
+   status: ResponseStatus
 
-  @ApiProperty({ enum: ResponseStatus })
-  @Column("enum", {
-    enum: ResponseStatus,
-    default: ResponseStatus.Pending,
-  })
-  status: ResponseStatus
+   @Column("text", { nullable: true })
+   message: string | null // Опциональное сообщение при отклике
 
-  @ApiProperty({ type: "string", format: "date" })
-  @CreateDateColumn({ type: "timestamptz" })
-  createdAt: Date
+   @OneToMany(() => Deal, (deal) => deal.response)
+   deals: Relation<Deal>[]
+
+   @CreateDateColumn()
+   createdAt: Date
+
+   @UpdateDateColumn()
+   updatedAt: Date
 }

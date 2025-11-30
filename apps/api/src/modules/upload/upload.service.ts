@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { BadRequestException, Injectable } from '@nestjs/common';
 import { S3Client } from '@aws-sdk/client-s3';
 import { Upload } from '@aws-sdk/lib-storage';
 import { createHash } from 'crypto';
@@ -12,6 +12,23 @@ export interface UploadResult {
   mimeType: string;
   size: number;
 }
+
+// Allowed file types and size limits according to specifications
+const ALLOWED_IMAGE_TYPES = [
+  'image/jpeg',
+  'image/png',
+  'image/webp',
+  'image/gif',
+];
+
+const ALLOWED_VIDEO_TYPES = [
+  'video/mp4',
+  'video/quicktime', // .mov
+  'video/x-msvideo', // .avi
+];
+
+const MAX_IMAGE_SIZE = 10 * 1024 * 1024; // 10MB
+const MAX_VIDEO_SIZE = 100 * 1024 * 1024; // 100MB
 
 @Injectable()
 export class UploadService {
@@ -30,16 +47,36 @@ export class UploadService {
   }
 
   async uploadFile(file: Buffer): Promise<UploadResult> {
-    // Calculate SHA256 hash BEFORE uploading
-    const hash = createHash('sha256').update(file).digest('hex');
-
     // Get file type information
     const fileTypeResult = await fromBuffer(file);
     if (!fileTypeResult) {
-      throw new Error('Unable to determine file type');
+      throw new BadRequestException('Unable to determine file type');
     }
 
     const { mime: mimeType, ext } = fileTypeResult;
+
+    // Validate file type
+    const isImage = ALLOWED_IMAGE_TYPES.includes(mimeType);
+    const isVideo = ALLOWED_VIDEO_TYPES.includes(mimeType);
+
+    if (!isImage && !isVideo) {
+      throw new BadRequestException(
+        `Invalid file type: ${mimeType}. Allowed types: ${[...ALLOWED_IMAGE_TYPES, ...ALLOWED_VIDEO_TYPES].join(', ')}`
+      );
+    }
+
+    // Validate file size
+    const maxSize = isImage ? MAX_IMAGE_SIZE : MAX_VIDEO_SIZE;
+    if (file.length > maxSize) {
+      const maxSizeMB = maxSize / (1024 * 1024);
+      const fileSizeMB = (file.length / (1024 * 1024)).toFixed(2);
+      throw new BadRequestException(
+        `File size (${fileSizeMB}MB) exceeds limit of ${maxSizeMB}MB for ${isImage ? 'images' : 'videos'}`
+      );
+    }
+
+    // Calculate SHA256 hash BEFORE uploading
+    const hash = createHash('sha256').update(file).digest('hex');
 
     // Generate unique filename
     const filename = `${randomUUID()}.${ext}`;

@@ -9,12 +9,10 @@ import { UserService } from "../user/user.service"
 import { AbilityFactory } from "./ability-factory"
 import { RequestLoggingMiddleware } from "@server/logging"
 import { ClsMiddleware } from "nestjs-cls"
-import { ResponseModule } from "../response/response.module"
-import { DealModule } from "../deal/deal.module"
 
 @Global()
 @Module({
-  imports: [TypeOrmModule.forFeature([User]), ResponseModule, DealModule],
+  imports: [TypeOrmModule.forFeature([User])],
   providers: [AuthService, AbilityFactory, UserService],
   controllers: [AuthController, UserController],
   exports: [AbilityFactory, UserService],

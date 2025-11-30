@@ -1,7 +1,6 @@
 export enum DealStatus {
-  Created = "created",
+  Accepted = "accepted",
   InProgress = "in_progress",
   Completed = "completed",
   Cancelled = "cancelled",
-  Disputed = "disputed",
 }
