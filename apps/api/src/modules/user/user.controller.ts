@@ -19,7 +19,7 @@ import { plainToInstance } from "class-transformer"
 import { GeoService } from "../geo/geo.service"
 import { ListPerformersDto } from "./dto/list-performers.dto"
 import { UpdateLocationDto } from "./dto/update-location.dto"
-import { RateLimit } from "../../common/rate-limit"
+import { RateLimit, IpRateLimit } from "../../common/rate-limit"
 
 @ApiExtraModels(User)
 @ApiTags("User")
@@ -136,6 +136,7 @@ export class UserController {
     },
   })
   @UseGuards(AuthGuard)
+  @IpRateLimit({ ttl: 60, limit: 60 }) // 60 requests per minute per IP
   @Get("list-performers")
   async listPerformers(@Query() dto: ListPerformersDto) {
     return await this.geoService.getPerformersNearby(dto.latitude, dto.longitude, dto.radiusKm)
@@ -152,7 +153,8 @@ export class UserController {
     },
   })
   @UseGuards(AuthGuard)
-  @RateLimit({ ttl: 30, limit: 1 })
+  @IpRateLimit({ ttl: 60, limit: 10 }) // 10 requests per minute per IP
+  @RateLimit({ ttl: 60, limit: 5 }) // 5 requests per minute per account
   @Post("update-location")
   async updateLocation(@GetUser() user: User, @Body() dto: UpdateLocationDto) {
     await this.geoService.updateUserLocation(user.id, dto.latitude, dto.longitude)

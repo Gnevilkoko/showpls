@@ -14,6 +14,9 @@ import { User } from "@share/entities"
 import { ResponseModule } from "../response/response.module"
 import { BullModule } from '@nestjs/bullmq'
 import { GeoModule } from "../geo/geo.module"
+import { ChatModule } from "../chat/chat.module"
+import { NotificationModule } from "../notification/notification.module"
+import { ChatGateway } from "../chat/chat.gateway"
 
 @Module({
   imports: [
@@ -21,12 +24,14 @@ import { GeoModule } from "../geo/geo.module"
     LedgerModule,
     ResponseModule,
     GeoModule,
+    ChatModule,
+    NotificationModule,
     BullModule.registerQueue({
       name: 'request-expiration',
     }),
   ],
   controllers: [RequestController],
-  providers: [RequestService, UserService, EscrowHoldService, AccountService, BalanceService, CurrencyService],
+  providers: [RequestService, UserService, EscrowHoldService, AccountService, BalanceService, CurrencyService, ChatGateway],
   exports: [RequestService],
 })
 export class RequestModule {}

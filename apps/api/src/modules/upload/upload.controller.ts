@@ -4,7 +4,7 @@ import { ApiTags, ApiConsumes, ApiBody, ApiSecurity } from '@nestjs/swagger';
 import { UploadService, UploadResult } from './upload.service';
 import { Express } from 'express';
 import { AuthGuard } from '../auth/guards/auth.guard';
-import { RateLimit } from '../../common/rate-limit/rate-limit.decorator';
+import { RateLimit, IpRateLimit } from '../../common/rate-limit';
 
 @ApiTags('Upload')
 @Controller('upload')
@@ -13,7 +13,8 @@ export class UploadController {
 
   @ApiSecurity("jwt-auth")
   @UseGuards(AuthGuard)
-  @RateLimit({ ttl: 60, limit: 5 })
+  @IpRateLimit({ ttl: 60, limit: 10 }) // 10 requests per minute per IP
+  @RateLimit({ ttl: 60, limit: 5 }) // 5 requests per minute per account
   @Post()
   @UseInterceptors(
     FileInterceptor('file', {

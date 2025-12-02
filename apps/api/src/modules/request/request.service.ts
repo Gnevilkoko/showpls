@@ -12,6 +12,9 @@ import { EscrowHoldService } from "@ledger/escrow/escrow-hold.service"
 import { Ledger } from "@ledger"
 import { Token } from "@share/token.enum"
 import { UserService } from "../user/user.service"
+import { ChatService } from "../chat/chat.service"
+import { NotificationService } from "../notification/notification.service"
+import { ChatGateway } from "../chat/chat.gateway"
 import { createHash } from 'crypto'
 import axios from 'axios'
 import { InjectQueue } from '@nestjs/bullmq'
@@ -30,6 +33,9 @@ export class RequestService {
     private readonly ledger: Ledger,
     private readonly dataSource: DataSource,
     private readonly userService: UserService,
+    private readonly chatService: ChatService,
+    private readonly notificationService: NotificationService,
+    private readonly chatGateway: ChatGateway,
     @InjectQueue('request-expiration')
     private readonly requestExpirationQueue: Queue,
   ) {}
@@ -268,10 +274,38 @@ export class RequestService {
     return this.dataSource.transaction(async (manager) => {
       const { savedRequest, attachments, response } = await this.createRequestInTransaction(dto, user, attachmentHashes, expiresAt, manager, true, performer)
 
-      // TODO: Create or get existing chat between customer and performer
-      const chatId = "placeholder-chat-id" // TODO: Implement chat creation/retrieval
+      // Create or get existing chat between customer and performer
+      const chat = await this.chatService.getOrCreateChat(user.id, performer.id)
 
-      // TODO: Send system message, notify performer
+      // Send system message with task offer
+      await this.chatService.sendMessage(
+        user,
+        chat.id,
+        {
+          text: `New task offer: ${dto.title}`,
+          type: "notification",
+          variant: "newTask"
+        }
+      )
+
+      // Notify performer through WebSocket
+      this.chatGateway.sendNotification(performer.id, {
+        type: "newTask",
+        requestId: savedRequest.id,
+        title: dto.title,
+        price: dto.price,
+        chatId: chat.id,
+        responseId: response!.id
+      })
+
+      // Notify performer through notify:user queue
+      await this.notificationService.send(performer.id, "newTask", {
+        requestId: savedRequest.id,
+        title: dto.title,
+        price: dto.price,
+        chatId: chat.id,
+        responseId: response!.id
+      })
 
       // TODO: Invalidate geo-cache
 
@@ -297,7 +331,7 @@ export class RequestService {
         deadlineAt: savedRequest.deadlineAt?.toISOString() || null,
         isUrgent: savedRequest.isUrgent,
         metadata: savedRequest.metadata,
-        chatId, // ID of created/existing chat
+        chatId: chat.id, // ID of created/existing chat
         responseId: response!.id, // ID of created Response (offer)
       }
     })

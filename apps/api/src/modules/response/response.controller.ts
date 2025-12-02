@@ -6,6 +6,7 @@ import { AcceptResponseDto } from "./dto/accept-response.dto"
 import { AuthGuard } from "../auth/guards/auth.guard"
 import { GetUser } from "../user/decorators/get-user.decorator"
 import { User } from "@share/entities"
+import { RateLimit, IpRateLimit } from "../../common/rate-limit"
 
 @ApiTags("Responses")
 @Controller("responses")
@@ -32,6 +33,8 @@ export class ResponseController {
 
   @ApiSecurity("jwt-auth")
   @UseGuards(AuthGuard)
+  @IpRateLimit({ ttl: 60, limit: 10 }) // 10 requests per minute per IP
+  @RateLimit({ ttl: 60, limit: 5 }) // 5 requests per minute per account
   @Post(":id/accept")
   @ApiOperation({ summary: "Accept a response and create a deal" })
   async accept(@GetUser() user: User, @Param("id") id: string, @Body() dto: AcceptResponseDto) {
