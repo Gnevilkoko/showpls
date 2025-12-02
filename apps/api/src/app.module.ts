@@ -12,7 +12,11 @@ import { RequestModule } from "./modules/request/request.module"
 import { ResponseModule } from "./modules/response/response.module"
 import { DealModule } from "./modules/deal/deal.module"
 import { UploadModule } from "./modules/upload/upload.module"
+import { QueueModule } from "./modules/queue/queue.module"
+import { GeoModule } from "./modules/geo/geo.module"
 import path from "path"
+import { ChatModule } from "./modules/chat/chat.module"
+import { NotificationModule } from "./modules/notification/notification.module"
 import { AcceptLanguageResolver, I18nModule } from "nestjs-i18n"
 import { Blockchain, FallbackLanguageCode, Token, TokenService } from "@share"
 import { ClsModule } from "nestjs-cls"
@@ -111,6 +115,10 @@ import { CacheableMemory } from "cacheable"
     ResponseModule,
     DealModule,
     UploadModule,
+    QueueModule,
+    GeoModule,
+    ChatModule,
+    NotificationModule,
 
       LedgerModule.forRootAsync({
         setup: async (ledger) => {

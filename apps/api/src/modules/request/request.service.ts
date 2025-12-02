@@ -3,15 +3,19 @@ import { InjectRepository } from "@nestjs/typeorm"
 import { Repository, DataSource } from "typeorm"
 import { Request, Response, User, FileAttachment } from "@share/entities"
 import { CreateRequestDto } from "./dto/create-request.dto"
+import { CreateDirectRequestDto } from "./dto/create-direct-request.dto"
 import { ListRequestsDto } from "./dto/list-requests.dto"
 import { UpdateRequestDto } from "./dto/update-request.dto"
 import { RequestStatus } from "@share/request-status.enum"
+import { ResponseStatus } from "@share/response-status.enum"
 import { EscrowHoldService } from "@ledger/escrow/escrow-hold.service"
 import { Ledger } from "@ledger"
 import { Token } from "@share/token.enum"
 import { UserService } from "../user/user.service"
 import { createHash } from 'crypto'
 import axios from 'axios'
+import { InjectQueue } from '@nestjs/bullmq'
+import { Queue } from 'bullmq'
 
 @Injectable()
 export class RequestService {
@@ -26,6 +30,8 @@ export class RequestService {
     private readonly ledger: Ledger,
     private readonly dataSource: DataSource,
     private readonly userService: UserService,
+    @InjectQueue('request-expiration')
+    private readonly requestExpirationQueue: Queue,
   ) {}
 
   private async validateAttachments(attachments: string[]): Promise<{ url: string; hash: string }[]> {
@@ -49,38 +55,28 @@ export class RequestService {
     return results
   }
 
-  async create(user: User, dto: CreateRequestDto): Promise<any> {
-    // 1. Validate all fields (DTO validation handles most of this)
-
-    // 2. Check user balance - only STARS are used for payment
+  private async validateBalance(user: User, price: number, errorMessage: string = "Insufficient balance"): Promise<void> {
     const balances = await this.userService.getBalances(user.id)
     console.log('User balances:', balances)
-    
-    // Filter all STARS balances (there might be multiple due to duplicate currencies)
+
     const starsBalances = balances.filter(b => b.token === Token.STARS && b.blockchain === null)
     if (starsBalances.length === 0) {
       throw new BadRequestException("User has no STARS balance")
     }
 
-    // Sum all STARS balances to handle duplicate currency entries
     const totalBalance = starsBalances.reduce((sum, b) => sum + BigInt(b.balance), BigInt(0))
     const totalLocked = starsBalances.reduce((sum, b) => sum + BigInt(b.lockedBalance), BigInt(0))
     const availableBalance = totalBalance - totalLocked
-    const priceInSmallestUnits = BigInt(Math.round(dto.price * 1e6))
-    
+    const priceInSmallestUnits = BigInt(Math.round(price * 1e6))
+
     console.log('Total balance:', totalBalance.toString(), 'Locked:', totalLocked.toString(), 'Available:', availableBalance.toString(), 'Price needed:', priceInSmallestUnits.toString())
-    
+
     if (availableBalance < priceInSmallestUnits) {
-      throw new BadRequestException("Insufficient balance")
+      throw new BadRequestException(errorMessage)
     }
+  }
 
-    // 3. Validate attachments if provided
-    let attachmentHashes: { url: string; hash: string }[] = []
-    if (dto.attachments && dto.attachments.length > 0) {
-      attachmentHashes = await this.validateAttachments(dto.attachments)
-    }
-
-    // 4. Get STARS currency for escrow
+  private async getCurrency(): Promise<any> {
     const currency = await this.ledger.currency.retrieve({
       code: Token.STARS,
       blockchain: null,
@@ -90,82 +86,130 @@ export class RequestService {
       throw new BadRequestException("Currency not found")
     }
 
-    // 5. Calculate expiresAt
+    return currency
+  }
+
+  private calculateExpiresAt(dto: CreateRequestDto | CreateDirectRequestDto): Date | null {
     let expiresAt: Date | null = null
     if (dto.expiresAt) {
       expiresAt = new Date(dto.expiresAt)
     } else if (dto.isUrgent && dto.deadlineAt) {
       expiresAt = new Date(dto.deadlineAt)
     } else if (!dto.isUrgent) {
-      // Default: 168 hours (7 days) for non-urgent tasks
       expiresAt = new Date(Date.now() + 168 * 60 * 60 * 1000)
     }
+    return expiresAt
+  }
 
-    // 6. Wrap in transaction
-    return this.dataSource.transaction(async (manager) => {
-      // Create Request object with proper PostGIS Point mapping
-      const request = this.requestRepository.create({
-        title: dto.title,
-        description: dto.description,
-        price: dto.price,
-        customer: user,
-        status: RequestStatus.Published,
-        // Map DTO location to PostGIS Point (longitude first!)
-        location: {
-          type: 'Point',
-          coordinates: [dto.longitude, dto.latitude]
-        },
-        address: dto.address || null,
-        metadata: dto.metadata || {},
-        isUrgent: dto.isUrgent || false,
-        deadlineAt: dto.deadlineAt ? new Date(dto.deadlineAt) : null,
-        expiresAt,
+  private async createRequestInTransaction(
+    dto: CreateRequestDto | CreateDirectRequestDto,
+    user: User,
+    attachmentHashes: { url: string; hash: string }[],
+    expiresAt: Date | null,
+    manager: any,
+    isDirect: boolean,
+    performer?: User
+  ): Promise<{ savedRequest: Request; attachments: any[]; response?: Response }> {
+    // Create Request object with proper PostGIS Point mapping
+    const request = this.requestRepository.create({
+      title: dto.title,
+      description: dto.description,
+      price: dto.price,
+      customer: user,
+      status: RequestStatus.Published,
+      // Map DTO location to PostGIS Point (longitude first!)
+      location: {
+        type: 'Point',
+        coordinates: [dto.longitude, dto.latitude]
+      },
+      address: dto.address || null,
+      metadata: dto.metadata || {},
+      isUrgent: dto.isUrgent || false,
+      deadlineAt: dto.deadlineAt ? new Date(dto.deadlineAt) : null,
+      expiresAt,
+    })
+
+    const savedRequest = await manager.save(Request, request)
+
+    // Create FileAttachment records
+    const attachments: any[] = []
+    for (const attachment of attachmentHashes) {
+      const fileAttachment = this.fileAttachmentRepository.create({
+        url: attachment.url,
+        hash: attachment.hash,
+        request: savedRequest,
       })
+      const savedAttachment = await manager.save(FileAttachment, fileAttachment)
+      attachments.push({
+        id: savedAttachment.id,
+        url: savedAttachment.url,
+        hash: savedAttachment.hash,
+      })
+    }
 
-      // Save the Request
-      const savedRequest = await manager.save(Request, request)
+    // Hold funds in escrow
+    const amountInSmallestUnit = BigInt(Math.round(dto.price * 1e6))
+    const currency = await this.getCurrency()
 
-      // 7. Create FileAttachment records
-      const attachments: any[] = []
-      for (const attachment of attachmentHashes) {
-        const fileAttachment = this.fileAttachmentRepository.create({
-          url: attachment.url,
-          hash: attachment.hash,
-          request: savedRequest,
-        })
-        const savedAttachment = await manager.save(FileAttachment, fileAttachment)
-        attachments.push({
-          id: savedAttachment.id,
-          url: savedAttachment.url,
-          hash: savedAttachment.hash,
-        })
+    await this.escrowHoldService.hold(
+      {
+        externalType: "request",
+        externalId: savedRequest.id,
+        from: user.id,
+        to: user.id, // Placeholder - funds go to escrow, actual recipient determined when request is accepted
+        amount: amountInSmallestUnit,
+        currencyId: currency.id,
+      },
+      manager
+    )
+
+    // Schedule BullMQ job for auto-expiry if expiresAt is set
+    if (expiresAt) {
+      const delay = expiresAt.getTime() - Date.now()
+      if (delay > 0) {
+        await this.requestExpirationQueue.add(
+          'expire-request',
+          { requestId: savedRequest.id },
+          { delay }
+        )
       }
+    }
 
-      // 8. Hold funds in escrow
-      // Convert price to smallest currency unit (6 decimals for STARS)
-      const amountInSmallestUnit = BigInt(Math.round(dto.price * 1e6))
+    let response: Response | undefined
+    if (isDirect && performer) {
+      // Create Response (direct offer to performer)
+      response = this.responseRepository.create({
+        request: savedRequest,
+        performer: performer,
+        status: ResponseStatus.Pending,
+        message: null, // No message for direct offers, or could add optional message field
+      })
+      const savedResponse = await manager.save(Response, response)
+      response = savedResponse
+    }
 
-      await this.escrowHoldService.hold(
-        {
-          externalType: "request",
-          externalId: savedRequest.id,
-          from: user.id,
-          to: user.id, // Placeholder - funds go to escrow, actual recipient determined when request is accepted
-          amount: amountInSmallestUnit,
-          currencyId: currency.id,
-        },
-        manager
-      )
+    return { savedRequest, attachments, response }
+  }
 
-      // 9. TODO: Schedule BullMQ job for auto-expiry if expiresAt is set
-      // if (expiresAt) {
-      //   // Add BullMQ job scheduling here
-      // }
+  async create(user: User, dto: CreateRequestDto): Promise<any> {
+    // Validate balance
+    await this.validateBalance(user, dto.price)
 
-      // 10. TODO: Invalidate geo-cache
-      // Add geo-cache invalidation here
+    // Validate attachments
+    let attachmentHashes: { url: string; hash: string }[] = []
+    if (dto.attachments && dto.attachments.length > 0) {
+      attachmentHashes = await this.validateAttachments(dto.attachments)
+    }
 
-      // 11. Return formatted response
+    // Calculate expiresAt
+    const expiresAt = this.calculateExpiresAt(dto)
+
+    // Wrap in transaction
+    return this.dataSource.transaction(async (manager) => {
+      const { savedRequest, attachments } = await this.createRequestInTransaction(dto, user, attachmentHashes, expiresAt, manager, false)
+
+      // TODO: Invalidate geo-cache
+
       return {
         id: savedRequest.id,
         title: savedRequest.title,
@@ -190,6 +234,75 @@ export class RequestService {
       }
     })
   }
+  async createDirect(user: User, dto: CreateDirectRequestDto): Promise<any> {
+    // Check if performer exists and is available
+    const performer = await this.dataSource.manager.findOne(User, {
+      where: { id: dto.performerId },
+    })
+
+    if (!performer) {
+      throw new NotFoundException("PERFORMER_NOT_FOUND")
+    }
+
+    if (performer.banned) {
+      throw new BadRequestException("PERFORMER_UNAVAILABLE")
+    }
+
+    if (performer.id === user.id) {
+      throw new BadRequestException("PERFORMER_UNAVAILABLE")
+    }
+
+    // Validate balance
+    await this.validateBalance(user, dto.price, "INSUFFICIENT_FUNDS")
+
+    // Validate attachments
+    let attachmentHashes: { url: string; hash: string }[] = []
+    if (dto.attachments && dto.attachments.length > 0) {
+      attachmentHashes = await this.validateAttachments(dto.attachments)
+    }
+
+    // Calculate expiresAt
+    const expiresAt = this.calculateExpiresAt(dto)
+
+    // Wrap in transaction
+    return this.dataSource.transaction(async (manager) => {
+      const { savedRequest, attachments, response } = await this.createRequestInTransaction(dto, user, attachmentHashes, expiresAt, manager, true, performer)
+
+      // TODO: Create or get existing chat between customer and performer
+      const chatId = "placeholder-chat-id" // TODO: Implement chat creation/retrieval
+
+      // TODO: Send system message, notify performer
+
+      // TODO: Invalidate geo-cache
+
+      return {
+        id: savedRequest.id,
+        title: savedRequest.title,
+        description: savedRequest.description,
+        price: savedRequest.price,
+        status: savedRequest.status,
+        attachments,
+        latitude: dto.latitude,
+        longitude: dto.longitude,
+        customer: {
+          id: user.id,
+          firstName: user.firstName,
+          lastName: user.lastName,
+          avatar: user.avatar,
+        },
+        performer: null, // Performer not assigned until confirmation
+        createdAt: savedRequest.createdAt.toISOString(),
+        acceptedAt: null,
+        expiresAt: savedRequest.expiresAt?.toISOString() || null,
+        deadlineAt: savedRequest.deadlineAt?.toISOString() || null,
+        isUrgent: savedRequest.isUrgent,
+        metadata: savedRequest.metadata,
+        chatId, // ID of created/existing chat
+        responseId: response!.id, // ID of created Response (offer)
+      }
+    })
+  }
+
 
   async findAll(user: User, query: ListRequestsDto): Promise<any> {
     const {

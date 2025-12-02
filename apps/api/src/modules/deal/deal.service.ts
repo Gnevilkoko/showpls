@@ -6,6 +6,7 @@ import { CreateDealDto } from "./dto/create-deal.dto"
 import { ListDealsDto } from "./dto/list-deals.dto"
 import { DealStatus } from "@share/deal-status.enum"
 import { RequestStatus } from "@share/request-status.enum"
+import { ChatService } from "../chat/chat.service"
 
 @Injectable()
 export class DealService {
@@ -16,7 +17,8 @@ export class DealService {
     private readonly requestRepository: Repository<Request>,
     @InjectRepository(Response)
     private readonly responseRepository: Repository<Response>,
-    private readonly dataSource: DataSource
+    private readonly dataSource: DataSource,
+    private readonly chatService: ChatService
   ) {}
 
   async create(user: User, dto: CreateDealDto): Promise<Deal> {
@@ -61,12 +63,16 @@ export class DealService {
 
     // 6. Create Deal in a transaction
     return this.dataSource.transaction(async (manager) => {
+      // Get or create chat
+      const chat = await this.chatService.getOrCreateChat(request.customer.id, response.performer.id)
+
       // Create Deal
       const deal = this.dealRepository.create({
         customer: request.customer,
         performer: response.performer,
         request,
         response,
+        chat,
         status: DealStatus.Accepted,
         escrowStatus: dto.escrowStatus,
         arbitrationApproved: dto.arbitrationApproved,
@@ -77,13 +83,17 @@ export class DealService {
       request.status = RequestStatus.Accepted
       await manager.save(Request, request)
 
+      // Update chat to mark as active order
+      chat.isActiveOrder = true
+      await this.chatService.updateChat(chat)
+
       return savedDeal
     })
   }
 
   async findAll(): Promise<Deal[]> {
     return this.dealRepository.find({
-      relations: ["request", "response", "request.customer", "response.performer"],
+      relations: ["request", "response", "request.customer", "response.performer", "chat"],
       order: { createdAt: "DESC" },
     })
   }
@@ -91,7 +101,7 @@ export class DealService {
   async findOne(id: string): Promise<Deal> {
     const deal = await this.dealRepository.findOne({
       where: { id },
-      relations: ["request", "response", "request.customer", "response.performer"],
+      relations: ["request", "response", "request.customer", "response.performer", "chat"],
     })
 
     if (!deal) {
@@ -107,7 +117,7 @@ export class DealService {
         { request: { customer: { id: userId } } },
         { response: { performer: { id: userId } } },
       ],
-      relations: ["request", "response", "request.customer", "response.performer"],
+      relations: ["request", "response", "request.customer", "response.performer", "chat"],
       order: { createdAt: "DESC" },
     })
   }
@@ -118,6 +128,7 @@ export class DealService {
       .leftJoinAndSelect('deal.response', 'response')
       .leftJoinAndSelect('request.customer', 'customer')
       .leftJoinAndSelect('response.performer', 'performer')
+      .leftJoinAndSelect('deal.chat', 'chat')
 
     // Filter by user role
     if (query.myRole === 'customer') {

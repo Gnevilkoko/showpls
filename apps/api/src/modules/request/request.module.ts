@@ -12,12 +12,18 @@ import { Account, Balance, Currency, Entry, Settings, Transaction } from "@ledge
 import { UserService } from "../user/user.service"
 import { User } from "@share/entities"
 import { ResponseModule } from "../response/response.module"
+import { BullModule } from '@nestjs/bullmq'
+import { GeoModule } from "../geo/geo.module"
 
 @Module({
   imports: [
     TypeOrmModule.forFeature([Request, Response, FileAttachment, User, Account, Balance, Currency, Entry, Settings, Transaction]),
     LedgerModule,
-    ResponseModule
+    ResponseModule,
+    GeoModule,
+    BullModule.registerQueue({
+      name: 'request-expiration',
+    }),
   ],
   controllers: [RequestController],
   providers: [RequestService, UserService, EscrowHoldService, AccountService, BalanceService, CurrencyService],

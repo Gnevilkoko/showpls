@@ -8,6 +8,10 @@ import { ResponseStatus } from "@share/response-status.enum"
 import { RequestStatus } from "@share/request-status.enum"
 import { DealStatus } from "@share/deal-status.enum"
 
+import { ChatService } from "../chat/chat.service"
+import { ChatGateway } from "../chat/chat.gateway"
+import { NotificationService } from "../notification/notification.service"
+
 @Injectable()
 export class ResponseService {
   constructor(
@@ -18,6 +22,9 @@ export class ResponseService {
     @InjectRepository(Deal)
     private readonly dealRepository: Repository<Deal>,
     private readonly dataSource: DataSource,
+    private readonly chatService: ChatService,
+    private readonly chatGateway: ChatGateway,
+    private readonly notificationService: NotificationService,
   ) {}
 
   async create(user: User, dto: CreateResponseDto): Promise<Response> {
@@ -63,7 +70,10 @@ export class ResponseService {
 
     const savedResponse = await this.responseRepository.save(response)
 
-    // 5-8. Chat, messages, notifications - ignore for now
+    // 5. Ensure Chat exists
+    const chat = await this.chatService.getOrCreateChat(request.customer.id, user.id)
+
+    // 6-8. Messages, notifications - ignore for now
 
     return {
       id: savedResponse.id,
@@ -78,7 +88,7 @@ export class ResponseService {
       status: savedResponse.status,
       message: savedResponse.message,
       createdAt: savedResponse.createdAt,
-      chatId: "placeholder", // ignore
+      chatId: chat.id,
     }
   }
 
@@ -152,16 +162,24 @@ export class ResponseService {
         throw new BadRequestException("A deal already exists for this response")
       }
 
+      // 5. Get or create chat
+      const chat = await this.chatService.getOrCreateChat(response.request.customer.id, response.performer.id)
+
       // 5. Create Deal
       const deal = manager.create(Deal, {
         request: response.request,
         response,
         customer: response.request.customer,
         performer: response.performer,
+        chat,
         status: DealStatus.Accepted,
         escrowStatus: "locked",
       })
       const savedDeal = await manager.save(Deal, deal)
+
+      // Update chat to mark as active order
+      chat.isActiveOrder = true
+      await this.chatService.updateChat(chat)
 
       // 6. Update Request
       response.request.status = RequestStatus.Accepted
@@ -183,7 +201,23 @@ export class ResponseService {
         })
         .execute()
 
-      // 9-11. Chat, messages, notifications - leave unused
+      // 9. Send system message about acceptance
+      await this.chatService.sendMessage(user, chat.id, { text: "Response accepted", type: "notification" })
+
+      // 10. If message provided, send it
+      if (dto.message) {
+        await this.chatService.sendMessage(user, chat.id, { text: dto.message })
+      }
+
+      // 11. Notify performer via WebSocket
+      this.chatGateway.sendNotification(response.performer.id, { type: "response_accepted", dealId: savedDeal.id })
+      
+      // 12. Send notification via queue
+      await this.notificationService.send(response.performer.id, "response_accepted", {
+        dealId: savedDeal.id,
+        requestId: savedDeal.request.id,
+        text: `Your response to request "${response.request.title || "Request"}" has been accepted!`,
+      })
 
       return {
         deal: {
@@ -193,6 +227,9 @@ export class ResponseService {
           status: savedDeal.status,
           escrowStatus: savedDeal.escrowStatus,
           createdAt: savedDeal.createdAt,
+          chat: {
+            id: savedDeal.chat.id,
+          },
         },
         request: {
           id: response.request.id,

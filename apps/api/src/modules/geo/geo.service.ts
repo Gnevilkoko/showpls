@@ -1,0 +1,270 @@
+import { Inject, Injectable } from '@nestjs/common'
+import { InjectRepository } from '@nestjs/typeorm'
+import { Repository } from 'typeorm'
+import { Request, User } from '@share/entities'
+import { CACHE_MANAGER } from '@nestjs/cache-manager'
+import { Cache } from 'cache-manager'
+
+interface RequestMapItem {
+  id: string
+  title: string
+  price: number
+  status: string
+  lng: number
+  lat: number
+}
+
+interface PerformerNearby {
+  id: string
+  username: string | null
+  firstName: string
+  lastName: string | null
+  avatar: string | null
+  distance: number
+  lng: number
+  lat: number
+}
+
+@Injectable()
+export class GeoService {
+  constructor(
+    @InjectRepository(Request)
+    private readonly requestRepository: Repository<Request>,
+    @InjectRepository(User)
+    private readonly userRepository: Repository<User>,
+    @Inject(CACHE_MANAGER)
+    private readonly cacheManager: Cache,
+  ) {}
+
+  /**
+   * Get requests within map bounds with Redis caching
+   * Handles meridian crossing (180/-180 longitude)
+   */
+  async getRequestsInBounds(
+    north: number,
+    south: number,
+    east: number,
+    west: number,
+  ): Promise<RequestMapItem[]> {
+    // Check cache first
+    const cacheKey = `geo:requests:${north}:${south}:${east}:${west}`
+    const cached = await this.cacheManager.get<RequestMapItem[]>(cacheKey)
+    if (cached) {
+      return cached
+    }
+
+    let results: RequestMapItem[]
+
+    // Check if meridian crossing occurs (west > east)
+    if (west > east) {
+      // Meridian crossing: use raw SQL with OR logic
+      const query = `
+        SELECT 
+          id, 
+          title, 
+          price, 
+          status, 
+          ST_X(location::geometry) as lng, 
+          ST_Y(location::geometry) as lat 
+        FROM request 
+        WHERE status IN ('published', 'accepted') 
+        AND (ST_X(location::geometry) >= $1 OR ST_X(location::geometry) <= $2) 
+        AND ST_Y(location::geometry) BETWEEN $3 AND $4
+      `
+      results = await this.requestRepository.query(query, [west, east, south, north])
+    } else {
+      // Standard bounds: use ST_MakeEnvelope
+      const query = `
+        SELECT 
+          id, 
+          title, 
+          price, 
+          status, 
+          ST_X(location::geometry) as lng, 
+          ST_Y(location::geometry) as lat 
+        FROM request 
+        WHERE status IN ('published', 'accepted') 
+        AND ST_Within(location::geometry, ST_MakeEnvelope($1, $2, $3, $4, 4326))
+      `
+      results = await this.requestRepository.query(query, [west, south, east, north])
+    }
+
+    // Convert price to number (it comes as string from DB)
+    const formattedResults = results.map(r => ({
+      ...r,
+      price: Number(r.price),
+      lng: Number(r.lng),
+      lat: Number(r.lat),
+    }))
+
+    // Cache for 5 minutes
+    await this.cacheManager.set(cacheKey, formattedResults, 300000)
+
+    return formattedResults
+  }
+
+  /**
+   * Get performers nearby a location with Redis caching
+   * Uses ST_Distance for accurate distance calculation
+   */
+  async getPerformersNearby(
+    lat: number,
+    lng: number,
+    radiusKm: number,
+  ): Promise<PerformerNearby[]> {
+    // Check cache first
+    const cacheKey = `geo:performers-list:${lat}:${lng}:${radiusKm}`
+    const cached = await this.cacheManager.get<PerformerNearby[]>(cacheKey)
+    if (cached) {
+      return cached
+    }
+
+    // Convert radius from km to meters for PostGIS
+    const radiusMeters = radiusKm * 1000
+
+    // Use ST_DWithin for efficient spatial query with distance filter
+    const query = `
+      SELECT 
+        id,
+        username,
+        "firstName",
+        "lastName",
+        avatar,
+        ST_X("lastKnownLocation"::geometry) as lng,
+        ST_Y("lastKnownLocation"::geometry) as lat,
+        ST_Distance(
+          "lastKnownLocation"::geography,
+          ST_SetSRID(ST_MakePoint($1, $2), 4326)::geography
+        ) as distance
+      FROM "user"
+      WHERE role = 'normal'
+      AND banned = false
+      AND "lastKnownLocation" IS NOT NULL
+      AND ST_DWithin(
+        "lastKnownLocation"::geography,
+        ST_SetSRID(ST_MakePoint($1, $2), 4326)::geography,
+        $3
+      )
+      ORDER BY distance ASC
+    `
+
+    const results = await this.userRepository.query(query, [lng, lat, radiusMeters])
+
+    // Format results
+    const formattedResults: PerformerNearby[] = results.map((r: any) => ({
+      id: r.id,
+      username: r.username,
+      firstName: r.firstName,
+      lastName: r.lastName,
+      avatar: r.avatar,
+      distance: Number(r.distance),
+      lng: Number(r.lng),
+      lat: Number(r.lat),
+    }))
+
+    // Cache for 2 minutes
+    await this.cacheManager.set(cacheKey, formattedResults, 120000)
+
+    return formattedResults
+  }
+
+  /**
+   * Get performers nearby a specific request location
+   * Uses request coordinates as center point
+   */
+  async getPerformersNearbyRequest(
+    requestId: string,
+    radiusKm: number = 5,
+    limit: number = 50,
+  ): Promise<{ items: PerformerNearby[] }> {
+    // Check cache first
+    const cacheKey = `geo:request-performers:${requestId}:${radiusKm}:${limit}`
+    const cached = await this.cacheManager.get<{ items: PerformerNearby[] }>(cacheKey)
+    if (cached) {
+      return cached
+    }
+
+    // Get request coordinates
+    const request = await this.requestRepository.findOne({
+      where: { id: requestId },
+      select: ['location'],
+    })
+
+    if (!request || !request.location) {
+      throw new Error('Request not found or has no location')
+    }
+
+    const requestLng = request.location.coordinates[0]
+    const requestLat = request.location.coordinates[1]
+
+    // Convert radius from km to meters for PostGIS
+    const radiusMeters = radiusKm * 1000
+
+    // Use ST_DWithin for efficient spatial query with distance filter
+    const query = `
+      SELECT
+        id,
+        "firstName",
+        "lastName",
+        avatar,
+        ST_X("lastKnownLocation"::geometry) as lng,
+        ST_Y("lastKnownLocation"::geometry) as lat,
+        ST_Distance(
+          "lastKnownLocation"::geography,
+          ST_SetSRID(ST_MakePoint($1, $2), 4326)::geography
+        ) / 1000 as distance
+      FROM "user"
+      WHERE role = 'normal'
+      AND banned = false
+      AND "lastKnownLocation" IS NOT NULL
+      AND ST_DWithin(
+        "lastKnownLocation"::geography,
+        ST_SetSRID(ST_MakePoint($1, $2), 4326)::geography,
+        $3
+      )
+      ORDER BY distance ASC
+      LIMIT $4
+    `
+
+    const results = await this.userRepository.query(query, [requestLng, requestLat, radiusMeters, limit])
+
+    // Format results
+    const items = results.map((r: any) => ({
+      id: r.id,
+      firstName: r.firstName,
+      lastName: r.lastName,
+      avatar: r.avatar,
+      rating: 0, // TODO: Implement rating calculation
+      latitude: Number(r.lat),
+      longitude: Number(r.lng),
+      distance: Number(r.distance),
+    }))
+
+    const response = { items }
+
+    // Cache for 2 minutes
+    await this.cacheManager.set(cacheKey, response, 120000)
+
+    return response
+  }
+
+  /**
+   * Update user's last known location
+   * Invalidates relevant cache keys
+   */
+  async updateUserLocation(userId: string, lat: number, lng: number): Promise<void> {
+    const query = `
+      UPDATE "user"
+      SET
+        "lastKnownLocation" = ST_SetSRID(ST_MakePoint($1, $2), 4326),
+        "locationUpdatedAt" = NOW()
+      WHERE id = $3
+    `
+
+    await this.userRepository.query(query, [lng, lat, userId])
+
+    // Note: Cache invalidation for nearby performers is handled by TTL
+    // For more aggressive invalidation, we could clear cache keys matching pattern
+    // but this would require additional Redis operations
+  }
+}

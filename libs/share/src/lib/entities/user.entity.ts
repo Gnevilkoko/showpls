@@ -84,4 +84,16 @@ export class User {
   @ApiProperty({ type: "string" })
   @CreateDateColumn({ type: "timestamptz" })
   createdAt: Date
+
+  @ApiProperty({
+    type: "string",
+    nullable: true,
+    description: "PostGIS Point geometry for user's last known location"
+  })
+  @Column("geometry", { spatialFeatureType: "Point", srid: 4326, nullable: true })
+  lastKnownLocation: any | null // PostGIS Point
+
+  @ApiProperty({ type: "string", nullable: true })
+  @Column({ type: "timestamptz", nullable: true })
+  locationUpdatedAt: Date | null
 }

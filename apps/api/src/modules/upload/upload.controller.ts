@@ -1,14 +1,19 @@
-import { Controller, Post, UploadedFile, UseInterceptors } from '@nestjs/common';
+import { Controller, Post, UploadedFile, UseInterceptors, UseGuards } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
-import { ApiTags, ApiConsumes, ApiBody } from '@nestjs/swagger';
+import { ApiTags, ApiConsumes, ApiBody, ApiSecurity } from '@nestjs/swagger';
 import { UploadService, UploadResult } from './upload.service';
 import { Express } from 'express';
+import { AuthGuard } from '../auth/guards/auth.guard';
+import { RateLimit } from '../../common/rate-limit/rate-limit.decorator';
 
 @ApiTags('Upload')
 @Controller('upload')
 export class UploadController {
   constructor(private readonly uploadService: UploadService) {}
 
+  @ApiSecurity("jwt-auth")
+  @UseGuards(AuthGuard)
+  @RateLimit({ ttl: 60, limit: 5 })
   @Post()
   @UseInterceptors(
     FileInterceptor('file', {

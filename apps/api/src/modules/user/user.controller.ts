@@ -1,5 +1,5 @@
 import { Body, Controller, Get, Post, Query, UseGuards } from "@nestjs/common"
-import { ApiExtraModels, ApiOkResponse, ApiSecurity, ApiTags, getSchemaPath } from "@nestjs/swagger"
+import { ApiBearerAuth, ApiExtraModels, ApiOkResponse, ApiOperation, ApiSecurity, ApiTags, getSchemaPath } from "@nestjs/swagger"
 import { User } from "@share/entities"
 import { SwaggerUtilities } from "../../common/swagger.utilities"
 import { InjectRepository } from "@nestjs/typeorm"
@@ -16,6 +16,10 @@ import UserExceptions from "./user.exceptions"
 import { SetLanguageCodeDto } from "./dto/set-language-code.dto"
 import { GetBalancesDto } from "./dto/get-balances.dto"
 import { plainToInstance } from "class-transformer"
+import { GeoService } from "../geo/geo.service"
+import { ListPerformersDto } from "./dto/list-performers.dto"
+import { UpdateLocationDto } from "./dto/update-location.dto"
+import { RateLimit } from "../../common/rate-limit"
 
 @ApiExtraModels(User)
 @ApiTags("User")
@@ -24,7 +28,8 @@ export class UserController {
   constructor(
     @InjectRepository(User) protected repository: Repository<User>,
     protected service: UserService,
-    protected abilityFactory: AbilityFactory
+    protected abilityFactory: AbilityFactory,
+    protected geoService: GeoService
   ) {}
 
   @ApiOkResponse({
@@ -110,5 +115,47 @@ export class UserController {
     return await this.service.getBalances(id)
   }
 
+  @ApiSecurity("jwt-auth")
+  @ApiOperation({ summary: "Get performers nearby a location" })
+  @ApiOkResponse({
+    schema: {
+      type: "array",
+      items: {
+        type: "object",
+        properties: {
+          id: { type: "string" },
+          username: { type: "string", nullable: true },
+          firstName: { type: "string" },
+          lastName: { type: "string", nullable: true },
+          avatar: { type: "string", nullable: true },
+          distance: { type: "number" },
+          lng: { type: "number" },
+          lat: { type: "number" },
+        },
+      },
+    },
+  })
+  @UseGuards(AuthGuard)
+  @Get("list-performers")
+  async listPerformers(@Query() dto: ListPerformersDto) {
+    return await this.geoService.getPerformersNearby(dto.latitude, dto.longitude, dto.radiusKm)
+  }
 
+  @ApiSecurity("jwt-auth")
+  @ApiOperation({ summary: "Update user's current location" })
+  @ApiOkResponse({
+    schema: {
+      type: "object",
+      properties: {
+        success: { type: "boolean" },
+      },
+    },
+  })
+  @UseGuards(AuthGuard)
+  @RateLimit({ ttl: 30, limit: 1 })
+  @Post("update-location")
+  async updateLocation(@GetUser() user: User, @Body() dto: UpdateLocationDto) {
+    await this.geoService.updateUserLocation(user.id, dto.latitude, dto.longitude)
+    return { success: true }
+  }
 }

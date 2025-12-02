@@ -2,6 +2,7 @@ import { Column, CreateDateColumn, Entity, ManyToOne, PrimaryGeneratedColumn, Up
 import { Request } from "./request.entity"
 import { Response } from "./response.entity"
 import { User } from "./user.entity"
+import { Chat } from "./chat.entity"
 import { DealStatus } from "../deal-status.enum"
 
 @Entity()
@@ -21,8 +22,8 @@ export class Deal {
    @ManyToOne(() => User)
    performer: User
 
-   // @ManyToOne(() => Chat)
-   // chat: Chat
+   @ManyToOne(() => Chat)
+   chat: Chat
 
    @Column("enum", {
      enum: ["accepted", "in_progress", "completed", "cancelled"],
