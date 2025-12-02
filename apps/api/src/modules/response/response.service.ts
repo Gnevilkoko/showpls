@@ -209,10 +209,7 @@ export class ResponseService {
         await this.chatService.sendMessage(user, chat.id, { text: dto.message })
       }
 
-      // 11. Notify performer via WebSocket
-      this.chatGateway.sendNotification(response.performer.id, { type: "response_accepted", dealId: savedDeal.id })
-      
-      // 12. Send notification via queue
+      // 11. Send notification via queue
       await this.notificationService.send(response.performer.id, "response_accepted", {
         dealId: savedDeal.id,
         requestId: savedDeal.request.id,

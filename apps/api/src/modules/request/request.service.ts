@@ -288,17 +288,7 @@ export class RequestService {
         }
       )
 
-      // Notify performer through WebSocket
-      this.chatGateway.sendNotification(performer.id, {
-        type: "newTask",
-        requestId: savedRequest.id,
-        title: dto.title,
-        price: dto.price,
-        chatId: chat.id,
-        responseId: response!.id
-      })
-
-      // Notify performer through notify:user queue
+      // Notify performer only through notification service (queue)
       await this.notificationService.send(performer.id, "newTask", {
         requestId: savedRequest.id,
         title: dto.title,
@@ -753,6 +743,143 @@ export class RequestService {
 
       // Delete the request
       await manager.delete(Request, { id })
+    })
+  }
+
+  async cancel(user: User, id: string): Promise<any> {
+    // 1. Find the request with related data
+    const request = await this.requestRepository.findOne({
+      where: { id },
+      relations: ["customer", "responses", "responses.performer"],
+    })
+
+    if (!request) {
+      throw new NotFoundException("Request not found")
+    }
+
+    // 2. Check if status allows cancellation
+    if (request.status !== RequestStatus.Draft && request.status !== RequestStatus.Published) {
+      throw new BadRequestException("Only draft or published requests can be cancelled")
+    }
+
+    // 3. Check if user is the customer or has arbitration rights
+    if (request.customer.id !== user.id) {
+      // TODO: Add arbitration permission check when implemented
+      throw new BadRequestException("Only the customer can cancel the request")
+    }
+
+    // 4. Wrap in transaction
+    return this.dataSource.transaction(async (manager) => {
+      // 4.1 Return funds to customer through EscrowRefund
+      await this.ledger.escrow.refund(
+        {
+          externalType: "request",
+          externalId: id,
+        },
+        manager
+      )
+
+      // 4.2 Update Request status
+      await manager.update(Request, { id }, {
+        status: RequestStatus.Cancelled,
+        cancelledAt: new Date()
+      })
+
+      // 4.3 Update all related Response statuses
+      if (request.responses && request.responses.length > 0) {
+        await manager.update(Response,
+          { request: { id } },
+          { status: ResponseStatus.Cancelled }
+        )
+      }
+
+      // 4.4 Update Deal if exists
+      // Find any deals associated with this request
+      const dealRepository = manager.getRepository("Deal")
+      const deals = await dealRepository.find({
+        where: { request: { id } }
+      })
+
+      if (deals.length > 0) {
+        await dealRepository.update(
+          { request: { id } },
+          {
+            status: "cancelled",
+            escrowStatus: "rejected"
+          }
+        )
+      }
+
+      // 4.5 Cancel scheduled auto-cancellation
+      await this.requestExpirationQueue.getJobs(['waiting']).then(jobs => {
+        const job = jobs.find(job => job.data.requestId === id)
+        if (job) {
+          job.remove()
+        }
+      })
+
+      // 4.6 Notify performer if assigned
+      const acceptedResponse = request.responses.find(r => r.status === ResponseStatus.Accepted)
+      if (acceptedResponse && acceptedResponse.performer) {
+        // Notify performer only through notification service (queue)
+        await this.notificationService.send(acceptedResponse.performer.id, "taskCancelled", {
+          requestId: id,
+          title: request.title
+        })
+      }
+
+      // 4.7 Get the updated request with all relations
+      const updatedRequest = await manager.findOne(Request, {
+        where: { id },
+        relations: ["customer", "responses", "responses.performer", "attachments", "submissions"],
+      });
+
+      if (!updatedRequest) {
+        throw new NotFoundException("Request not found");
+      }
+
+      // Find performer (accepted one)
+      const acceptedResponseForPerformer = updatedRequest.responses.find(r => r.status === "accepted");
+      const performer = acceptedResponseForPerformer ? {
+        id: acceptedResponseForPerformer.performer.id,
+        firstName: acceptedResponseForPerformer.performer.firstName,
+        lastName: acceptedResponseForPerformer.performer.lastName,
+        avatar: acceptedResponseForPerformer.performer.avatar,
+      } : null;
+
+      // Return the updated request with the cancelled status
+      return {
+        id: updatedRequest.id,
+        title: updatedRequest.title,
+        description: updatedRequest.description,
+        price: updatedRequest.price,
+        status: RequestStatus.Cancelled, // Explicitly set the cancelled status
+        attachments: updatedRequest.attachments?.map(att => ({
+          id: att.id,
+          url: att.url,
+          hash: att.hash,
+        })) || [],
+        latitude: updatedRequest.location.coordinates[1],
+        longitude: updatedRequest.location.coordinates[0],
+        customer: {
+          id: updatedRequest.customer.id,
+          firstName: updatedRequest.customer.firstName,
+          lastName: updatedRequest.customer.lastName,
+          avatar: updatedRequest.customer.avatar,
+        },
+        performer,
+        createdAt: updatedRequest.createdAt.toISOString(),
+        updatedAt: updatedRequest.updatedAt.toISOString(),
+        acceptedAt: updatedRequest.acceptedAt?.toISOString() || null,
+        completedAt: updatedRequest.completedAt?.toISOString() || null,
+        cancelledAt: updatedRequest.cancelledAt?.toISOString() || new Date().toISOString(),
+        expiresAt: updatedRequest.expiresAt?.toISOString() || null,
+        deadlineAt: updatedRequest.deadlineAt?.toISOString() || null,
+        isUrgent: updatedRequest.isUrgent,
+        metadata: updatedRequest.metadata,
+        responses: [], // Empty responses for cancelled requests
+        submission: null,
+      };
     })
   }
 }

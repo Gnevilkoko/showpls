@@ -197,4 +197,12 @@ export class RequestController {
   delete(@GetUser() user: User, @Param("id") id: string) {
     return this.requestService.delete(user, id)
   }
+
+  @ApiSecurity("jwt-auth")
+  @UseGuards(AuthGuard)
+  @Post(":id/cancel")
+  @ApiOperation({ summary: "Cancel a request" })
+  async cancel(@GetUser() user: User, @Param("id") id: string) {
+    return this.requestService.cancel(user, id)
+  }
 }

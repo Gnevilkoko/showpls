@@ -1,6 +1,6 @@
 import { Injectable, NotFoundException, ForbiddenException } from "@nestjs/common"
-import { InjectRepository } from "@nestjs/typeorm"
-import { Repository, Brackets, In } from "typeorm"
+import { InjectRepository, InjectDataSource } from "@nestjs/typeorm"
+import { Repository, Brackets, In, DataSource } from "typeorm"
 import { Chat } from "@share/entities/chat.entity"
 import { ChatMessage } from "@share/entities/chat-message.entity"
 import { Deal } from "@share/entities/deal.entity"
@@ -25,6 +25,8 @@ export class ChatService {
     private readonly userRepository: Repository<User>,
     @InjectRepository(Response)
     private readonly responseRepository: Repository<Response>,
+    @InjectDataSource()
+    private readonly dataSource: DataSource,
     private readonly chatGateway: ChatGateway,
   ) {}
 
@@ -262,37 +264,40 @@ export class ChatService {
 
     const receiver = chat.user1.id === user.id ? chat.user2 : chat.user1
 
-    const message = this.messageRepository.create({
-      chat,
-      sender: user,
-      receiver,
-      text: dto.text,
-      attachments: dto.attachments,
-      type: dto.type,
-      variant: dto.variant,
-      isRead: false,
+    // Use transaction to ensure data consistency
+    const completeMessage = await this.dataSource.transaction(async (manager) => {
+      const message = manager.create(ChatMessage, {
+        chat,
+        sender: user,
+        receiver,
+        text: dto.text,
+        attachments: dto.attachments,
+        type: dto.type,
+        variant: dto.variant,
+        isRead: false,
+      })
+
+      // Save the message
+      const savedMessage = await manager.save(message)
+
+      // Update chat with last message info and unread count
+      chat.lastMessage = dto.text || (dto.attachments?.length ? "Attachment" : "Message")
+      chat.lastUpdate = new Date()
+
+      if (receiver.id === chat.user1.id) {
+        chat.countUnread += 1
+      } else {
+        chat.countUnread2 += 1
+      }
+
+      await manager.save(chat)
+
+      // Fetch the complete message with relations (sender and receiver)
+      return await manager.findOne(ChatMessage, {
+        where: { id: savedMessage.id },
+        relations: ["sender", "receiver"],
+      })
     })
-
-    // Save the message first
-    const savedMessage = await this.messageRepository.save(message)
-
-    // Fetch the complete message with relations (sender and receiver)
-    const completeMessage = await this.messageRepository.findOne({
-      where: { id: savedMessage.id },
-      relations: ["sender", "receiver"],
-    })
-
-    // Update chat
-    chat.lastMessage = dto.text || (dto.attachments?.length ? "Attachment" : "Message")
-    chat.lastUpdate = new Date()
-
-    if (receiver.id === chat.user1.id) {
-      chat.countUnread += 1
-    } else {
-      chat.countUnread2 += 1
-    }
-
-    await this.chatRepository.save(chat)
 
     // Use the complete message with relations for notifications
     this.chatGateway.notifyReceiver(receiver.id, completeMessage, chat.id)
@@ -323,13 +328,16 @@ export class ChatService {
       throw new ForbiddenException("Access denied")
     }
 
-    if (chat.user1.id === user.id) {
-      chat.isFavorite = isFavorite
-    } else {
-      chat.isFavorite2 = isFavorite
-    }
+    // Use transaction to ensure data consistency
+    await this.dataSource.transaction(async (manager) => {
+      if (chat.user1.id === user.id) {
+        chat.isFavorite = isFavorite
+      } else {
+        chat.isFavorite2 = isFavorite
+      }
 
-    await this.chatRepository.save(chat)
+      await manager.save(chat)
+    })
 
     return {
       chatId: chat.id,
@@ -351,35 +359,40 @@ export class ChatService {
       throw new ForbiddenException("Access denied")
     }
 
-    const qb = this.messageRepository.createQueryBuilder()
-      .update(ChatMessage)
-      .set({ isRead: true })
-      .where("chatId = :chatId", { chatId })
-      .andWhere("receiverId = :userId", { userId: user.id })
-      .andWhere("isRead = :isRead", { isRead: false })
+    // Use transaction to ensure data consistency
+    const result = await this.dataSource.transaction(async (manager) => {
+      const qb = manager.createQueryBuilder()
+        .update(ChatMessage)
+        .set({ isRead: true })
+        .where("chatId = :chatId", { chatId })
+        .andWhere("receiverId = :userId", { userId: user.id })
+        .andWhere("isRead = :isRead", { isRead: false })
 
-    if (messageIds && messageIds.length > 0) {
-      qb.andWhere("id IN (:...ids)", { ids: messageIds })
-    }
+      if (messageIds && messageIds.length > 0) {
+        qb.andWhere("id IN (:...ids)", { ids: messageIds })
+      }
 
-    const result = await qb.execute()
+      const updateResult = await qb.execute()
 
-    // Update chat counters
-    // We need to recalculate unread count for this user in this chat
-    const count = await this.messageRepository.count({
-      where: {
-        chat: { id: chatId },
-        receiver: { id: user.id },
-        isRead: false,
-      },
+      // Update chat counters
+      // We need to recalculate unread count for this user in this chat
+      const count = await manager.count(ChatMessage, {
+        where: {
+          chat: { id: chatId },
+          receiver: { id: user.id },
+          isRead: false,
+        },
+      })
+
+      if (chat.user1.id === user.id) {
+        chat.countUnread = count
+      } else {
+        chat.countUnread2 = count
+      }
+      await manager.save(chat)
+
+      return updateResult
     })
-
-    if (chat.user1.id === user.id) {
-      chat.countUnread = count
-    } else {
-      chat.countUnread2 = count
-    }
-    await this.chatRepository.save(chat)
 
     const countUnread = await this.calculateTotalUnread(user.id)
     const countUnreadFavorite = await this.calculateTotalUnreadFavorite(user.id)
@@ -416,46 +429,51 @@ export class ChatService {
       throw new ForbiddenException("Chat is not in arbitration")
     }
 
-    chat.admin = admin
-    await this.chatRepository.save(chat)
+    // Use transaction to ensure data consistency
+    const { completeMessage1, completeMessage2 } = await this.dataSource.transaction(async (manager) => {
+      chat.admin = admin
+      await manager.save(chat)
 
-    // Send system message to both users
-    const messageText = "Admin joined the chat"
-    
-    // Create message for user1
-    const message1 = this.messageRepository.create({
-      chat,
-      sender: admin,
-      receiver: chat.user1,
-      type: "notification",
-      text: messageText,
-      isRead: false,
-    })
-    const savedMessage1 = await this.messageRepository.save(message1)
-    const completeMessage1 = await this.messageRepository.findOne({
-      where: { id: savedMessage1.id },
-      relations: ["sender", "receiver"],
-    })
+      // Send system message to both users
+      const messageText = "Admin joined the chat"
+      
+      // Create message for user1
+      const message1 = manager.create(ChatMessage, {
+        chat,
+        sender: admin,
+        receiver: chat.user1,
+        type: "notification",
+        text: messageText,
+        isRead: false,
+      })
+      const savedMessage1 = await manager.save(message1)
+      const completeMessage1 = await manager.findOne(ChatMessage, {
+        where: { id: savedMessage1.id },
+        relations: ["sender", "receiver"],
+      })
 
-    // Create message for user2
-    const message2 = this.messageRepository.create({
-      chat,
-      sender: admin,
-      receiver: chat.user2,
-      type: "notification",
-      text: messageText,
-      isRead: false,
-    })
-    const savedMessage2 = await this.messageRepository.save(message2)
-    const completeMessage2 = await this.messageRepository.findOne({
-      where: { id: savedMessage2.id },
-      relations: ["sender", "receiver"],
-    })
+      // Create message for user2
+      const message2 = manager.create(ChatMessage, {
+        chat,
+        sender: admin,
+        receiver: chat.user2,
+        type: "notification",
+        text: messageText,
+        isRead: false,
+      })
+      const savedMessage2 = await manager.save(message2)
+      const completeMessage2 = await manager.findOne(ChatMessage, {
+        where: { id: savedMessage2.id },
+        relations: ["sender", "receiver"],
+      })
 
-    // Update chat with the system message
-    chat.lastMessage = messageText
-    chat.lastUpdate = new Date()
-    await this.chatRepository.save(chat)
+      // Update chat with the system message
+      chat.lastMessage = messageText
+      chat.lastUpdate = new Date()
+      await manager.save(chat)
+
+      return { completeMessage1, completeMessage2 }
+    })
 
     // Notify both users about the new message
     this.chatGateway.notifyReceiver(chat.user1.id, completeMessage1, chat.id)
