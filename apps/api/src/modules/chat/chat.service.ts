@@ -506,11 +506,12 @@ export class ChatService {
         { user1: { id: userId } },
         { user2: { id: userId } },
       ],
+      relations: ["user1", "user2"],
     })
 
     return chats.reduce((acc, chat) => {
-      if (chat.user1.id === userId) return acc + chat.countUnread
-      if (chat.user2.id === userId) return acc + chat.countUnread2
+      if (chat.user1 && chat.user1.id === userId) return acc + chat.countUnread
+      if (chat.user2 && chat.user2.id === userId) return acc + chat.countUnread2
       return acc
     }, 0)
   }
@@ -521,11 +522,12 @@ export class ChatService {
         { user1: { id: userId }, isFavorite: true },
         { user2: { id: userId }, isFavorite2: true },
       ],
+      relations: ["user1", "user2"],
     })
 
     return chats.reduce((acc, chat) => {
-      if (chat.user1.id === userId) return acc + chat.countUnread
-      if (chat.user2.id === userId) return acc + chat.countUnread2
+      if (chat.user1 && chat.user1.id === userId) return acc + chat.countUnread
+      if (chat.user2 && chat.user2.id === userId) return acc + chat.countUnread2
       return acc
     }, 0)
   }

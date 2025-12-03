@@ -1,25 +1,11 @@
-import { ApiProperty } from "@nestjs/swagger"
-import { IsArray, IsEnum, IsOptional, IsString } from "class-validator"
+import { z } from "zod"
+import { createZodDto } from "nestjs-zod"
 
-export class SendMessageDto {
-  @ApiProperty({ required: false })
-  @IsString()
-  @IsOptional()
-  text?: string
+const sendMessageSchema = z.object({
+  text: z.string().optional(),
+  attachments: z.array(z.string()).optional(),
+  type: z.enum(["message", "notification"]).default("message").optional(),
+  variant: z.string().optional(),
+})
 
-  @ApiProperty({ required: false, type: [String] })
-  @IsArray()
-  @IsString({ each: true })
-  @IsOptional()
-  attachments?: string[]
-
-  @ApiProperty({ enum: ["message", "notification"], default: "message" })
-  @IsEnum(["message", "notification"])
-  @IsOptional()
-  type?: "message" | "notification" = "message"
-
-  @ApiProperty({ required: false })
-  @IsString()
-  @IsOptional()
-  variant?: string
-}
+export class SendMessageDto extends createZodDto(sendMessageSchema) {}

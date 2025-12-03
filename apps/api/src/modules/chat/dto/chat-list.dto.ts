@@ -1,17 +1,14 @@
-import { ApiProperty } from "@nestjs/swagger"
-import { IsBoolean, IsOptional, IsString } from "class-validator"
-import { PaginationDto } from "../../../common/dto/pagination.dto"
-import { Transform } from "class-transformer"
+import { z } from "zod"
+import { createZodDto } from "nestjs-zod"
+import { paginationSchema } from "../../../common/dto/pagination.dto"
 
-export class ChatListDto extends PaginationDto {
-  @ApiProperty({ required: false })
-  @IsBoolean()
-  @IsOptional()
-  @Transform(({ value }) => value === "true" || value === true)
-  isFavorite?: boolean
+const chatListSchema = paginationSchema.extend({
+  isFavorite: z
+    .preprocess((val) => {
+      if (typeof val === "string") return val === "true"
+      return val
+    }, z.boolean().optional()),
+  search: z.string().optional(),
+})
 
-  @ApiProperty({ required: false })
-  @IsString()
-  @IsOptional()
-  search?: string
-}
+export class ChatListDto extends createZodDto(chatListSchema) {}

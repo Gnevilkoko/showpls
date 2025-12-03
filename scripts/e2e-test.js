@@ -159,6 +159,58 @@ socket.on('message:new', (data) => {
 
         log('\n📦 ВСЕ ТЕСТЫ ЗАПРОСОВ: РАБОТАЮТ!', colors.green);
 
+        // --- 2.10 Тестирование модуля CHAT ---
+        log('\n💬 2.10 Тестируем все маршруты модуля chat...', colors.yellow);
+
+        // 2.10.1 Получение списка чатов
+        log('   2.10.1 Получение списка чатов...', colors.blue);
+        const chatListRes = await axios.get(`${API_URL}/chat/list`, {
+            params: {
+                page: 1,
+                limit: 10
+            },
+            headers: { Authorization: `Bearer ${CUST_TOKEN}` }
+        });
+        log(`   ✅ Получено чатов: ${chatListRes.data.items.length} (всего: ${chatListRes.data.total})`, colors.green);
+
+        // 2.10.2 Получение чата по ID
+        log('   2.10.2 Получение чата по ID...', colors.blue);
+        const chatByIdRes = await axios.get(`${API_URL}/chat/${chatId}`, {
+            params: {
+                page: 1,
+                limit: 10
+            },
+            headers: { Authorization: `Bearer ${CUST_TOKEN}` }
+        });
+        log(`   ✅ Чат получен: ${chatByIdRes.data.id || chatId} (сообщений: ${chatByIdRes.data.messages?.length || 0})`, colors.green);
+
+        // 2.10.3 Отправка сообщения (уже протестировано в шаге 5, но добавим для полноты)
+        log('   2.10.3 Отправка сообщения в чат...', colors.blue);
+        const secondMsgText = `Second message ${Date.now()}`;
+        const secondMsgRes = await axios.post(`${API_URL}/chat/${chatId}/message`, {
+            text: secondMsgText
+        }, { headers: { Authorization: `Bearer ${PERF_TOKEN}` } });
+        log(`   ✅ Второе сообщение отправлено`, colors.green);
+
+        // 2.10.4 Переключение избранного
+        log('   2.10.4 Переключение избранного...', colors.blue);
+        const favoriteRes = await axios.post(`${API_URL}/chat/${chatId}/favorite`, {
+            isFavorite: true
+        }, { headers: { Authorization: `Bearer ${CUST_TOKEN}` } });
+        log(`   ✅ Чат добавлен в избранное`, colors.green);
+
+        // 2.10.5 Отметка сообщений как прочитанных
+        log('   2.10.5 Отметка сообщений как прочитанных...', colors.blue);
+        const markReadRes = await axios.post(`${API_URL}/chat/${chatId}/read`, {
+            messageIds: []
+        }, { headers: { Authorization: `Bearer ${CUST_TOKEN}` } });
+        log(`   ✅ Сообщения отмечены как прочитанные`, colors.green);
+
+        // 2.10.6 Присоединение как администратор (если нужно)
+        // Пропускаем, так как это административная функция
+
+        log('\n💬 ВСЕ ТЕСТЫ МОДУЛЯ CHAT: РАБОТАЮТ!', colors.green);
+
         // --- 3. ТЕСТЫ МОДУЛЯ RESPONSES ---
         log('\n📝 3. Тестируем все маршруты модуля responses...', colors.yellow);
         

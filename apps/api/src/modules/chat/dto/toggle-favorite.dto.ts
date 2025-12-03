@@ -1,8 +1,8 @@
-import { ApiProperty } from "@nestjs/swagger"
-import { IsBoolean } from "class-validator"
+import { z } from "zod"
+import { createZodDto } from "nestjs-zod"
 
-export class ToggleFavoriteDto {
-  @ApiProperty()
-  @IsBoolean()
-  isFavorite: boolean
-}
+const toggleFavoriteSchema = z.object({
+  isFavorite: z.boolean(),
+})
+
+export class ToggleFavoriteDto extends createZodDto(toggleFavoriteSchema) {}

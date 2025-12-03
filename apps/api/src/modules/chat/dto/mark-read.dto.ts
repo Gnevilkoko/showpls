@@ -1,10 +1,8 @@
-import { ApiProperty } from "@nestjs/swagger"
-import { IsArray, IsOptional, IsString } from "class-validator"
+import { z } from "zod"
+import { createZodDto } from "nestjs-zod"
 
-export class MarkReadDto {
-  @ApiProperty({ required: false, type: [String] })
-  @IsArray()
-  @IsString({ each: true })
-  @IsOptional()
-  messageIds?: string[]
-}
+const markReadSchema = z.object({
+  messageIds: z.array(z.string()).optional(),
+})
+
+export class MarkReadDto extends createZodDto(markReadSchema) {}
