@@ -190,7 +190,14 @@ export class ResponseService {
       response.status = ResponseStatus.Accepted
       await manager.save(Response, response)
 
-      // 8. Update all other responses for this request to rejected
+      // 8. Notify about proposal status change via WebSocket
+      this.chatGateway.notifyProposalStatusChanged(response.performer.id, response.id, ResponseStatus.Accepted)
+
+      // 8.1. Notify about order status change via WebSocket
+      this.chatGateway.notifyOrderStatusChanged(response.request.customer.id, response.request.id, RequestStatus.Accepted)
+      this.chatGateway.notifyOrderStatusChanged(response.performer.id, response.request.id, RequestStatus.Accepted)
+
+      // 9. Update all other responses for this request to rejected
       await manager
         .createQueryBuilder()
         .update(Response)
@@ -201,15 +208,15 @@ export class ResponseService {
         })
         .execute()
 
-      // 9. Send system message about acceptance
+      // 10. Send system message about acceptance
       await this.chatService.sendMessage(user, chat.id, { text: "Response accepted", type: "notification" })
 
-      // 10. If message provided, send it
+      // 11. If message provided, send it
       if (dto.message) {
         await this.chatService.sendMessage(user, chat.id, { text: dto.message })
       }
 
-      // 11. Send notification via queue
+      // 12. Send notification via queue
       await this.notificationService.send(response.performer.id, "response_accepted", {
         dealId: savedDeal.id,
         requestId: savedDeal.request.id,

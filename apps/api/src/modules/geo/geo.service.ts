@@ -1,4 +1,4 @@
-import { Inject, Injectable } from '@nestjs/common'
+import { Inject, Injectable, BadRequestException } from '@nestjs/common'
 import { InjectRepository } from '@nestjs/typeorm'
 import { Repository } from 'typeorm'
 import { Request, User } from '@share/entities'
@@ -46,6 +46,18 @@ export class GeoService {
     east: number,
     west: number,
   ): Promise<RequestMapItem[]> {
+    // Validate bounding box size
+    const latDiff = Math.abs(north - south)
+    const lngDiff = Math.abs(east - west)
+
+    // Max ~1000km (~9 degrees Lat, ~18 degrees Lng)
+    const MAX_LAT_DIFF = 9
+    const MAX_LNG_DIFF = 18
+
+    if (latDiff > MAX_LAT_DIFF || lngDiff > MAX_LNG_DIFF) {
+      throw new BadRequestException("Map area too large. Please zoom in.")
+    }
+
     // Check cache first
     const cacheKey = `geo:requests:${north}:${south}:${east}:${west}`
     const cached = await this.cacheManager.get<RequestMapItem[]>(cacheKey)

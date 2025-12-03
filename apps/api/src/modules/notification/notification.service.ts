@@ -7,7 +7,11 @@ export class NotificationService {
   constructor(@InjectQueue("notify-user") private notificationQueue: Queue) {}
 
   async send(userId: string, eventType: string, payload: any) {
-    const jobId = `${userId}-notify-${eventType}-${Date.now()}`
+    // Создаем идемпотентный ключ на основе userId, eventType и хеша payload
+    const crypto = require('crypto')
+    const payloadHash = crypto.createHash('md5').update(JSON.stringify(payload)).digest('hex')
+    const jobId = `${userId}-notify-${eventType}-${payloadHash}`
+    
     await this.notificationQueue.add(
       "notify",
       {
@@ -18,6 +22,13 @@ export class NotificationService {
       {
         jobId,
         removeOnComplete: true,
+        // Добавляем опцию для предотвращения дублирования
+        removeOnFail: false,
+        attempts: 3,
+        backoff: {
+          type: 'exponential',
+          delay: 2000,
+        },
       },
     )
   }

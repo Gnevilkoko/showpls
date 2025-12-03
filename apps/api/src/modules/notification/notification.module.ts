@@ -12,6 +12,15 @@ import { User } from "@share/entities/user.entity"
   imports: [
     BullModule.registerQueue({
       name: "notify-user",
+      defaultJobOptions: {
+        removeOnComplete: 100,
+        removeOnFail: 50,
+        attempts: 3,
+        backoff: {
+          type: 'exponential',
+          delay: 2000,
+        },
+      },
     }),
     TypeOrmModule.forFeature([Notification, User]),
     QueueModule,

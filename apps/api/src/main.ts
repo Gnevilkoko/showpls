@@ -4,7 +4,7 @@ import { WinstonModule } from "nest-winston"
 import { getWinstonOptions } from "./get-winston-options"
 import { DocumentBuilder, SwaggerModule } from "@nestjs/swagger"
 import { cleanupOpenApiDoc } from "nestjs-zod"
-import { BotConfig, ConfigService } from "./config"
+import { BotConfig, ConfigService, CorsConfig } from "./config"
 import { AppService } from "./app.service"
 import { APIExceptionResponse } from "@server/api"
 import { Context, Telegraf } from "telegraf"
@@ -14,6 +14,9 @@ async function bootstrap() {
   const app = await NestFactory.create(AppModule, {
     logger: WinstonModule.createLogger(getWinstonOptions()),
   })
+
+  // Применяем конфигурацию CORS для HTTP запросов
+  app.enableCors(CorsConfig)
 
   await AppService.upgrade(app)
 

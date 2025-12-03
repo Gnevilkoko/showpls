@@ -7,6 +7,7 @@ import { ListDealsDto } from "./dto/list-deals.dto"
 import { DealStatus } from "@share/deal-status.enum"
 import { RequestStatus } from "@share/request-status.enum"
 import { ChatService } from "../chat/chat.service"
+import { ChatGateway } from "../chat/chat.gateway"
 
 @Injectable()
 export class DealService {
@@ -18,7 +19,8 @@ export class DealService {
     @InjectRepository(Response)
     private readonly responseRepository: Repository<Response>,
     private readonly dataSource: DataSource,
-    private readonly chatService: ChatService
+    private readonly chatService: ChatService,
+    private readonly chatGateway: ChatGateway
   ) {}
 
   async create(user: User, dto: CreateDealDto): Promise<Deal> {
@@ -82,6 +84,10 @@ export class DealService {
       // Update Request Status to Accepted
       request.status = RequestStatus.Accepted
       await manager.save(Request, request)
+
+      // Notify about order status change via WebSocket
+      this.chatGateway.notifyOrderStatusChanged(request.customer.id, request.id, RequestStatus.Accepted)
+      this.chatGateway.notifyOrderStatusChanged(response.performer.id, request.id, RequestStatus.Accepted)
 
       // Update chat to mark as active order
       chat.isActiveOrder = true

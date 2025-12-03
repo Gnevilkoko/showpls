@@ -1,4 +1,4 @@
-import { Injectable, BadRequestException, NotFoundException } from "@nestjs/common"
+import { Injectable, BadRequestException, NotFoundException, Logger } from "@nestjs/common"
 import { InjectRepository } from "@nestjs/typeorm"
 import { Repository, DataSource } from "typeorm"
 import { Request, Response, User, FileAttachment } from "@share/entities"
@@ -22,6 +22,8 @@ import { Queue } from 'bullmq'
 
 @Injectable()
 export class RequestService {
+  private readonly logger = new Logger(RequestService.name)
+
   constructor(
     @InjectRepository(Request)
     private readonly requestRepository: Repository<Request>,
@@ -162,7 +164,7 @@ export class RequestService {
         externalType: "request",
         externalId: savedRequest.id,
         from: user.id,
-        to: user.id, // Placeholder - funds go to escrow, actual recipient determined when request is accepted
+        to: user.id,
         amount: amountInSmallestUnit,
         currencyId: currency.id,
       },
@@ -173,11 +175,30 @@ export class RequestService {
     if (expiresAt) {
       const delay = expiresAt.getTime() - Date.now()
       if (delay > 0) {
-        await this.requestExpirationQueue.add(
-          'expire-request',
-          { requestId: savedRequest.id },
-          { delay }
-        )
+        try {
+          await this.requestExpirationQueue.add(
+            'expire-request',
+            { requestId: savedRequest.id },
+            {
+              delay,
+              jobId: `${savedRequest.id}_expire`,
+              attempts: 3,
+              backoff: {
+                type: 'exponential',
+                delay: 2000,
+              },
+              removeOnComplete: 100,
+              removeOnFail: 50,
+            }
+          )
+          this.logger.log(`Scheduled expiration job for request ${savedRequest.id} with delay ${delay}ms`)
+        } catch (error) {
+          this.logger.error(
+            `Failed to schedule expiration job for request ${savedRequest.id}: ${error instanceof Error ? error.message : 'Unknown error'}`,
+            error instanceof Error ? error.stack : undefined,
+          )
+          // Не прерываем транзакцию, но логируем ошибку
+        }
       }
     }
 

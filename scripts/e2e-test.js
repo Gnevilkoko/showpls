@@ -21,7 +21,9 @@ async function runTest() {
     let requestId, responseId, dealId, chatId, draftRequestId;
     let eventsReceived = {
         notification: false,
-        messageNew: false
+        messageNew: false,
+        orderStatusChanged: false,
+        proposalStatusChanged: false
     };
 
     // --- 1. ПОДКЛЮЧАЕМ СОКЕТ ИСПОЛНИТЕЛЯ ---
@@ -45,9 +47,19 @@ async function runTest() {
 
 socket.on('message:new', (data) => {
         // Берем данные из вложенного объекта .message
-        const msg = data.message; 
+        const msg = data.message;
         log(`💬 [SOCKET] НОВОЕ СООБЩЕНИЕ: "${msg.text}" от ${msg.sender?.firstName || 'Unknown'}`, colors.magenta);
         eventsReceived.messageNew = true;
+    });
+
+    socket.on('order:status_changed', (data) => {
+        log(`📦 [SOCKET] ИЗМЕНЕНИЕ СТАТУСА ЗАКАЗА: ${data.orderId} -> ${data.status}`, colors.blue);
+        eventsReceived.orderStatusChanged = true;
+    });
+
+    socket.on('proposal:status_changed', (data) => {
+        log(`📝 [SOCKET] ИЗМЕНЕНИЕ СТАТУСА ПРЕДЛОЖЕНИЯ: ${data.proposalId} -> ${data.status}`, colors.blue);
+        eventsReceived.proposalStatusChanged = true;
     });
 
     await sleep(1000);
@@ -280,7 +292,7 @@ socket.on('message:new', (data) => {
         await sleep(1000);
 
         console.log('\n--- ИТОГИ ---');
-        
+
         if (eventsReceived.notification) {
             log('✅ Уведомления: РАБОТАЮТ', colors.green);
         } else {
@@ -291,6 +303,18 @@ socket.on('message:new', (data) => {
             log('✅ Чат (Real-time): РАБОТАЕТ', colors.green);
         } else {
             log('❌ Чат (Real-time): НЕ ПРИШЛО message:new', colors.red);
+        }
+
+        if (eventsReceived.orderStatusChanged) {
+            log('✅ События заказов: РАБОТАЮТ', colors.green);
+        } else {
+            log('⚠️ События заказов: НЕ ПРИШЛИ (возможно не было изменений статуса)', colors.yellow);
+        }
+
+        if (eventsReceived.proposalStatusChanged) {
+            log('✅ События предложений: РАБОТАЮТ', colors.green);
+        } else {
+            log('⚠️ События предложений: НЕ ПРИШЛИ (возможно не было изменений статуса)', colors.yellow);
         }
 
         if (eventsReceived.notification && eventsReceived.messageNew) {

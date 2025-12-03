@@ -8,8 +8,15 @@ import { Server, Socket } from "socket.io"
 import { Logger } from "@nestjs/common"
 import AuthService from "../auth/auth.service"
 import { UserPayload } from "@share/user.payload"
+import { allowedOrigins } from "../../config/cors.config"
 
-@WebSocketGateway({ cors: { origin: "*" }, path: "/chat/ws" })
+@WebSocketGateway({
+  cors: {
+    origin: allowedOrigins,     // Единый список доверенных источников
+    credentials: true
+  },
+  path: "/chat/ws"
+})
 export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
   @WebSocketServer()
   server: Server
@@ -134,6 +141,40 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
     if (sockets) {
       sockets.forEach((socketId) => {
         this.server.to(socketId).emit("notification", notification)
+      })
+    }
+  }
+
+  /**
+   * Notify users about order status changes
+   */
+  notifyOrderStatusChanged(userId: string, orderId: string, status: string) {
+    const sockets = this.userSockets.get(userId)
+    if (sockets) {
+      sockets.forEach((socketId) => {
+        this.server.to(socketId).emit("order:status_changed", {
+          type: "order:status_changed",
+          orderId,
+          status,
+          timestamp: new Date().toISOString(),
+        })
+      })
+    }
+  }
+
+  /**
+   * Notify users about proposal status changes
+   */
+  notifyProposalStatusChanged(userId: string, proposalId: string, status: string) {
+    const sockets = this.userSockets.get(userId)
+    if (sockets) {
+      sockets.forEach((socketId) => {
+        this.server.to(socketId).emit("proposal:status_changed", {
+          type: "proposal:status_changed",
+          proposalId,
+          status,
+          timestamp: new Date().toISOString(),
+        })
       })
     }
   }
