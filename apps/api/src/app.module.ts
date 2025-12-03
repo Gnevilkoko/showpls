@@ -24,9 +24,8 @@ import { TelegrafModule } from "nestjs-telegraf"
 import { BotHandler } from "./modules/bot/bot.handler"
 import { TopUpModule } from "./modules/top-up/top-up.module"
 import { LedgerModule } from "@ledger"
-import Keyv from "keyv"
 import { CacheModule } from "@nestjs/cache-manager"
-import { CacheableMemory } from "cacheable"
+import KeyvRedis from "@keyv/redis"
 
 @Module({
   imports: [
@@ -44,10 +43,9 @@ import { CacheableMemory } from "cacheable"
       useFactory: async () => {
         return {
           stores: [
-            new Keyv({
-              store: new CacheableMemory({ ttl: ms("5m"), lruSize: 500 }),
-            }),
-            // new KeyvRedis(RedisConfig.getDSN())
+            // Using Redis instead of CacheableMemory for better cache management
+            // with frequent location updates
+            new KeyvRedis(RedisConfig.getDSN()),
           ],
         }
       },

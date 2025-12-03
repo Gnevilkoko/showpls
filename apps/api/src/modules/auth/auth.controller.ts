@@ -188,30 +188,30 @@ export class AuthController {
     return await this.service.getRules(user)
   }
 
-  // ГЕНЕРАТОР ВЕЧНЫХ ТОКЕНОВ ДЛЯ ТЕСТОВ
-  @Post("dev/generate-permanent-tokens")
-  async generatePermanentTokens() {
-    // 1. Ищем наших братишек по ID (string, так как в сущности это bigint, но TypeORM мапит)
-    // Важно: в seed.sql мы писали числа, но TypeORM часто работает со строками для bigint
-    const customer = await this.repository.findOneBy({ id: "777777" });
-    const performer = await this.repository.findOneBy({ id: "888888" });
+  // // ГЕНЕРАТОР ВЕЧНЫХ ТОКЕНОВ ДЛЯ ТЕСТОВ
+  // @Post("dev/generate-permanent-tokens")
+  // async generatePermanentTokens() {
+  //   // 1. Ищем наших юзеров по ID (string, так как в сущности это bigint, но TypeORM мапит)
+  //   // Важно: в seed.sql мы писали числа, но TypeORM часто работает со строками для bigint
+  //   const customer = await this.repository.findOneBy({ id: "777777" });
+  //   const performer = await this.repository.findOneBy({ id: "888888" });
 
-    if (!customer || !performer) {
-      throw new APIException(ErrorCode.UNAUTHORIZED, "Запусти сначала seed.sql, братишка!");
-    }
+  //   if (!customer || !performer) {
+  //     throw new APIException(ErrorCode.UNAUTHORIZED, "Запусти сначала seed.sql, братишка!");
+  //   }
 
-    // 2. Готовим payload
-    const plainCustomer = omit(instanceToPlain(customer), []);
-    const plainPerformer = omit(instanceToPlain(performer), []);
+  //   // 2. Готовим payload
+  //   const plainCustomer = omit(instanceToPlain(customer), []);
+  //   const plainPerformer = omit(instanceToPlain(performer), []);
 
-    // 3. Генерируем токены на 365 дней (ms('365d'))
-    // Внимание: число 31536000000 - это год в миллисекундах
-    const oneYear = 31536000000;
+  //   // 3. Генерируем токены на 365 дней (ms('365d'))
+  //   // Внимание: число 31536000000 - это год в миллисекундах
+  //   const oneYear = 31536000000;
 
-    return {
-      message: "Сохрани эти токены, они работают 1 год 👇",
-      CUSTOMER_777777: AuthService.generateToken(plainCustomer, oneYear),
-      PERFORMER_888888: AuthService.generateToken(plainPerformer, oneYear),
-    };
-  }
+  //   return {
+  //     message: "Сохрани эти токены, они работают 1 год 👇",
+  //     CUSTOMER_777777: AuthService.generateToken(plainCustomer, oneYear),
+  //     PERFORMER_888888: AuthService.generateToken(plainPerformer, oneYear),
+  //   };
+  // }
 }

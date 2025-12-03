@@ -97,8 +97,8 @@ export class GeoService {
       lat: Number(r.lat),
     }))
 
-    // Cache for 5 minutes
-    await this.cacheManager.set(cacheKey, formattedResults, 300000)
+    // Cache for 15 seconds to optimize Redis load with frequent location updates
+    await this.cacheManager.set(cacheKey, formattedResults, 15000)
 
     return formattedResults
   }
@@ -162,8 +162,8 @@ export class GeoService {
       lat: Number(r.lat),
     }))
 
-    // Cache for 2 minutes
-    await this.cacheManager.set(cacheKey, formattedResults, 120000)
+    // Cache for 15 seconds to optimize Redis load with frequent location updates
+    await this.cacheManager.set(cacheKey, formattedResults, 15000)
 
     return formattedResults
   }
@@ -242,8 +242,8 @@ export class GeoService {
 
     const response = { items }
 
-    // Cache for 2 minutes
-    await this.cacheManager.set(cacheKey, response, 120000)
+    // Cache for 15 seconds to optimize Redis load with frequent location updates
+    await this.cacheManager.set(cacheKey, response, 15000)
 
     return response
   }
