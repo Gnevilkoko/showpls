@@ -13,6 +13,7 @@ import { UserService } from "../user/user.service"
 import { User } from "@share/entities"
 import { ResponseModule } from "../response/response.module"
 import { BullModule } from '@nestjs/bullmq'
+import { QueueModule } from "../queue/queue.module"
 import { GeoModule } from "../geo/geo.module"
 import { ChatModule } from "../chat/chat.module"
 import { NotificationModule } from "../notification/notification.module"
@@ -23,12 +24,10 @@ import { ChatGateway } from "../chat/chat.gateway"
     TypeOrmModule.forFeature([Request, Response, FileAttachment, User, Account, Balance, Currency, Entry, Settings, Transaction]),
     LedgerModule,
     ResponseModule,
+    QueueModule,
     GeoModule,
     ChatModule,
     NotificationModule,
-    BullModule.registerQueue({
-      name: 'request-expiration',
-    }),
   ],
   controllers: [RequestController],
   providers: [RequestService, UserService, EscrowHoldService, AccountService, BalanceService, CurrencyService, ChatGateway],

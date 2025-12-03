@@ -5,6 +5,7 @@ import { NotificationService } from "./notification.service"
 import { NotificationProcessor } from "./processors/notification.processor"
 import { Notification } from "./notification.entity"
 import { ChatModule } from "../chat/chat.module"
+import { QueueModule } from "../queue/queue.module"
 import { User } from "@share/entities/user.entity"
 
 @Module({
@@ -13,6 +14,7 @@ import { User } from "@share/entities/user.entity"
       name: "notify-user",
     }),
     TypeOrmModule.forFeature([Notification, User]),
+    QueueModule,
     ChatModule,
   ],
   providers: [NotificationService, NotificationProcessor],
