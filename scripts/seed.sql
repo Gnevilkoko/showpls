@@ -83,16 +83,33 @@ ON CONFLICT (id) DO NOTHING;
 
 -- 7. Отклик
 INSERT INTO "response" (id, "requestId", "performerId", message, status, "createdAt")
-VALUES ('660e8400-e29b-41d4-a716-446655440001', '550e8400-e29b-41d4-a716-446655440000', 888888, 'I can do this task', 'pending', NOW())
+VALUES ('660e8400-e29b-41d4-a716-446655440001', '550e8400-e29b-41d4-a716-446655440000'::uuid, 888888, 'I can do this task', 'pending', NOW())
 ON CONFLICT (id) DO NOTHING;
 
 -- 8. Создание чата
 INSERT INTO "chat" (id, "user1Id", "user2Id", "isActiveOrder", "createdAt")
 VALUES (
-    '11111111-1111-1111-1111-111111111111', 
-    777777, 
-    888888, 
-    true, 
+    '11111111-1111-1111-1111-111111111111',
+    777777,
+    888888,
+    true,
+    NOW()
+)
+ON CONFLICT (id) DO NOTHING;
+
+-- 9. Создание сделки (deal) между заказчиком и исполнителем
+INSERT INTO "deal" (id, "requestId", "responseId", "customerId", "performerId", "chatId", status, "escrowStatus", "arbitrationApproved", "createdAt", "updatedAt")
+VALUES (
+    '239be2cf-75fd-4a90-bdff-15a901e50233',
+    '550e8400-e29b-41d4-a716-446655440000'::uuid,
+    '660e8400-e29b-41d4-a716-446655440001'::uuid,
+    777777,
+    888888,
+    '11111111-1111-1111-1111-111111111111',
+    'accepted',
+    'locked',
+    false,
+    NOW(),
     NOW()
 )
 ON CONFLICT (id) DO NOTHING;

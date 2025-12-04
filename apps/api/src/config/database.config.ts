@@ -12,6 +12,7 @@ import {
   TONTopUp,
   User,
 } from "@share/entities"
+import { Notification } from "../modules/notification/notification.entity"
 import process from "process"
 import { LoggerOptions } from "typeorm"
 import { MixedList } from "typeorm/common/MixedList"
@@ -67,6 +68,7 @@ export default function () {
       ChatMessage,
       Submission,
       FileAttachment,
+      Notification,
     ] as MixedList<Function>,
     migrations: [] as MixedList<Function>,
     migrationsTableName: "migrations",

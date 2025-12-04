@@ -531,4 +531,8 @@ export class ChatService {
       return acc
     }, 0)
   }
+
+  async updateIsActiveOrder(chatId: string, isActiveOrder: boolean): Promise<void> {
+    await this.chatRepository.update(chatId, { isActiveOrder })
+  }
 }

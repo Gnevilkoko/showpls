@@ -15,6 +15,9 @@ export class Notification {
   @Column("varchar")
   type: string
 
+  @Column("varchar", { nullable: true })
+  variant: string
+
   @Column("jsonb", { nullable: true })
   payload: any
 

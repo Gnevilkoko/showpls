@@ -545,9 +545,27 @@ export class RequestService {
     }
     // For others, no responses
 
-    // Filter submissions - placeholder since entity doesn't have required fields
+    // Filter submissions - get the latest one
     let submission: any = null
-    // TODO: Implement submission logic when entity is updated
+    if (request.submissions && request.submissions.length > 0) {
+      // Sort by serverTs descending
+      const sortedSubmissions = request.submissions.sort((a, b) => {
+        return new Date(b.serverTs).getTime() - new Date(a.serverTs).getTime()
+      })
+      const latestSubmission = sortedSubmissions[0]
+      
+      submission = {
+        id: latestSubmission.id,
+        status: latestSubmission.status,
+        serverTs: latestSubmission.serverTs,
+        proofMeta: latestSubmission.proofMeta,
+        attachments: latestSubmission.attachments?.map(att => ({
+          id: att.id,
+          url: att.url,
+          hash: att.hash,
+        })) || [],
+      }
+    }
 
     // Find performer (accepted one)
     const acceptedResponse = request.responses.find(r => r.status === "accepted")

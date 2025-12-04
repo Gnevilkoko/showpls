@@ -41,7 +41,6 @@ export class NotificationProcessor extends BaseProcessor {
       if (isConnected) {
         this.logger.log(`User ${userId} is online. Sending WebSocket event.`)
         this.chatGateway.sendNotification(userId, {
-          type: eventType,
           ...payload,
         })
         websocketSent = true
@@ -75,7 +74,8 @@ export class NotificationProcessor extends BaseProcessor {
     try {
       const notification = this.notificationRepository.create({
         user,
-        type: eventType,
+        type: payload.type || "notification", // Default to "notification" if not specified
+        variant: payload.variant || null, // New field for variant
         text: payload.text || `Notification: ${eventType}`, // Fallback text
         payload,
         isRead: false,
