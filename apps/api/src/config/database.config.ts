@@ -1,5 +1,6 @@
 import { TypeOrmModuleOptions } from "@nestjs/typeorm"
 import {
+  Arbitration,
   Chat,
   ChatMessage,
   Deal,
@@ -68,6 +69,7 @@ export default function () {
       ChatMessage,
       Submission,
       FileAttachment,
+      Arbitration,
       Notification,
     ] as MixedList<Function>,
     migrations: [] as MixedList<Function>,

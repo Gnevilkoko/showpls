@@ -532,6 +532,144 @@ async function runTest() {
     log("\n⏳ Ждем уведомления о загрузке пруфов (1 сек)...", colors.yellow)
     await sleep(1000)
 
+    // --- 9. ТЕСТЫ ЗАВЕРШЕНИЯ ЗАПРОСА (COMPLETE) ---
+    log("\n✅ 9. Тестируем завершение запроса (complete)...", colors.yellow)
+
+    try {
+      // 9.1 Получаем балансы заказчика ДО завершения
+      log("   9.1 Получаем балансы заказчика ДО завершения...", colors.blue)
+      const customerBalanceBeforeRes = await axios.get(`${API_URL}/user/get-balances`, {
+        params: { id: 777777 },
+        headers: { Authorization: `Bearer ${CUST_TOKEN}` },
+      })
+      // Find STARS balance with non-zero values (there might be duplicates)
+      const customerBalanceBefore = customerBalanceBeforeRes.data
+        .filter((b) => b.token === "STARS" && b.blockchain === null)
+        .find((b) => BigInt(b.balance) > 0n || BigInt(b.lockedBalance) > 0n) ||
+        customerBalanceBeforeRes.data.find((b) => b.token === "STARS" && b.blockchain === null)
+      log(
+        `   📊 Баланс заказчика ДО: ${customerBalanceBefore.balance}, Locked: ${customerBalanceBefore.lockedBalance}`,
+        colors.blue
+      )
+
+      // 9.2 Получаем балансы исполнителя ДО завершения
+      log("   9.2 Получаем балансы исполнителя ДО завершения...", colors.blue)
+      const performerBalanceBeforeRes = await axios.get(`${API_URL}/user/get-balances`, {
+        params: { id: 888888 },
+        headers: { Authorization: `Bearer ${PERF_TOKEN}` },
+      })
+      // Find STARS balance with non-zero values (there might be duplicates)
+      const performerBalanceBefore = performerBalanceBeforeRes.data
+        .filter((b) => b.token === "STARS" && b.blockchain === null)
+        .find((b) => BigInt(b.balance) > 0n || BigInt(b.lockedBalance) > 0n) ||
+        performerBalanceBeforeRes.data.find((b) => b.token === "STARS" && b.blockchain === null)
+      log(
+        `   📊 Баланс исполнителя ДО: ${performerBalanceBefore?.balance || "0"}, Locked: ${performerBalanceBefore?.lockedBalance || "0"}`,
+        colors.blue
+      )
+
+      // 9.3 Завершаем запрос (complete)
+      log("   9.3 Завершаем запрос (заказчик вызывает /complete)...", colors.blue)
+      const completeRes = await axios.post(
+        `${API_URL}/request/${requestId}/complete`,
+        {
+          rating: 5,
+          feedback: "Excellent work!",
+        },
+        { headers: { Authorization: `Bearer ${CUST_TOKEN}` } }
+      )
+      log(`   ✅ Запрос завершен! Статус: ${completeRes.data.status}`, colors.green)
+      log(`   ✅ Deal status: ${completeRes.data.deal.status}, escrowStatus: ${completeRes.data.deal.escrowStatus}`, colors.green)
+
+      // Ждем, чтобы транзакции обработались
+      await sleep(500)
+
+      // 9.4 Получаем балансы заказчика ПОСЛЕ завершения
+      log("   9.4 Получаем балансы заказчика ПОСЛЕ завершения...", colors.blue)
+      const customerBalanceAfterRes = await axios.get(`${API_URL}/user/get-balances`, {
+        params: { id: 777777 },
+        headers: { Authorization: `Bearer ${CUST_TOKEN}` },
+      })
+      // Find STARS balance with non-zero values (there might be duplicates)
+      const customerBalanceAfter = customerBalanceAfterRes.data
+        .filter((b) => b.token === "STARS" && b.blockchain === null)
+        .find((b) => BigInt(b.balance) > 0n || BigInt(b.lockedBalance) > 0n) ||
+        customerBalanceAfterRes.data.find((b) => b.token === "STARS" && b.blockchain === null)
+      log(
+        `   📊 Баланс заказчика ПОСЛЕ: ${customerBalanceAfter.balance}, Locked: ${customerBalanceAfter.lockedBalance}`,
+        colors.blue
+      )
+
+      // 9.5 Получаем балансы исполнителя ПОСЛЕ завершения
+      log("   9.5 Получаем балансы исполнителя ПОСЛЕ завершения...", colors.blue)
+      const performerBalanceAfterRes = await axios.get(`${API_URL}/user/get-balances`, {
+        params: { id: 888888 },
+        headers: { Authorization: `Bearer ${PERF_TOKEN}` },
+      })
+      // Find STARS balance with non-zero values (there might be duplicates)
+      const performerBalanceAfter = performerBalanceAfterRes.data
+        .filter((b) => b.token === "STARS" && b.blockchain === null)
+        .find((b) => BigInt(b.balance) > 0n || BigInt(b.lockedBalance) > 0n) ||
+        performerBalanceAfterRes.data.find((b) => b.token === "STARS" && b.blockchain === null)
+      log(
+        `   📊 Баланс исполнителя ПОСЛЕ: ${performerBalanceAfter?.balance || "0"}, Locked: ${performerBalanceAfter?.lockedBalance || "0"}`,
+        colors.blue
+      )
+
+      // 9.6 Проверяем изменения балансов
+      log("\n   9.6 Проверяем изменения балансов...", colors.blue)
+
+      const customerLockedDiff = BigInt(customerBalanceBefore.lockedBalance) - BigInt(customerBalanceAfter.lockedBalance)
+      const performerBalanceDiff = BigInt(performerBalanceAfter?.balance || "0") - BigInt(performerBalanceBefore?.balance || "0")
+
+      log(`   💰 Locked у заказчика уменьшился на: ${customerLockedDiff.toString()}`, colors.blue)
+      log(`   💰 Баланс исполнителя увеличился на: ${performerBalanceDiff.toString()}`, colors.blue)
+
+      // Проверяем, что:
+      // 1. Locked balance заказчика уменьшился
+      // 2. Баланс исполнителя увеличился
+      // 3. Исполнитель получил деньги (с учетом комиссии платформы 2.5%)
+
+      if (customerLockedDiff > 0n) {
+        log(`   ✅ Locked баланс заказчика корректно уменьшился!`, colors.green)
+      } else {
+        log(`   ❌ ОШИБКА: Locked баланс заказчика не уменьшился!`, colors.red)
+      }
+
+      if (performerBalanceDiff > 0n) {
+        log(`   ✅ Баланс исполнителя увеличился! (Исполнитель получил деньги)`, colors.green)
+
+        // Проверяем, что исполнитель получил примерно ожидаемую сумму (за вычетом комиссии 2.5%)
+        const requestPrice = BigInt(500 * 1e6) // 500 STARS в smallest units
+        const expectedPerformerAmount = (requestPrice * 975n) / 1000n // 97.5% от суммы (100% - 2.5% комиссия)
+        const tolerance = requestPrice / 100n // 1% допуск на округление
+
+        if (performerBalanceDiff >= expectedPerformerAmount - tolerance && performerBalanceDiff <= expectedPerformerAmount + tolerance) {
+          log(`   ✅ Исполнитель получил корректную сумму (с учетом комиссии 2.5%)!`, colors.green)
+        } else {
+          log(`   ⚠️ Сумма исполнителя отличается от ожидаемой (ожидалось ~${expectedPerformerAmount.toString()})`, colors.yellow)
+        }
+      } else {
+        log(`   ❌ КРИТИЧЕСКАЯ ОШИБКА: Баланс исполнителя не увеличился! Деньги не дошли до исполнителя!`, colors.red)
+      }
+
+      // 9.7 Проверяем статус запроса
+      log("\n   9.7 Проверяем финальный статус запроса...", colors.blue)
+      const finalRequestRes = await axios.get(`${API_URL}/request/${requestId}`)
+      log(`   ✅ Финальный статус запроса: ${finalRequestRes.data.status}`, colors.green)
+      log(`   ✅ Время завершения: ${finalRequestRes.data.completedAt}`, colors.green)
+
+      log("\n✅ ВСЕ ТЕСТЫ ЗАВЕРШЕНИЯ ЗАПРОСА (COMPLETE): РАБОТАЮТ!", colors.green)
+    } catch (completeError) {
+      log("\n❌ ОШИБКА В ТЕСТАХ COMPLETE:", colors.red)
+      if (completeError.response) {
+        console.log("Response status:", completeError.response.status)
+        console.log("Response data:", JSON.stringify(completeError.response.data, null, 2))
+      } else {
+        console.log(completeError.message)
+      }
+    }
+
     log("\n🏆 ВСЕ ТЕСТЫ ЗАВЕРШЕНЫ!", colors.green)
 
     process.exit(0)

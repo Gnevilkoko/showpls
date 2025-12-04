@@ -24,6 +24,7 @@ import { TelegrafModule } from "nestjs-telegraf"
 import { BotHandler } from "./modules/bot/bot.handler"
 import { TopUpModule } from "./modules/top-up/top-up.module"
 import { SubmissionModule } from "./modules/submission/submission.module"
+import { ArbitrationModule } from "./modules/arbitration/arbitration.module"
 import { LedgerModule } from "@ledger"
 import { CacheModule } from "@nestjs/cache-manager"
 import KeyvRedis from "@keyv/redis"
@@ -159,6 +160,7 @@ import KeyvRedis from "@keyv/redis"
       }),
     TopUpModule,
     SubmissionModule,
+    ArbitrationModule,
   ],
   providers: [BotHandler],
   controllers: [],

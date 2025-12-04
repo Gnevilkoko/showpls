@@ -1,14 +1,19 @@
-import { Injectable, BadRequestException, NotFoundException, Logger } from "@nestjs/common"
+import { Injectable, BadRequestException, NotFoundException, Logger, ForbiddenException } from "@nestjs/common"
 import { InjectRepository } from "@nestjs/typeorm"
 import { Repository, DataSource } from "typeorm"
-import { Request, Response, User, FileAttachment } from "@share/entities"
+import { Request, Response, User, FileAttachment, Submission, Deal } from "@share/entities"
+import { Transaction, Account, TransactionType, AccountOwnerType, AccountPurpose } from "@ledger/entities"
 import { CreateRequestDto } from "./dto/create-request.dto"
 import { CreateDirectRequestDto } from "./dto/create-direct-request.dto"
 import { ListRequestsDto } from "./dto/list-requests.dto"
 import { UpdateRequestDto } from "./dto/update-request.dto"
+import { CompleteRequestDto } from "./dto/complete-request.dto"
 import { RequestStatus } from "@share/request-status.enum"
 import { ResponseStatus } from "@share/response-status.enum"
+import { SubmissionStatus } from "@share/entities/submission.entity"
+import { DealStatus } from "@share/deal-status.enum"
 import { EscrowHoldService } from "@ledger/escrow/escrow-hold.service"
+import { EscrowReleaseService } from "@ledger/escrow/escrow-release.service"
 import { Ledger } from "@ledger"
 import { Token } from "@share/token.enum"
 import { UserService } from "../user/user.service"
@@ -31,7 +36,12 @@ export class RequestService {
     private readonly responseRepository: Repository<Response>,
     @InjectRepository(FileAttachment)
     private readonly fileAttachmentRepository: Repository<FileAttachment>,
+    @InjectRepository(Submission)
+    private readonly submissionRepository: Repository<Submission>,
+    @InjectRepository(Deal)
+    private readonly dealRepository: Repository<Deal>,
     private readonly escrowHoldService: EscrowHoldService,
+    private readonly escrowReleaseService: EscrowReleaseService,
     private readonly ledger: Ledger,
     private readonly dataSource: DataSource,
     private readonly userService: UserService,
@@ -789,22 +799,36 @@ export class RequestService {
     // 1. Find the request with related data
     const request = await this.requestRepository.findOne({
       where: { id },
-      relations: ["customer", "responses", "responses.performer"],
+      relations: ["customer", "responses", "responses.performer", "deals"],
     })
 
     if (!request) {
       throw new NotFoundException("Request not found")
     }
 
-    // 2. Check if status allows cancellation
-    if (request.status !== RequestStatus.Draft && request.status !== RequestStatus.Published) {
-      throw new BadRequestException("Only draft or published requests can be cancelled")
+    // 2. Check if user is the customer
+    if (request.customer.id !== user.id) {
+      throw new ForbiddenException("Only the customer can cancel the request")
     }
 
-    // 3. Check if user is the customer or has arbitration rights
-    if (request.customer.id !== user.id) {
-      // TODO: Add arbitration permission check when implemented
-      throw new BadRequestException("Only the customer can cancel the request")
+    // 3. Check if status allows cancellation
+    if (request.status === RequestStatus.Draft || request.status === RequestStatus.Published) {
+      // Allowed immediately for DRAFT or PUBLISHED
+    } else if (request.status === RequestStatus.InProgress) {
+      // For IN_PROGRESS, check if arbitrationApproved
+      const deal = await this.dealRepository.findOne({
+        where: { request: { id } },
+      })
+
+      if (!deal) {
+        throw new BadRequestException("No deal found for this request")
+      }
+
+      if (!deal.arbitrationApproved) {
+        throw new ForbiddenException("Cannot cancel in-progress request without arbitration approval")
+      }
+    } else {
+      throw new BadRequestException("Request cannot be cancelled in current status")
     }
 
     // 4. Wrap in transaction
@@ -919,6 +943,184 @@ export class RequestService {
         responses: [], // Empty responses for cancelled requests
         submission: null,
       };
+    })
+  }
+
+  async complete(user: User, id: string, dto: CompleteRequestDto): Promise<any> {
+    // 1. Find the request with all necessary relations
+    const request = await this.requestRepository.findOne({
+      where: { id },
+      relations: ["customer", "deals", "deals.performer", "deals.chat"],
+    })
+
+    if (!request) {
+      throw new NotFoundException("Request not found")
+    }
+
+    // 2. Check rights (only customer)
+    if (request.customer.id !== user.id) {
+      throw new ForbiddenException("Only the customer can complete the task")
+    }
+
+    // 3. Check if status is in_progress
+    if (request.status !== RequestStatus.InProgress) {
+      throw new BadRequestException("Only tasks in progress can be completed")
+    }
+
+    // 4. Find the active deal (status = accepted or in_progress)
+    const activeDeal = request.deals?.find(
+      deal => deal.status === DealStatus.Accepted || deal.status === DealStatus.InProgress
+    )
+
+    if (!activeDeal) {
+      throw new BadRequestException("No active deal found for this request")
+    }
+
+    const performer = activeDeal.performer
+
+    // 5. Wrap in transaction
+    return this.dataSource.transaction(async (manager) => {
+      // First, update the escrow hold transaction metadata to set the correct recipient (performer)
+      const holdTransaction = await manager.findOne(Transaction, {
+        where: {
+          type: TransactionType.EscrowHold,
+          externalType: 'request',
+          externalId: id,
+        },
+      })
+
+      if (!holdTransaction) {
+        throw new BadRequestException("Escrow hold transaction not found")
+      }
+
+      // Get or create performer's account
+      let performerAccount = await manager.findOne(Account, {
+        where: {
+          ownerId: performer.id.toString(),
+          ownerType: AccountOwnerType.User,
+        },
+      })
+
+      if (!performerAccount) {
+        // Create account for performer if it doesn't exist
+        const accountInsertResult = await manager
+          .createQueryBuilder()
+          .insert()
+          .into(Account)
+          .values({
+            purpose: AccountPurpose.Main,
+            ownerType: AccountOwnerType.User,
+            ownerId: performer.id.toString(),
+          })
+          .returning('*')
+          .execute()
+        
+        performerAccount = manager.create(Account, accountInsertResult.raw[0] as object)
+      }
+
+      // Get the currency from the hold transaction
+      const currency = await this.getCurrency()
+
+      // Ensure balance exists for performer
+      const Balance = manager.getRepository('Balance')
+      let performerBalance = await Balance.findOne({
+        where: {
+          accountId: performerAccount.id,
+          currencyId: currency.id,
+        },
+      })
+
+      if (!performerBalance) {
+        // Create balance for performer
+        const balanceInsertResult = await manager
+          .createQueryBuilder()
+          .insert()
+          .into('balance')
+          .values({
+            accountId: performerAccount.id,
+            currencyId: currency.id,
+            amount: '0',
+            lockedAmount: '0',
+            updatedAt: new Date(),
+            createdAt: new Date(),
+          })
+          .returning('*')
+          .execute()
+      }
+
+      // Update the hold transaction metadata to change 'to' to performer's account
+      const updatedMeta = {
+        ...holdTransaction.meta,
+        to: performerAccount.id,
+      }
+      
+      await manager.update(Transaction,
+        { id: holdTransaction.id },
+        { meta: updatedMeta as any }
+      )
+
+      // FINANCIAL ACTION: Transfer funds to performer through Ledger escrow release
+      await this.ledger.escrow.release(
+        {
+          externalType: "request",
+          externalId: id,
+        },
+        manager
+      )
+
+      // Update Request
+      await manager.update(Request, { id }, {
+        status: RequestStatus.Completed,
+        completedAt: new Date(),
+      })
+
+      // Update Deal
+      await manager.update(Deal, { id: activeDeal.id }, {
+        status: DealStatus.Completed,
+        escrowStatus: "released",
+      })
+
+      // Get or verify chat
+      const chat = activeDeal.chat || await this.chatService.getOrCreateChat(user.id, performer.id)
+
+      // Update isActiveOrder = false in chat
+      await this.chatService.updateIsActiveOrder(chat.id, false)
+
+      // Notify performer: "Task completed, funds released"
+      await this.notificationService.send(performer.id, "taskCompleted", {
+        requestId: id,
+        title: request.title,
+        message: "Task completed, funds released",
+      })
+
+      // Notify about order status change via WebSocket
+      this.chatGateway.notifyOrderStatusChanged(user.id, id, RequestStatus.Completed)
+      this.chatGateway.notifyOrderStatusChanged(performer.id, id, RequestStatus.Completed)
+
+      // Return updated request
+      const updatedRequest = await manager.findOne(Request, {
+        where: { id },
+        relations: ["customer", "responses", "responses.performer", "attachments", "submissions"],
+      })
+
+      if (!updatedRequest) {
+        throw new NotFoundException("Request not found after update")
+      }
+
+      const updatedDeal = await manager.findOne(Deal, {
+        where: { id: activeDeal.id },
+      })
+
+      return {
+        id: updatedRequest.id,
+        status: RequestStatus.Completed,
+        completedAt: updatedRequest.completedAt?.toISOString(),
+        deal: {
+          id: updatedDeal!.id,
+          status: DealStatus.Completed,
+          escrowStatus: "released",
+        },
+      }
     })
   }
 }

@@ -1,10 +1,11 @@
 import { Module } from "@nestjs/common"
 import { TypeOrmModule } from "@nestjs/typeorm"
-import { Request, Response, FileAttachment } from "@share/entities"
+import { Request, Response, FileAttachment, Submission, Deal } from "@share/entities"
 import { RequestController } from "./request.controller"
 import { RequestService } from "./request.service"
 import { LedgerModule } from "@ledger/ledger.module"
 import { EscrowHoldService } from "@ledger/escrow/escrow-hold.service"
+import { EscrowReleaseService } from "@ledger/escrow/escrow-release.service"
 import { AccountService } from "@ledger/account/account.service"
 import { BalanceService } from "@ledger/balance/balance.service"
 import { CurrencyService } from "@ledger/currency/currency.service"
@@ -21,7 +22,7 @@ import { ChatGateway } from "../chat/chat.gateway"
 
 @Module({
   imports: [
-    TypeOrmModule.forFeature([Request, Response, FileAttachment, User, Account, Balance, Currency, Entry, Settings, Transaction]),
+    TypeOrmModule.forFeature([Request, Response, FileAttachment, Submission, Deal, User, Account, Balance, Currency, Entry, Settings, Transaction]),
     LedgerModule,
     ResponseModule,
     QueueModule,
@@ -30,7 +31,7 @@ import { ChatGateway } from "../chat/chat.gateway"
     NotificationModule,
   ],
   controllers: [RequestController],
-  providers: [RequestService, UserService, EscrowHoldService, AccountService, BalanceService, CurrencyService, ChatGateway],
+  providers: [RequestService, UserService, EscrowHoldService, EscrowReleaseService, AccountService, BalanceService, CurrencyService, ChatGateway],
   exports: [RequestService],
 })
 export class RequestModule {}

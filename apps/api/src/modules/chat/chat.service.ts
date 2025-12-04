@@ -535,4 +535,11 @@ export class ChatService {
   async updateIsActiveOrder(chatId: string, isActiveOrder: boolean): Promise<void> {
     await this.chatRepository.update(chatId, { isActiveOrder })
   }
+
+  /**
+   * Notify user about order status changes via WebSocket
+   */
+  notifyOrderStatusChanged(userId: string, orderId: string, status: string): void {
+    this.chatGateway.notifyOrderStatusChanged(userId, orderId, status)
+  }
 }

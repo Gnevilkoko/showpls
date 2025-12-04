@@ -6,6 +6,7 @@ import { CreateDirectRequestDto } from "./dto/create-direct-request.dto"
 import { ListRequestsDto } from "./dto/list-requests.dto"
 import { UpdateRequestDto } from "./dto/update-request.dto"
 import { RespondToRequestDto } from "./dto/respond-to-request.dto"
+import { CompleteRequestDto } from "./dto/complete-request.dto"
 import { AuthGuard } from "../auth/guards/auth.guard"
 import { GetUser } from "../user/decorators/get-user.decorator"
 import { User } from "@share/entities"
@@ -204,5 +205,33 @@ export class RequestController {
   @ApiOperation({ summary: "Cancel a request" })
   async cancel(@GetUser() user: User, @Param("id") id: string) {
     return this.requestService.cancel(user, id)
+  }
+
+  @ApiSecurity("jwt-auth")
+  @UseGuards(AuthGuard)
+  @IpRateLimit({ ttl: 60, limit: 5 }) // 5 requests per minute per IP
+  @RateLimit({ ttl: 60, limit: 3 }) // 3 requests per minute per account
+  @Post(":id/complete")
+  @ApiOperation({ summary: "Complete a task (customer only)" })
+  @ApiOkResponse({
+    schema: {
+      type: "object",
+      properties: {
+        id: { type: "string" },
+        status: { type: "string", example: "completed" },
+        completedAt: { type: "string", format: "date-time" },
+        deal: {
+          type: "object",
+          properties: {
+            id: { type: "string" },
+            status: { type: "string", example: "completed" },
+            escrowStatus: { type: "string", example: "released" },
+          },
+        },
+      },
+    },
+  })
+  async complete(@GetUser() user: User, @Param("id") id: string, @Body() dto: CompleteRequestDto) {
+    return this.requestService.complete(user, id, dto)
   }
 }
