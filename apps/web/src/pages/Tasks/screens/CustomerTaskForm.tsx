@@ -10,11 +10,16 @@ import MapTaskField from "../components/MapTaskField"
 import TimeLimitField from "../components/TimeLimitField"
 import BudgetField from "../components/BudgetField"
 import Modal from "../../../shared/components/Modal"
-import PerformersMap from "../PerformersMap"
+import PerformersMapGoogle from "../../../shared/components/maps/google/PerformersMapGoogle"
 import VerifProofField from "../components/VerifProofField"
+import { useSelector } from "react-redux"
+import type { RootState } from "../../../store"
+import PerformersMap2Gis from "../../../shared/components/maps/2Gis/PerformersMap2Gis"
 
 const CustomerTaskForm = () => {
   const { t } = useTranslation()
+  const language = useSelector((state: RootState) => state.language)
+  const isRussian = language === "ru"
 
   // Состояния для валидации инпутов
   const [taskDescription, setTaskDescription] = useState("")
@@ -121,7 +126,7 @@ const CustomerTaskForm = () => {
       )}
 
       <Modal isOpen={isOpenPerformerDiscover} onClose={handleClosePerformerDiscover}>
-        <PerformersMap />
+        {isRussian ? <PerformersMap2Gis /> : <PerformersMapGoogle />}
       </Modal>
     </>
   )

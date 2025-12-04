@@ -1,10 +1,10 @@
 import { GoogleMap } from "@react-google-maps/api"
 import { memo, useCallback, useEffect, useRef, useState } from "react"
-import { useMapLoaded } from "../../shared/providers/MapContext"
-import { MAP_ID } from "../../constants"
-import type { TaskType } from "../../shared/types"
+import { useGoogleMapLoaded } from "../../../providers/GoogleMapContext"
+import { GOOGLE_MAP_ID } from "../../../../constants"
+import type { TaskType } from "../../../types"
 import { createRoot, type Root } from "react-dom/client"
-import starsWhiteIcon from "../../assets/icons/status/stars-white.svg"
+import starsWhiteIcon from "../../../../assets/icons/status/stars-white.svg"
 
 interface MarkerContentProps {
   count: number
@@ -23,7 +23,7 @@ const MarkerContent = ({ count, image }: MarkerContentProps) => {
   )
 }
 
-interface MapContainerProps {
+interface MainMapGoogleProps {
   selectedTask: TaskType | null
   handleSelectTask: (task: TaskType) => void
   tasksList: TaskType[]
@@ -33,13 +33,13 @@ const centerMap = { lat: 37.75296, lng: -122.467844 }
 
 const mapOptions: google.maps.MapOptions = {
   disableDefaultUI: true,
-  mapId: MAP_ID,
+  mapId: GOOGLE_MAP_ID,
   gestureHandling: "greedy",
 }
 
-const TasksMap = memo(({ selectedTask, handleSelectTask, tasksList }: MapContainerProps) => {
+const MainMapGoogle = memo(({ selectedTask, handleSelectTask, tasksList }: MainMapGoogleProps) => {
   const [map, setMap] = useState<google.maps.Map | null>(null)
-  const isLoaded = useMapLoaded()
+  const isLoaded = useGoogleMapLoaded()
   const markersRef = useRef<Map<string, google.maps.marker.AdvancedMarkerElement>>(new Map())
   const rootsRef = useRef<Map<string, Root>>(new Map())
 
@@ -105,4 +105,4 @@ const TasksMap = memo(({ selectedTask, handleSelectTask, tasksList }: MapContain
   )
 })
 
-export default TasksMap
+export default MainMapGoogle

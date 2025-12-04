@@ -1,7 +1,10 @@
-import MiniMapContainer from "../MiniMapContainer"
+import MiniMapGoogle from "../../../shared/components/maps/google/MiniMapGoogle"
 import CustomerBanner from "./CustomerBanner"
 import locationIcon from "../../../assets/icons/ui/location.svg"
 import { useTranslation } from "react-i18next"
+import { useSelector } from "react-redux"
+import type { RootState } from "../../../store"
+import MiniMap2Gis from "../../../shared/components/maps/2Gis/MiniMap2Gis"
 
 interface MapTaskFieldProps {
   value: string
@@ -12,6 +15,8 @@ interface MapTaskFieldProps {
 
 const MapTaskField = ({ value, onChange, mapCoordinates, setMapCoordinates }: MapTaskFieldProps) => {
   const { t } = useTranslation()
+  const language = useSelector((state: RootState) => state.language)
+  const isRussian = language === "ru"
 
   return (
     <CustomerBanner icon={locationIcon} title={t("tasksPage.location")} isValid={mapCoordinates !== null}>
@@ -25,7 +30,11 @@ const MapTaskField = ({ value, onChange, mapCoordinates, setMapCoordinates }: Ma
 
       <p className="customer-banner__paragraph">{t("tasksPage.orMarkMap")}</p>
 
-      <MiniMapContainer address={value} onCoordinatesChange={setMapCoordinates} />
+      {isRussian ? (
+        <MiniMap2Gis address={value} onCoordinatesChange={setMapCoordinates} />
+      ) : (
+        <MiniMapGoogle address={value} onCoordinatesChange={setMapCoordinates} />
+      )}
     </CustomerBanner>
   )
 }

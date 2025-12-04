@@ -9,6 +9,8 @@
   },
   "private": true,
   "dependencies": {
+    "@2gis/mapgl": "^1.67.0",
+    "@2gis/mapgl-clusterer": "^2.5.2",
     "@aws-sdk/client-s3": "^3.940.0",
     "@aws-sdk/lib-storage": "^3.940.0",
     "@casl/ability": "^6.7.3",
