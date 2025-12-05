@@ -4,6 +4,7 @@ import { ChatService } from "./chat.service"
 import { GetUser } from "../user/decorators/get-user.decorator"
 import { User } from "@share/entities/user.entity"
 import { AuthGuard } from "../auth/guards/auth.guard"
+import { AdminGuard } from "../auth/guards/admin.guard"
 import { ChatListDto } from "./dto/chat-list.dto"
 import { PaginationDto } from "../../common/dto/pagination.dto"
 import { SendMessageDto } from "./dto/send-message.dto"
@@ -67,7 +68,7 @@ export class ChatController {
   }
 
   @ApiSecurity("jwt-auth")
-  @UseGuards(AuthGuard)
+  @UseGuards(AuthGuard, AdminGuard)
   @Post(":id/join-as-admin")
   async joinAsAdmin(@Param("id") id: string, @GetUser() user: User) {
     return this.chatService.joinAsAdmin(user, id)

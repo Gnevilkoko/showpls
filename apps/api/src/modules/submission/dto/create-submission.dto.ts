@@ -7,7 +7,7 @@ export class CreateSubmissionDto {
   @IsNotEmpty()
   requestId: string
 
-  @ApiProperty({ example: ["https://example.com/proof1.jpg", "https://example.com/proof2.jpg"] })
+  @ApiProperty({ example: ["https://s3.ru1.storage.beget.cloud/c0ca6843f56c-public/61b0e63f-0dc0-4b97-8f54-05d2694eb8d9.jpg"] })
   @IsArray()
   @IsString({ each: true })
   @IsNotEmpty()

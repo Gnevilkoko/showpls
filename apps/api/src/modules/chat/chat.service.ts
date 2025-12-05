@@ -30,13 +30,16 @@ export class ChatService {
     private readonly chatGateway: ChatGateway,
   ) {}
 
-  async getOrCreateChat(user1Id: string, user2Id: string): Promise<Chat> {
+  async getOrCreateChat(user1Id: string, user2Id: string, manager?: DataSource): Promise<Chat> {
     // Ensure consistent ordering to avoid duplicate chats (e.g. user1 < user2)
     // But the requirement says "Finds an existing chat between two users OR creates a new one."
     // And the entity has user1 and user2.
     // Let's check both combinations.
 
-    let chat = await this.chatRepository.findOne({
+    const chatRepo = manager ? manager.getRepository(Chat) : this.chatRepository
+    const userRepo = manager ? manager.getRepository(User) : this.userRepository
+
+    let chat = await chatRepo.findOne({
       where: [
         { user1: { id: user1Id }, user2: { id: user2Id } },
         { user1: { id: user2Id }, user2: { id: user1Id } },
@@ -45,19 +48,19 @@ export class ChatService {
     })
 
     if (!chat) {
-      const user1 = await this.userRepository.findOneBy({ id: user1Id })
-      const user2 = await this.userRepository.findOneBy({ id: user2Id })
+      const user1 = await userRepo.findOneBy({ id: user1Id })
+      const user2 = await userRepo.findOneBy({ id: user2Id })
 
       if (!user1 || !user2) {
         throw new NotFoundException("User not found")
       }
 
-      chat = this.chatRepository.create({
+      chat = chatRepo.create({
         user1,
         user2,
         lastUpdate: new Date(),
       })
-      await this.chatRepository.save(chat)
+      await chatRepo.save(chat)
     }
 
     return chat
@@ -248,10 +251,13 @@ export class ChatService {
     }
   }
 
-  async sendMessage(user: User, chatId: string, dto: SendMessageDto) {
-    const chat = await this.chatRepository.findOne({
+  async sendMessage(user: User, chatId: string, dto: SendMessageDto, manager?: DataSource) {
+    const chatRepo = manager ? manager.getRepository(Chat) : this.chatRepository
+    const messageRepo = manager ? manager.getRepository(ChatMessage) : this.messageRepository
+
+    const chat = await chatRepo.findOne({
       where: { id: chatId },
-      relations: ["user1", "user2"],
+      relations: ["user1", "user2", "admin"],
     })
 
     if (!chat) {
@@ -264,40 +270,12 @@ export class ChatService {
 
     const receiver = chat.user1.id === user.id ? chat.user2 : chat.user1
 
-    // Use transaction to ensure data consistency
-    const completeMessage = await this.dataSource.transaction(async (manager) => {
-      const message = manager.create(ChatMessage, {
-        chat,
-        sender: user,
-        receiver,
-        text: dto.text,
-        attachments: dto.attachments,
-        type: dto.type,
-        variant: dto.variant,
-        isRead: false,
+    // Use transaction if no manager provided, otherwise use the provided manager
+    const completeMessage = manager ?
+      await this.sendMessageWithManager(user, chat, receiver, dto, chatRepo, messageRepo) :
+      await this.dataSource.transaction(async (txManager) => {
+        return this.sendMessageWithManager(user, chat, receiver, dto, txManager.getRepository(Chat), txManager.getRepository(ChatMessage))
       })
-
-      // Save the message
-      const savedMessage = await manager.save(message)
-
-      // Update chat with last message info and unread count
-      chat.lastMessage = dto.text || (dto.attachments?.length ? "Attachment" : "Message")
-      chat.lastUpdate = new Date()
-
-      if (receiver.id === chat.user1.id) {
-        chat.countUnread += 1
-      } else {
-        chat.countUnread2 += 1
-      }
-
-      await manager.save(chat)
-
-      // Fetch the complete message with relations (sender and receiver)
-      return await manager.findOne(ChatMessage, {
-        where: { id: savedMessage.id },
-        relations: ["sender", "receiver"],
-      })
-    })
 
     // Use the complete message with relations for notifications
     this.chatGateway.notifyReceiver(receiver.id, completeMessage, chat.id)
@@ -312,6 +290,47 @@ export class ChatService {
     })
 
     return completeMessage
+  }
+
+  private async sendMessageWithManager(
+    user: User,
+    chat: Chat,
+    receiver: User,
+    dto: SendMessageDto,
+    chatRepo: Repository<Chat>,
+    messageRepo: Repository<ChatMessage>
+  ) {
+    const message = messageRepo.create({
+      chat,
+      sender: user,
+      receiver,
+      text: dto.text,
+      attachments: dto.attachments,
+      type: dto.type,
+      variant: dto.variant,
+      isRead: false,
+    })
+
+    // Save the message
+    const savedMessage = await messageRepo.save(message)
+
+    // Update chat with last message info and unread count
+    chat.lastMessage = dto.text || (dto.attachments?.length ? "Attachment" : "Message")
+    chat.lastUpdate = new Date()
+
+    if (receiver.id === chat.user1.id) {
+      chat.countUnread += 1
+    } else {
+      chat.countUnread2 += 1
+    }
+
+    await chatRepo.save(chat)
+
+    // Fetch the complete message with relations (sender and receiver)
+    return await messageRepo.findOne({
+      where: { id: savedMessage.id },
+      relations: ["sender", "receiver"],
+    })
   }
 
   async toggleFavorite(user: User, chatId: string, isFavorite: boolean) {
@@ -434,7 +453,7 @@ export class ChatService {
       chat.admin = admin
       await manager.save(chat)
 
-      // Send system message to both users
+      // Send system message to both users (no specific variant in schema for admin join)
       const messageText = "Admin joined the chat"
       
       // Create message for user1
@@ -443,6 +462,7 @@ export class ChatService {
         sender: admin,
         receiver: chat.user1,
         type: "notification",
+        variant: null,
         text: messageText,
         isRead: false,
       })
@@ -458,6 +478,7 @@ export class ChatService {
         sender: admin,
         receiver: chat.user2,
         type: "notification",
+        variant: null,
         text: messageText,
         isRead: false,
       })
@@ -490,6 +511,16 @@ export class ChatService {
       lastMessage: chat.lastMessage,
       lastUpdate: chat.lastUpdate,
     })
+
+    // Notify both users that admin joined
+    const adminData = {
+      id: admin.id,
+      firstName: admin.firstName,
+      lastName: admin.lastName,
+      avatar: admin.avatar,
+    }
+    this.chatGateway.notifyAdminJoined(chat.user1.id, chat.id, adminData)
+    this.chatGateway.notifyAdminJoined(chat.user2.id, chat.id, adminData)
 
     return {
       chat: {
@@ -539,7 +570,7 @@ export class ChatService {
   /**
    * Notify user about order status changes via WebSocket
    */
-  notifyOrderStatusChanged(userId: string, orderId: string, status: string): void {
-    this.chatGateway.notifyOrderStatusChanged(userId, orderId, status)
+  notifyOrderStatusChanged(userId: string, orderId: string, status: string, chatId?: string, escrowStatus?: string | null): void {
+    this.chatGateway.notifyOrderStatusChanged(userId, orderId, status, chatId, escrowStatus)
   }
 }

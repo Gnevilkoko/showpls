@@ -320,7 +320,7 @@ export class RequestService {
       )
 
       // Notify performer only through notification service (queue)
-      await this.notificationService.send(performer.id, "newTask", {
+      await this.notificationService.send(String(performer.id), "newTask", {
         requestId: savedRequest.id,
         title: dto.title,
         price: dto.price,
@@ -884,11 +884,40 @@ export class RequestService {
       // 4.6 Notify performer if assigned
       const acceptedResponse = request.responses.find(r => r.status === ResponseStatus.Accepted)
       if (acceptedResponse && acceptedResponse.performer) {
-        // Notify performer only through notification service (queue)
-        await this.notificationService.send(acceptedResponse.performer.id, "taskCancelled", {
+        // Get or create chat
+        const chat = await this.chatService.getOrCreateChat(user.id, acceptedResponse.performer.id, manager as any)
+        
+        // Send chat message with taskCancelled variant
+        await this.chatService.sendMessage(user, chat.id, {
+          text: `Task cancelled: ${request.title}`,
+          type: "notification",
+          variant: "taskCancelled",
+        }, manager as any)
+
+        // Notify performer through notification service (queue)
+        await this.notificationService.send(String(acceptedResponse.performer.id), "taskCancelled", {
           requestId: id,
           title: request.title
         })
+
+        // Send WebSocket order:status_changed events to both parties
+        this.chatGateway.notifyOrderStatusChanged(
+          user.id,
+          id,
+          RequestStatus.Cancelled,
+          chat.id,
+          "rejected"
+        )
+        this.chatGateway.notifyOrderStatusChanged(
+          acceptedResponse.performer.id,
+          id,
+          RequestStatus.Cancelled,
+          chat.id,
+          "rejected"
+        )
+
+        // Update isActiveOrder = false in chat
+        await this.chatService.updateIsActiveOrder(chat.id, false)
       }
 
       // 4.7 Get the updated request with all relations
@@ -1086,16 +1115,35 @@ export class RequestService {
       // Update isActiveOrder = false in chat
       await this.chatService.updateIsActiveOrder(chat.id, false)
 
+      // Send chat message with taskCompleted variant
+      await this.chatService.sendMessage(user, chat.id, {
+        text: "Task completed, funds released",
+        type: "notification",
+        variant: "taskCompleted",
+      }, manager as any)
+
       // Notify performer: "Task completed, funds released"
-      await this.notificationService.send(performer.id, "taskCompleted", {
+      await this.notificationService.send(String(performer.id), "taskCompleted", {
         requestId: id,
         title: request.title,
         message: "Task completed, funds released",
       })
 
-      // Notify about order status change via WebSocket
-      this.chatGateway.notifyOrderStatusChanged(user.id, id, RequestStatus.Completed)
-      this.chatGateway.notifyOrderStatusChanged(performer.id, id, RequestStatus.Completed)
+      // Notify about order status change via WebSocket with complete info
+      this.chatGateway.notifyOrderStatusChanged(
+        user.id,
+        id,
+        RequestStatus.Completed,
+        chat.id,
+        "released"
+      )
+      this.chatGateway.notifyOrderStatusChanged(
+        performer.id,
+        id,
+        RequestStatus.Completed,
+        chat.id,
+        "released"
+      )
 
       // Return updated request
       const updatedRequest = await manager.findOne(Request, {

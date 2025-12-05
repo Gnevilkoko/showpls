@@ -96,6 +96,53 @@ export class ArbitrationController {
   }
 
   @ApiSecurity("jwt-auth")
+  @ApiOperation({ summary: "Get arbitration by ID" })
+  @ApiResponse({
+    status: 200,
+    description: "Arbitration details",
+    schema: {
+      type: "object",
+      properties: {
+        id: { type: "string", format: "uuid" },
+        request: {
+          type: "object",
+          properties: {
+            id: { type: "string", format: "uuid" },
+            title: { type: "string" },
+            description: { type: "string" },
+            price: { type: "number" },
+            status: { type: "string" },
+            customer: {
+              type: "object",
+              properties: {
+                id: { type: "string" },
+                firstName: { type: "string" },
+                lastName: { type: "string", nullable: true },
+                avatar: { type: "string", nullable: true },
+              },
+            },
+          },
+        },
+        chat: {
+          type: "object",
+          properties: {
+            id: { type: "string", format: "uuid" },
+            isArbitration: { type: "boolean" },
+          },
+        },
+        reason: { type: "string" },
+        status: { type: "string", enum: ["pending", "resolved"] },
+        createdAt: { type: "string", format: "date-time" },
+      },
+    },
+  })
+  @UseGuards(AuthGuard)
+  @Get(":id")
+  async findOne(@Param("id") id: string, @GetUser() user: User) {
+    return this.arbitrationService.findOne(id, user)
+  }
+
+  @ApiSecurity("jwt-auth")
   @ApiOperation({ summary: "Resolve arbitration (admin only)" })
   @ApiResponse({
     status: 200,

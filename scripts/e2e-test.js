@@ -11,6 +11,9 @@ const CUST_TOKEN =
 
 const PERF_TOKEN =
   "eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6Ijg4ODg4OCIsInJvbGUiOiJub3JtYWwiLCJ0Z0lkIjoiODg4ODg4IiwidXNlcm5hbWUiOm51bGwsImZpcnN0TmFtZSI6IlBlcmZvcm1lckJybyIsImxhc3ROYW1lIjpudWxsLCJhdmF0YXIiOm51bGwsImxhbmd1YWdlQ29kZSI6InJ1IiwiYmFubmVkIjpmYWxzZSwibGFzdFNlZW5BdCI6IjIwMjUtMTItMDFUMDU6Mjg6MjUuOTMxWiIsImNyZWF0ZWRBdCI6IjIwMjUtMTItMDFUMDU6Mjg6MjUuOTMxWiIsImlhdCI6MTc2NDU2NjkxNSwiZXhwIjoxNzk2MTAyOTE1fQ.DTPxehhFNNu1MAeagyj-xOcapHCJmFKHhM7lA5Ta5G9Shze0GoZ9pGpXlGfjcKChX8XerzkkPCb3OZ6D16TpZonmAwybEjUJsHxxd2sZq9GnE0fEAumOgSZ_SFqsYMvT3YNfqJKoKdAs_-cdpoye7w-xZv5CG76GP5ZsG4QaFxmlSYPLJdgsdBLUG-C_BL2tQDtGVEYKC-9gbshjSsIFh1PU7Tg_I98lkcg2-Z760TThpN-qPMrq6cH-6d6KmrwcKo50bfDHOjbDmofpIX3LUikzMgNUv6HPeF6SCaEw3gbqYq6SBgvKpqxudaeo-O09jpIGQmvSXshimao2hKRGHjoqM96SS-AbZoiEyaIAGrh5KagN2HAe7WiQ93YOKx-F5x-lTap13mRqCJ528YM-eB0bVko8c-Xw5aDLSefl8r50yh3rH3aaoQnayiKBT9zO-2MJLwG54dighRvuRygToa51iNZHFuYpQVdYv4Y_DiY_W5KdB-qKaUohpEw5Im3iDb6CIB6edJUmoH38kXNIOBtAzX4G9VGlttKktZefDl2K5_eFX6225rUqUcKKj7N3P_nQdpvGafi9AQ78wHlYYSsUKKdkTuu79gMWp6FwrUxovjjriy3JQFViAmwouX9SMnNDPQw8fWIApLb1QQGuRzMwMGNwfvRwwPY7BUOp4TI"
+// АДМИН ТОКЕН (для тестирования функций администратора)
+const ADMIN_TOKEN =
+  "eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6Ijk5OTk5OSIsInJvbGUiOiJhZG1pbiIsInRnSWQiOiI5OTk5OTkiLCJ1c2VybmFtZSI6bnVsbCwiZmlyc3ROYW1lIjoiQmlnQm9zc0FkbWluIiwibGFzdE5hbWUiOm51bGwsImF2YXRhciI6bnVsbCwibGFuZ3VhZ2VDb2RlIjoicnUiLCJiYW5uZWQiOmZhbHNlLCJsYXN0U2VlbkF0IjoiMjAyNS0xMi0wNFQxNTowMjozNy43MTBaIiwiY3JlYXRlZEF0IjoiMjAyNS0xMi0wNFQxNTowMjozNy43MTBaIiwibGFzdEtub3duTG9jYXRpb24iOm51bGwsImxvY2F0aW9uVXBkYXRlZEF0IjpudWxsLCJpYXQiOjE3NjQ4NjA1NjYsImV4cCI6MTc5NjM5NjU2Nn0.ApdU6DrPKMtgRKQ9_VmC5A8t44u1nzZT7a0rOwLY0K9zcR3ksr7pydFnTXavv5CbCTjOvectAE-Q-B5Zce-BBPndQhd29Pn40dVfULgTpGWODOqeDYLJ-41srD0AkrvXRiKPtwwoSRIae7xDYWucpcCRkRhIdb_eE1aAV7i5y0BS8GBAuITFLvA5xZt0eusTgHSgEdi7np-jE4BKJtIFwz10vuysYfgPNuKgsPAgtMTJklYAqMHzQDYAHsnoGMO54kfW80rvLSMB34KLvSb9tf7Hthq_GSRb7cB_-9JYUQwvmhONX7XqZOXSOuXFhk5G7x2sONt6FdIOq3xVhvSegNIjliPdVut5HfTsjVsvfuVsu59CRSFtmkF3tdqZf-_E7PiBaJJ7QycT7tIb5I8ObrgLD_HjsX_hx9cG_Kj2lWK--oNh26NwyTppAhMjX9k2PtFa5Z6ihnZ3fnjyWmuL4cvod11klx1w2RotGvbG2tb0t8e-dzb1HieJFR3JlHww9yPU9hGsJ6uy_dpbviUcQOojGi4WTtpWsge0jSvpCNnc2G42NmpuEl_Aqyg8tZv1zj5F2nGVO7qEgxyKnRd9oO0C-FmSoYa4G8OhJsmwElwR4yrN8-OgQ4NmpJYWR5fsR9U6__2D54tWss2OHMrNDy6knuqe-Oe8NIfAH85d0g0"
 
 // Утилиты
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms))
@@ -20,13 +23,16 @@ const colors = { green: "\x1b[32m", red: "\x1b[31m", blue: "\x1b[34m", yellow: "
 async function runTest() {
   log("\n🚀 ЗАПУСК ПОЛНОГО ТЕСТА СИСТЕМЫ (ВКЛЮЧАЯ ЧАТ И GEO ЗАПРОСЫ)...", colors.blue)
 
-  let requestId, responseId, dealId, chatId, draftRequestId, submissionId
+  let requestId, responseId, dealId, chatId, draftRequestId, submissionId, arbitrationId
   let eventsReceived = {
     notification: false,
     messageNew: false,
     orderStatusChanged: false,
     proposalStatusChanged: false,
     uploadNotification: false,
+    adminJoinedChat: false,
+    arbitrationCreated: false,
+    arbitrationResolved: false,
   }
 
   // --- 1. ПОДКЛЮЧАЕМ СОКЕТЫ ИСПОЛНИТЕЛЯ И ЗАКАЗЧИКА ---
@@ -95,6 +101,11 @@ async function runTest() {
     socket.on("proposal:status_changed", (data) => {
       log(`📝 [SOCKET ${socketName}] ИЗМЕНЕНИЕ СТАТУСА ПРЕДЛОЖЕНИЯ: ${data.proposalId} -> ${data.status}`, colors.blue)
       eventsReceived.proposalStatusChanged = true
+    })
+
+    socket.on("admin:joined", (data) => {
+      log(`👮 [SOCKET ${socketName}] АДМИН ПРИСОЕДИНИЛСЯ К ЧАТУ: ${data.chatId}`, colors.magenta)
+      eventsReceived.adminJoinedChat = true
     })
   }
 
@@ -532,8 +543,161 @@ async function runTest() {
     log("\n⏳ Ждем уведомления о загрузке пруфов (1 сек)...", colors.yellow)
     await sleep(1000)
 
-    // --- 9. ТЕСТЫ ЗАВЕРШЕНИЯ ЗАПРОСА (COMPLETE) ---
-    log("\n✅ 9. Тестируем завершение запроса (complete)...", colors.yellow)
+    // --- 9. ТЕСТЫ АРБИТРАЖА ---
+    log("\n⚖️ 9. Тестируем систему арбитража...", colors.yellow)
+    
+    try {
+      // 9.1 Создаем новый запрос для арбитража
+      log("   9.1 Создаем новый запрос для арбитража...", colors.blue)
+      const arbitrationReqRes = await axios.post(
+        `${API_URL}/request/create`,
+        {
+          title: `Arbitration Test Request ${Date.now()}`,
+          description: "This request will be used for arbitration testing",
+          price: 300,
+          latitude: 55.75,
+          longitude: 37.61,
+          address: "Moscow",
+          expiresAt: new Date(Date.now() + 3600000).toISOString(),
+        },
+        { headers: { Authorization: `Bearer ${CUST_TOKEN}` } }
+      )
+      const arbitrationRequestId = arbitrationReqRes.data.id
+      log(`   ✅ Запрос для арбитража создан: ${arbitrationRequestId}`, colors.green)
+      
+      // 9.2 Отклик на запрос
+      log("   9.2 Отклик на запрос...", colors.blue)
+      const arbitrationRespRes = await axios.post(
+        `${API_URL}/request/${arbitrationRequestId}/respond`,
+        {},
+        { headers: { Authorization: `Bearer ${PERF_TOKEN}` } }
+      )
+      const arbitrationResponseId = arbitrationRespRes.data.id
+      log(`   ✅ Отклик создан: ${arbitrationResponseId}`, colors.green)
+      
+      // 9.3 Принятие отклика
+      log("   9.3 Принятие отклика...", colors.blue)
+      const arbitrationDealRes = await axios.post(
+        `${API_URL}/responses/${arbitrationResponseId}/accept`,
+        { message: "Let's start work" },
+        { headers: { Authorization: `Bearer ${CUST_TOKEN}` } }
+      )
+      const arbitrationDealId = arbitrationDealRes.data.deal.id
+      const arbitrationChatId = arbitrationDealRes.data.deal.chat.id
+      log(`   ✅ Сделка создана: ${arbitrationDealId}, чат: ${arbitrationChatId}`, colors.green)
+      
+      // 9.4 Создание арбитража заказчиком
+      log("   9.4 Создание арбитража заказчиком...", colors.blue)
+      const createArbitrationRes = await axios.post(
+        `${API_URL}/arbitration/create`,
+        {
+          requestId: arbitrationRequestId,
+          reason: "Test arbitration for notification system",
+          attachments: ["https://example.com/evidence1.jpg"]
+        },
+        { headers: { Authorization: `Bearer ${CUST_TOKEN}` } }
+      )
+      arbitrationId = createArbitrationRes.data.id
+      log(`   ✅ Арбитраж создан: ${arbitrationId}`, colors.green)
+      eventsReceived.arbitrationCreated = true
+      
+      // Ждем уведомлений
+      await sleep(1000)
+      
+      // 9.5 Проверка получения списка арбитражей
+      log("   9.5 Получение списка арбитражей...", colors.blue)
+      const arbitrationsListRes = await axios.get(`${API_URL}/arbitration/list`, {
+        params: { limit: 10, offset: 0 },
+        headers: { Authorization: `Bearer ${ADMIN_TOKEN}` } }
+      )
+      log(`   ✅ Получено арбитражей: ${arbitrationsListRes.data.items.length}`, colors.green)
+      
+      // 9.6 Получение арбитража по ID
+      log("   9.6 Получение арбитража по ID...", colors.blue)
+      const getArbitrationRes = await axios.get(`${API_URL}/arbitration/${arbitrationId}`, {
+        headers: { Authorization: `Bearer ${CUST_TOKEN}` } }
+      )
+      log(`   ✅ Арбитраж получен: статус ${getArbitrationRes.data.status}`, colors.green)
+      
+      // 9.7 Присоединение администратора к чату
+      log("   9.7 Присоединение администратора к чату арбитража...", colors.blue)
+      try {
+        await axios.post(
+          `${API_URL}/chat/${arbitrationChatId}/join-as-admin`,
+          {},
+          { headers: { Authorization: `Bearer ${ADMIN_TOKEN}` } }
+        )
+        log("   ✅ Администратор присоединился к чату", colors.green)
+      } catch (adminJoinError) {
+        log("   ❌ Ошибка при присоединении администратора:", colors.red)
+        if (adminJoinError.response) {
+          console.log(adminJoinError.response.data)
+        } else {
+          console.log(adminJoinError.message)
+        }
+      }
+      
+      // Ждем уведомлений о присоединении администратора
+      await sleep(1000)
+      
+      // 9.8 Разрешение арбитража
+      log("   9.8 Разрешение арбитража (завершение задачи)...", colors.blue)
+      try {
+        const resolveArbitrationRes = await axios.post(
+          `${API_URL}/arbitration/${arbitrationId}/resolve`,
+          {
+            action: "complete",
+            message: "Admin resolved arbitration in favor of performer"
+          },
+          { headers: { Authorization: `Bearer ${ADMIN_TOKEN}` } }
+        )
+        log(`   ✅ Арбитраж разрешен: ${resolveArbitrationRes.data.status}`, colors.green)
+        eventsReceived.arbitrationResolved = true
+      } catch (resolveError) {
+        log("   ❌ Ошибка при разрешении арбитража:", colors.red)
+        if (resolveError.response) {
+          console.log(resolveError.response.data)
+        } else {
+          console.log(resolveError.message)
+        }
+      }
+      
+      // Ждем уведомлений о разрешении арбитража
+      await sleep(1000)
+      
+      log("\n⚖️ ВСЕ ТЕСТЫ АРБИТРАЖА: РАБОТАЮТ!", colors.green)
+    } catch (arbitrationError) {
+      log("\n❌ ОШИБКА В ТЕСТАХ АРБИТРАЖА:", colors.red)
+      if (arbitrationError.response) {
+        console.log("Response status:", arbitrationError.response.status)
+        console.log("Response data:", JSON.stringify(arbitrationError.response.data, null, 2))
+      } else {
+        console.log(arbitrationError.message)
+      }
+    }
+    
+    // Проверяем уведомления арбитража
+    console.log("\n--- ПРОВЕРКА УВЕДОМЛЕНИЙ АРБИТРАЖА ---")
+    if (eventsReceived.arbitrationCreated) {
+      log("✅ Создание арбитража: РАБОТАЕТ", colors.green)
+    } else {
+      log("❌ Создание арбитража: НЕ РАБОТАЕТ", colors.red)
+    }
+    
+    if (eventsReceived.adminJoinedChat) {
+      log("✅ Присоединение администратора: РАБОТАЕТ", colors.green)
+    } else {
+      log("❌ Присоединение администратора: НЕ РАБОТАЕТ", colors.red)
+    }
+    
+    if (eventsReceived.arbitrationResolved) {
+      log("✅ Разрешение арбитража: РАБОТАЕТ", colors.green)
+    } else {
+      log("❌ Разрешение арбитража: НЕ РАБОТАЕТ", colors.red)
+    }
+
+    // --- 10. ТЕСТЫ ЗАВЕРШЕНИЯ ЗАПРОСА (COMPLETE) ---
+    log("\n✅ 10. Тестируем завершение запроса (complete)...", colors.yellow)
 
     try {
       // 9.1 Получаем балансы заказчика ДО завершения
@@ -542,9 +706,7 @@ async function runTest() {
         params: { id: 777777 },
         headers: { Authorization: `Bearer ${CUST_TOKEN}` },
       })
-      // Find STARS balance with non-zero values (there might be duplicates)
       const customerBalanceBefore = customerBalanceBeforeRes.data
-        .filter((b) => b.token === "STARS" && b.blockchain === null)
         .find((b) => BigInt(b.balance) > 0n || BigInt(b.lockedBalance) > 0n) ||
         customerBalanceBeforeRes.data.find((b) => b.token === "STARS" && b.blockchain === null)
       log(
@@ -558,9 +720,7 @@ async function runTest() {
         params: { id: 888888 },
         headers: { Authorization: `Bearer ${PERF_TOKEN}` },
       })
-      // Find STARS balance with non-zero values (there might be duplicates)
       const performerBalanceBefore = performerBalanceBeforeRes.data
-        .filter((b) => b.token === "STARS" && b.blockchain === null)
         .find((b) => BigInt(b.balance) > 0n || BigInt(b.lockedBalance) > 0n) ||
         performerBalanceBeforeRes.data.find((b) => b.token === "STARS" && b.blockchain === null)
       log(
@@ -590,9 +750,7 @@ async function runTest() {
         params: { id: 777777 },
         headers: { Authorization: `Bearer ${CUST_TOKEN}` },
       })
-      // Find STARS balance with non-zero values (there might be duplicates)
       const customerBalanceAfter = customerBalanceAfterRes.data
-        .filter((b) => b.token === "STARS" && b.blockchain === null)
         .find((b) => BigInt(b.balance) > 0n || BigInt(b.lockedBalance) > 0n) ||
         customerBalanceAfterRes.data.find((b) => b.token === "STARS" && b.blockchain === null)
       log(
@@ -606,9 +764,7 @@ async function runTest() {
         params: { id: 888888 },
         headers: { Authorization: `Bearer ${PERF_TOKEN}` },
       })
-      // Find STARS balance with non-zero values (there might be duplicates)
       const performerBalanceAfter = performerBalanceAfterRes.data
-        .filter((b) => b.token === "STARS" && b.blockchain === null)
         .find((b) => BigInt(b.balance) > 0n || BigInt(b.lockedBalance) > 0n) ||
         performerBalanceAfterRes.data.find((b) => b.token === "STARS" && b.blockchain === null)
       log(

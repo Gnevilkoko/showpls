@@ -27,9 +27,9 @@ export class SubmissionController {
   @UseGuards(AuthGuard)
   @Get(":id")
   @ApiOperation({ summary: "Get submission details" })
-  async findOne(@Param("id") id: string) {
+  async findOne(@GetUser() user: User, @Param("id") id: string) {
     try {
-      return await this.submissionService.findOne(id)
+      return await this.submissionService.findOne(id, user)
     } catch (error) {
       throw error // Let the global exception filter handle it
     }
@@ -39,9 +39,9 @@ export class SubmissionController {
   @UseGuards(AuthGuard)
   @Get("request/:requestId")
   @ApiOperation({ summary: "Get latest submission for a request" })
-  async findByRequest(@Param("requestId") requestId: string) {
+  async findByRequest(@GetUser() user: User, @Param("requestId") requestId: string) {
     try {
-      return await this.submissionService.findByRequest(requestId)
+      return await this.submissionService.findByRequest(requestId, user)
     } catch (error) {
       throw error // Let the global exception filter handle it
     }

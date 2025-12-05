@@ -1,4 +1,4 @@
-import { BadRequestException, Injectable, Logger, NotFoundException } from "@nestjs/common"
+import { BadRequestException, ForbiddenException, Injectable, Logger, NotFoundException } from "@nestjs/common"
 import { InjectRepository } from "@nestjs/typeorm"
 import { DataSource, Repository } from "typeorm"
 import { Deal, FileAttachment, Request, Submission, SubmissionStatus, User } from "@share/entities"
@@ -9,6 +9,7 @@ import { NotificationService } from "../notification/notification.service"
 import { ChatService } from "../chat/chat.service"
 import { createHash } from "crypto"
 import axios from "axios"
+import { URL } from "url"
 
 @Injectable()
 export class SubmissionService {
@@ -35,20 +36,149 @@ export class SubmissionService {
     }
   }
 
+  /**
+   * Validates URL to prevent SSRF attacks
+   * @param urlString URL to validate
+   * @throws BadRequestException if URL is unsafe
+   */
+  private validateUrlSafety(urlString: string): void {
+    try {
+      const url = new URL(urlString)
+
+      // Only allow HTTP and HTTPS protocols
+      if (!["http:", "https:"].includes(url.protocol)) {
+        throw new BadRequestException("Only HTTP and HTTPS protocols are allowed")
+      }
+
+      // Block localhost and loopback addresses
+      const hostname = url.hostname.toLowerCase()
+      const blockedHostnames = [
+        "localhost",
+        "127.0.0.1",
+        "0.0.0.0",
+        "::1",
+        "0:0:0:0:0:0:0:1",
+      ]
+
+      if (blockedHostnames.includes(hostname)) {
+        throw new BadRequestException("Access to localhost is not allowed")
+      }
+
+      // Block private IP ranges
+      const ipv4Regex = /^(\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})$/
+      const ipv4Match = hostname.match(ipv4Regex)
+
+      if (ipv4Match) {
+        const [, octet1, octet2, octet3, octet4] = ipv4Match.map(Number)
+
+        // Validate octets are in range
+        if ([octet1, octet2, octet3, octet4].some(o => o > 255)) {
+          throw new BadRequestException("Invalid IP address")
+        }
+
+        // Block private IPv4 ranges
+        // 10.0.0.0/8
+        if (octet1 === 10) {
+          throw new BadRequestException("Access to private network is not allowed")
+        }
+        // 172.16.0.0/12
+        if (octet1 === 172 && octet2 >= 16 && octet2 <= 31) {
+          throw new BadRequestException("Access to private network is not allowed")
+        }
+        // 192.168.0.0/16
+        if (octet1 === 192 && octet2 === 168) {
+          throw new BadRequestException("Access to private network is not allowed")
+        }
+        // 169.254.0.0/16 (link-local)
+        if (octet1 === 169 && octet2 === 254) {
+          throw new BadRequestException("Access to link-local addresses is not allowed")
+        }
+        // 127.0.0.0/8 (loopback)
+        if (octet1 === 127) {
+          throw new BadRequestException("Access to loopback addresses is not allowed")
+        }
+      }
+
+      // Block IPv6 private addresses
+      if (hostname.includes(":")) {
+        const blockedIPv6Prefixes = [
+          "fe80:", // link-local
+          "fc00:", // unique local
+          "fd00:", // unique local
+          "::1",   // loopback
+          "::ffff:127", // IPv4 mapped loopback
+          "::ffff:10",  // IPv4 mapped private
+          "::ffff:172.16", // IPv4 mapped private
+          "::ffff:192.168", // IPv4 mapped private
+        ]
+
+        for (const prefix of blockedIPv6Prefixes) {
+          if (hostname.startsWith(prefix)) {
+            throw new BadRequestException("Access to private network is not allowed")
+          }
+        }
+      }
+
+      // Block metadata services (AWS, GCP, Azure, etc.)
+      const blockedMetadataServices = [
+        "169.254.169.254", // AWS, Azure, GCP metadata
+        "metadata.google.internal",
+        "metadata",
+      ]
+
+      if (blockedMetadataServices.includes(hostname)) {
+        throw new BadRequestException("Access to metadata services is not allowed")
+      }
+
+    } catch (error) {
+      if (error instanceof BadRequestException) {
+        throw error
+      }
+      throw new BadRequestException("Invalid URL format")
+    }
+  }
+
   private async validateAttachments(attachments: string[]): Promise<{ url: string; hash: string }[]> {
     const results: { url: string; hash: string }[] = []
+    const MAX_FILE_SIZE = 50 * 1024 * 1024 // 50 MB
 
     for (const url of attachments) {
       try {
-        // Download file
-        const response = await axios.get(url, { responseType: "arraybuffer" })
+        // Validate URL safety (SSRF protection)
+        this.validateUrlSafety(url)
+
+        // Download file with timeout and size limit
+        const response = await axios.get(url, {
+          responseType: "arraybuffer",
+          timeout: 30000, // 30 seconds timeout
+          maxContentLength: MAX_FILE_SIZE,
+          maxBodyLength: MAX_FILE_SIZE,
+          validateStatus: (status) => status === 200, // Only accept 200 OK
+        })
+
+        // Validate Content-Type (should be image)
+        const contentType = response.headers["content-type"]
+        if (!contentType || !contentType.startsWith("image/")) {
+          this.logger.warn(`Non-image content type detected: ${contentType} for URL: ${url}`)
+          // Continue anyway, but log for monitoring
+        }
+
         const buffer = Buffer.from(response.data)
+
+        // Additional size check
+        if (buffer.length > MAX_FILE_SIZE) {
+          throw new BadRequestException(`File size exceeds maximum allowed size (50 MB)`)
+        }
 
         // Calculate SHA256 hash
         const hash = createHash("sha256").update(buffer).digest("hex")
 
         results.push({ url, hash })
       } catch (error) {
+        if (error instanceof BadRequestException) {
+          throw error
+        }
+        this.logger.error(`Failed to process attachment: ${url}`, error)
         throw new BadRequestException(`Failed to process attachment: ${url}`)
       }
     }
@@ -177,7 +307,7 @@ export class SubmissionService {
       }
 
       // Send Notification to Customer
-      await this.notificationService.send(request.customer.id, "notification", {
+      await this.notificationService.send(String(request.customer.id), "notification", {
         type: "notification",
         variant: "upload",
         requestId: request.id,
@@ -192,28 +322,97 @@ export class SubmissionService {
     })
   }
 
-  async findOne(id: string): Promise<Submission> {
+  /**
+   * Check if user has access to view submission
+   * User can view submission if they are:
+   * - The performer who created it
+   * - The customer of the request
+   * @param user Current user
+   * @param submission Submission to check access for
+   * @throws ForbiddenException if user doesn't have access
+   */
+  private async checkSubmissionAccess(user: User, submission: Submission): Promise<void> {
+    // Load request with customer if not already loaded
+    if (!submission.request.customer) {
+      const request = await this.requestRepository.findOne({
+        where: { id: submission.request.id },
+        relations: ["customer"],
+      })
+
+      if (!request) {
+        throw new NotFoundException("Request not found")
+      }
+
+      submission.request = request
+    }
+
+    // Check if user is the performer
+    const isPerformer = submission.performer.id === user.id
+
+    // Check if user is the customer
+    const isCustomer = submission.request.customer.id === user.id
+
+    if (!isPerformer && !isCustomer) {
+      throw new ForbiddenException("You don't have access to view this submission")
+    }
+  }
+
+  async findOne(id: string, user: User): Promise<Submission> {
     this.validateUUID(id, "submission id")
 
     const submission = await this.submissionRepository.findOne({
       where: { id },
-      relations: ["request", "performer", "attachments"],
+      relations: ["request", "request.customer", "performer", "attachments"],
     })
 
     if (!submission) {
       throw new NotFoundException("Submission not found")
     }
 
+    // Check access rights
+    await this.checkSubmissionAccess(user, submission)
+
     return submission
   }
 
-  async findByRequest(requestId: string): Promise<Submission | null> {
+  async findByRequest(requestId: string, user: User): Promise<Submission | null> {
     this.validateUUID(requestId, "requestId")
 
-    return this.submissionRepository.findOne({
+    // First, check if user has access to the request
+    const request = await this.requestRepository.findOne({
+      where: { id: requestId },
+      relations: ["customer"],
+    })
+
+    if (!request) {
+      throw new NotFoundException("Request not found")
+    }
+
+    // Check if user is customer
+    const isCustomer = request.customer.id === user.id
+
+    // Check if user is performer in any deal for this request
+    let isPerformer = false
+    if (!isCustomer) {
+      const deal = await this.dealRepository.findOne({
+        where: {
+          request: { id: requestId },
+          performer: { id: user.id },
+        },
+      })
+      isPerformer = !!deal
+    }
+
+    if (!isCustomer && !isPerformer) {
+      throw new ForbiddenException("You don't have access to view submissions for this request")
+    }
+
+    const submission = await this.submissionRepository.findOne({
       where: { request: { id: requestId } },
-      relations: ["request", "performer", "attachments"],
+      relations: ["request", "request.customer", "performer", "attachments"],
       order: { serverTs: "DESC" },
     })
+
+    return submission
   }
 }

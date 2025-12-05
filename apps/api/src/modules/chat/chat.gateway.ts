@@ -148,14 +148,16 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
   /**
    * Notify users about order status changes
    */
-  notifyOrderStatusChanged(userId: string, orderId: string, status: string) {
+  notifyOrderStatusChanged(userId: string, orderId: string, status: string, chatId?: string, escrowStatus?: string | null) {
     const sockets = this.userSockets.get(userId)
     if (sockets) {
       sockets.forEach((socketId) => {
         this.server.to(socketId).emit("order:status_changed", {
           type: "order:status_changed",
           orderId,
+          chatId,
           status,
+          escrowStatus: escrowStatus || undefined,
           timestamp: new Date().toISOString(),
         })
       })
@@ -173,6 +175,23 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
           type: "proposal:status_changed",
           proposalId,
           status,
+          timestamp: new Date().toISOString(),
+        })
+      })
+    }
+  }
+
+  /**
+   * Notify users that admin joined the chat
+   */
+  notifyAdminJoined(userId: string, chatId: string, adminData: any) {
+    const sockets = this.userSockets.get(userId)
+    if (sockets) {
+      sockets.forEach((socketId) => {
+        this.server.to(socketId).emit("admin:joined", {
+          type: "admin:joined",
+          chatId,
+          admin: adminData,
           timestamp: new Date().toISOString(),
         })
       })

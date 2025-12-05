@@ -72,11 +72,17 @@ export class ArbitrationService {
     // 6. Transaction to create arbitration and update related entities
     return this.dataSource.transaction(async (manager) => {
       // Get or create chat between customer and performer
-      const chat = await this.chatService.getOrCreateChat(request.customer.id, otherUserId)
+      const chat = await this.chatService.getOrCreateChat(request.customer.id, otherUserId, manager as any)
 
       // Update chat to mark as arbitration
       chat.isArbitration = true
       await manager.save(Chat, chat)
+
+      // Get the active deal for escrow status
+      const activeDeal = request.deals?.find(
+        deal => deal.status === DealStatus.Accepted || deal.status === DealStatus.InProgress
+      )
+      const escrowStatus = activeDeal?.escrowStatus || "locked"
 
       // Update request status to arbitration
       request.status = RequestStatus.Arbitration
@@ -93,22 +99,51 @@ export class ArbitrationService {
       })
       const savedArbitration = await manager.save(Arbitration, arbitration)
 
-      // Send message to chat with arbitration details
+      // Send system message to chat (no specific variant in schema for arbitration creation)
       await this.chatService.sendMessage(user, chat.id, {
         text: `Arbitration initiated: ${dto.reason}`,
         type: "notification",
-        variant: "arbitration",
+        variant: null,
         attachments: dto.attachments,
-      })
+      }, manager as any)
 
-      // Notify admin through queue
-      await this.notificationService.send("admin", "arbitrationCreated", {
-        arbitrationId: savedArbitration.id,
-        requestId: request.id,
-        reason: dto.reason,
-        initiatorId: user.id,
-        chatId: chat.id,
+      // Find admin user to notify
+      const adminUser = await this.dataSource.getRepository(User).findOne({
+        where: { role: Role.Admin }
       })
+      
+      if (adminUser) {
+        this.logger.log(`Found admin user with ID: ${adminUser.id}`)
+        // Notify admin through queue - ensure we pass the numeric ID as string
+        await this.notificationService.send(String(adminUser.id), "arbitrationCreated", {
+          arbitrationId: savedArbitration.id,
+          requestId: request.id,
+          reason: dto.reason,
+          initiatorId: user.id.toString(),
+          chatId: chat.id,
+        })
+      } else {
+        this.logger.warn('No admin user found to notify about arbitration')
+      }
+
+      // Send WebSocket order:status_changed event to both parties
+      this.chatService.notifyOrderStatusChanged(
+        request.customer.id,
+        request.id,
+        RequestStatus.Arbitration,
+        chat.id,
+        escrowStatus
+      )
+      
+      if (acceptedResponse) {
+        this.chatService.notifyOrderStatusChanged(
+          acceptedResponse.performer.id,
+          request.id,
+          RequestStatus.Arbitration,
+          chat.id,
+          escrowStatus
+        )
+      }
 
       return {
         id: savedArbitration.id,
@@ -188,6 +223,78 @@ export class ArbitrationService {
     }
   }
 
+  async findOne(arbitrationId: string, user: User): Promise<any> {
+    // 1. Get arbitration with all relations
+    const arbitration = await this.arbitrationRepository.findOne({
+      where: { id: arbitrationId },
+      relations: [
+        "request",
+        "request.customer",
+        "request.responses",
+        "request.responses.performer",
+        "chat",
+        "chat.user1",
+        "chat.user2",
+        "initiator",
+        "resolvedBy",
+      ],
+    })
+
+    if (!arbitration) {
+      throw new NotFoundException("Arbitration not found")
+    }
+
+    // 2. Check access rights - user must be participant (customer, performer) or admin
+    const isCustomer = arbitration.request.customer.id === user.id
+    const acceptedResponse = arbitration.request.responses?.find(r => r.status === "accepted")
+    const isPerformer = acceptedResponse && acceptedResponse.performer.id === user.id
+    const isAdmin = user.role === Role.Admin
+
+    if (!isCustomer && !isPerformer && !isAdmin) {
+      throw new ForbiddenException("Access denied to this arbitration")
+    }
+
+    // 3. Format response
+    return {
+      id: arbitration.id,
+      request: {
+        id: arbitration.request.id,
+        title: arbitration.request.title,
+        description: arbitration.request.description,
+        price: arbitration.request.price,
+        status: arbitration.request.status,
+        customer: {
+          id: arbitration.request.customer.id,
+          firstName: arbitration.request.customer.firstName,
+          lastName: arbitration.request.customer.lastName,
+          avatar: arbitration.request.customer.avatar,
+        },
+      },
+      chat: {
+        id: arbitration.chat.id,
+        isArbitration: arbitration.chat.isArbitration,
+      },
+      reason: arbitration.reason,
+      attachments: arbitration.attachments,
+      status: arbitration.status,
+      resolution: arbitration.resolution,
+      adminMessage: arbitration.adminMessage,
+      initiator: {
+        id: arbitration.initiator.id,
+        firstName: arbitration.initiator.firstName,
+        lastName: arbitration.initiator.lastName,
+        avatar: arbitration.initiator.avatar,
+      },
+      resolvedBy: arbitration.resolvedBy ? {
+        id: arbitration.resolvedBy.id,
+        firstName: arbitration.resolvedBy.firstName,
+        lastName: arbitration.resolvedBy.lastName,
+      } : null,
+      createdAt: arbitration.createdAt.toISOString(),
+      resolvedAt: arbitration.resolvedAt?.toISOString() || null,
+    }
+  }
+
   async resolve(admin: User, arbitrationId: string, dto: ResolveArbitrationDto): Promise<any> {
     // 1. Check admin rights
     if (admin.role !== Role.Admin) {
@@ -230,6 +337,7 @@ export class ArbitrationService {
     // 4. Transaction to handle resolution
     return this.dataSource.transaction(async (manager) => {
       let messageText = ""
+      let messageVariant: "permissionToCancel" | "taskCompleted" | "taskCancelled" | null = null
 
       if (dto.action === "approve_cancel") {
         // Approve cancellation - update deal
@@ -237,16 +345,30 @@ export class ArbitrationService {
         await manager.save(Deal, activeDeal)
 
         messageText = dto.message || "Admin approved cancellation. Customer can now cancel the task."
+        messageVariant = "permissionToCancel"
 
         // Notify customer they can cancel
-        await this.notificationService.send(request.customer.id, "permissionToCancel", {
+        await this.notificationService.send(String(request.customer.id), "permissionToCancel", {
           requestId: request.id,
           arbitrationId: arbitration.id,
           message: messageText,
         })
 
-        // Send WebSocket order status change event to customer
-        this.chatService.notifyOrderStatusChanged(request.customer.id, request.id, RequestStatus.Arbitration)
+        // Send WebSocket order status change event to both parties with complete info
+        this.chatService.notifyOrderStatusChanged(
+          request.customer.id,
+          request.id,
+          RequestStatus.Arbitration,
+          arbitration.chat.id,
+          activeDeal.escrowStatus
+        )
+        this.chatService.notifyOrderStatusChanged(
+          activeDeal.performer.id,
+          request.id,
+          RequestStatus.Arbitration,
+          arbitration.chat.id,
+          activeDeal.escrowStatus
+        )
 
       } else if (dto.action === "complete") {
         // Complete task - release funds to performer
@@ -277,17 +399,54 @@ export class ArbitrationService {
           performerAccount = manager.create(Account, accountInsertResult.raw[0] as object)
         }
 
-        // Get the hold transaction
+        // Get the hold transaction with entries
         const holdTransaction = await manager.findOne(Transaction, {
           where: {
             type: TransactionType.EscrowHold,
             externalType: 'request',
             externalId: request.id,
           },
+          relations: ['entries'],
         })
 
         if (!holdTransaction) {
           throw new BadRequestException("Escrow hold transaction not found")
+        }
+
+        if (!holdTransaction.entries || holdTransaction.entries.length === 0) {
+          throw new BadRequestException("Hold transaction has no entries")
+        }
+
+        // Get the currency from the hold transaction
+        const currencyId = holdTransaction.entries[0].currencyId
+        if (!currencyId) {
+          throw new BadRequestException("Currency not found in hold transaction")
+        }
+
+        // Ensure balance exists for performer
+        const Balance = manager.getRepository('Balance')
+        let performerBalance = await Balance.findOne({
+          where: {
+            accountId: performerAccount.id,
+            currencyId: currencyId,
+          },
+        })
+
+        if (!performerBalance) {
+          // Create balance for performer
+          await manager
+            .createQueryBuilder()
+            .insert()
+            .into('balance')
+            .values({
+              accountId: performerAccount.id,
+              currencyId: currencyId,
+              amount: '0',
+              lockedAmount: '0',
+              updatedAt: new Date(),
+              createdAt: new Date(),
+            })
+            .execute()
         }
 
         // Update the hold transaction metadata to set the correct recipient
@@ -321,51 +480,77 @@ export class ArbitrationService {
         await manager.save(Deal, activeDeal)
 
         messageText = dto.message || "Admin completed the task. Funds released to performer."
+        messageVariant = "taskCompleted"
 
         // Notify both parties
-        await this.notificationService.send(request.customer.id, "arbitrationResolved", {
+        await this.notificationService.send(String(request.customer.id), "arbitrationResolved", {
           requestId: request.id,
           resolution: "complete",
           message: messageText,
         })
 
-        await this.notificationService.send(performer.id, "taskCompleted", {
+        await this.notificationService.send(String(performer.id), "taskCompleted", {
           requestId: request.id,
           message: "Task completed by admin. Funds released.",
         })
 
-        // Send WebSocket order status change event
-        this.chatService.notifyOrderStatusChanged(request.customer.id, request.id, RequestStatus.Completed)
-        this.chatService.notifyOrderStatusChanged(performer.id, request.id, RequestStatus.Completed)
+        // Send WebSocket order status change event with complete info
+        this.chatService.notifyOrderStatusChanged(
+          request.customer.id,
+          request.id,
+          RequestStatus.Completed,
+          arbitration.chat.id,
+          "released"
+        )
+        this.chatService.notifyOrderStatusChanged(
+          performer.id,
+          request.id,
+          RequestStatus.Completed,
+          arbitration.chat.id,
+          "released"
+        )
 
       } else if (dto.action === "reject") {
         // Reject arbitration - task stays in current status
         messageText = dto.message || "Admin rejected the arbitration. Task continues in current status."
+        messageVariant = null
 
         // Notify both parties
-        await this.notificationService.send(request.customer.id, "arbitrationResolved", {
+        await this.notificationService.send(String(request.customer.id), "arbitrationResolved", {
           requestId: request.id,
           resolution: "reject",
           message: messageText,
         })
 
-        await this.notificationService.send(activeDeal.performer.id, "arbitrationResolved", {
+        await this.notificationService.send(String(activeDeal.performer.id), "arbitrationResolved", {
           requestId: request.id,
           resolution: "reject",
           message: messageText,
         })
 
-        // Send WebSocket order status change event to both parties
-        this.chatService.notifyOrderStatusChanged(request.customer.id, request.id, request.status)
-        this.chatService.notifyOrderStatusChanged(activeDeal.performer.id, request.id, request.status)
+        // Send WebSocket order status change event to both parties with complete info
+        this.chatService.notifyOrderStatusChanged(
+          request.customer.id,
+          request.id,
+          request.status,
+          arbitration.chat.id,
+          activeDeal.escrowStatus
+        )
+        this.chatService.notifyOrderStatusChanged(
+          activeDeal.performer.id,
+          request.id,
+          request.status,
+          arbitration.chat.id,
+          activeDeal.escrowStatus
+        )
       }
 
-      // Send message to chat with admin's decision
+      // Send message to chat with admin's decision using the appropriate variant
       await this.chatService.sendMessage(admin, arbitration.chat.id, {
         text: messageText,
         type: "notification",
-        variant: "adminDecision",
-      })
+        variant: messageVariant,
+      }, manager as any)
 
       // Update arbitration status
       arbitration.status = "resolved"

@@ -22,9 +22,12 @@ export class ChatMessage {
   @Column("enum", { enum: ["message", "notification"], default: "message" })
   type: "message" | "notification"
 
-  @ApiProperty({ type: "string", nullable: true })
+  @ApiProperty({
+    enum: ["upload", "newTask", "permissionToCancel", "taskCompleted", "taskCancelled"],
+    nullable: true
+  })
   @Column("varchar", { nullable: true })
-  variant: string | null
+  variant: "upload" | "newTask" | "permissionToCancel" | "taskCompleted" | "taskCancelled" | null
 
   @ApiProperty({ type: "string", nullable: true })
   @Column("text", { nullable: true })

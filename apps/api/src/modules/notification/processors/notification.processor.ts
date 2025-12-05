@@ -41,6 +41,7 @@ export class NotificationProcessor extends BaseProcessor {
       if (isConnected) {
         this.logger.log(`User ${userId} is online. Sending WebSocket event.`)
         this.chatGateway.sendNotification(userId, {
+          type: eventType,
           ...payload,
         })
         websocketSent = true

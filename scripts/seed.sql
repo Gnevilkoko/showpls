@@ -1,7 +1,11 @@
 -- 1. Валюта STARS
-INSERT INTO "currency" (code, name, scale, blockchain)
-VALUES ('STARS', 'Telegram Stars', 6, NULL)
-ON CONFLICT (code, blockchain) DO NOTHING;
+DO $$
+BEGIN
+    IF NOT EXISTS (SELECT 1 FROM "currency" WHERE code = 'STARS' AND blockchain IS NULL) THEN
+        INSERT INTO "currency" (code, name, scale, blockchain, "createdAt")
+        VALUES ('STARS', 'Telegram Stars', 6, NULL, NOW());
+    END IF;
+END $$;
 
 -- 2. Заказчик (777777)
 INSERT INTO "user" (id, "firstName", "tgId", role, "languageCode", banned, "lastSeenAt", "createdAt", "lastKnownLocation", "locationUpdatedAt")

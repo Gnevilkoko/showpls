@@ -217,7 +217,7 @@ export class ResponseService {
       }
 
       // 12. Send notification via queue
-      await this.notificationService.send(response.performer.id, "response_accepted", {
+      await this.notificationService.send(String(response.performer.id), "response_accepted", {
         dealId: savedDeal.id,
         requestId: savedDeal.request.id,
         text: `Your response to request "${response.request.title || "Request"}" has been accepted!`,
