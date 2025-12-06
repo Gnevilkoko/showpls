@@ -166,7 +166,7 @@ export const chatData: DataMessages[] = [
   },
   {
     chat_id: 3,
-    messages: messagesReciever,
+    messages: messagesSender,
     has_more: true,
   },
   {
@@ -202,6 +202,21 @@ export const chatData: DataMessages[] = [
   {
     chat_id: 10,
     messages: messagesSender,
+    has_more: true,
+  },
+  {
+    chat_id: 22,
+    messages: messagesSender,
+    has_more: true,
+  },
+  {
+    chat_id: 23,
+    messages: messagesSender,
+    has_more: true,
+  },
+  {
+    chat_id: 24,
+    messages: messagesReciever,
     has_more: true,
   },
 ]

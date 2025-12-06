@@ -1,8 +1,11 @@
 import type { TaskType } from "../types"
 import { useCallback, useState } from "react"
-import ChatMap from "../../pages/Chats/components/ChatMap"
+import ChatMapGoogle from "./maps/google/ChatMapGoogle"
 import ImageViewer from "./ImageViewer"
 import TaskTags from "./TaskTags"
+import { useSelector } from "react-redux"
+import type { RootState } from "../../store"
+import ChatMap2Gis from "./maps/2Gis/ChatMap2Gis"
 
 interface TaskInfoProps {
   selectedOrder: TaskType
@@ -10,6 +13,8 @@ interface TaskInfoProps {
 
 const TaskInfo = ({ selectedOrder }: TaskInfoProps) => {
   const [selectedImageIndex, setSelectedImageIndex] = useState<number | null>(null)
+  const language = useSelector((state: RootState) => state.language)
+  const isRussian = language === "ru"
 
   const handleImageClick = useCallback(
     (imageSrc: string) => {
@@ -44,7 +49,11 @@ const TaskInfo = ({ selectedOrder }: TaskInfoProps) => {
         </div>
       )}
 
-      {selectedOrder.position && <ChatMap coordinates={selectedOrder.position} />}
+      {selectedOrder.position && isRussian ? (
+        <ChatMap2Gis coordinates={selectedOrder.position} />
+      ) : (
+        <ChatMapGoogle coordinates={selectedOrder.position} />
+      )}
 
       {selectedImageIndex !== null && selectedOrder.attachments && (
         <ImageViewer

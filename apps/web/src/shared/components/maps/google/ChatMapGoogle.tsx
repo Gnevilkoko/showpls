@@ -1,21 +1,21 @@
 import { GoogleMap } from "@react-google-maps/api"
 import { memo, useCallback, useEffect, useRef, useState } from "react"
-import pinIcon from "../../../assets/icons/ui/pin.svg"
-import { useMapLoaded } from "../../../shared/providers/MapContext"
-import { MAP_ID } from "../../../constants"
+import pinIcon from "../../../../assets/icons/ui/pin.svg"
+import { useGoogleMapLoaded } from "../../../providers/GoogleMapContext"
+import { GOOGLE_MAP_ID } from "../../../../constants"
 
 const mapOptions: google.maps.MapOptions = {
   disableDefaultUI: true,
-  mapId: MAP_ID,
+  mapId: GOOGLE_MAP_ID,
   gestureHandling: "greedy",
 }
 
-interface ChatMapProps {
+interface ChatMapGoogleProps {
   coordinates: { lat: number; lng: number }
 }
 
-const ChatMap = memo(({ coordinates }: ChatMapProps) => {
-  const isLoaded = useMapLoaded()
+const ChatMapGoogle = memo(({ coordinates }: ChatMapGoogleProps) => {
+  const isLoaded = useGoogleMapLoaded()
   const [map, setMap] = useState<google.maps.Map | null>(null)
   const [mapIsFocused, setMapIsFocused] = useState(false)
   const markerRef = useRef<google.maps.marker.AdvancedMarkerElement | null>(null)
@@ -89,4 +89,4 @@ const ChatMap = memo(({ coordinates }: ChatMapProps) => {
   )
 })
 
-export default ChatMap
+export default ChatMapGoogle

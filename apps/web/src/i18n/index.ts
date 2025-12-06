@@ -216,6 +216,7 @@ const resources = {
       youReceivedNewOffer: "You have received a new offer",
       youMadeNewOffer: "You have made a new offer",
       cancelOffer: "Cancel the offer",
+      respondToTheTask: "Respond to the task",
     },
   },
   ru: {
@@ -432,6 +433,7 @@ const resources = {
       youReceivedNewOffer: "Вы получили новое предложение",
       youMadeNewOffer: "Вы сделали новое предложение",
       cancelOffer: "Отменить предложение",
+      respondToTheTask: "Откликнуться на задачу",
     },
   },
 }

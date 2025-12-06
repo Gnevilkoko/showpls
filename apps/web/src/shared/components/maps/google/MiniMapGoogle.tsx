@@ -1,25 +1,25 @@
 import { GoogleMap } from "@react-google-maps/api"
 import { memo, useCallback, useEffect, useRef, useState } from "react"
-import pinIcon from "../../assets/icons/ui/pin.svg" // своя иконка
-import { useMapLoaded } from "../../shared/providers/MapContext"
-import { MAP_ID } from "../../constants"
+import pinIcon from "../../../../assets/icons/ui/pin.svg" // своя иконка
+import { useGoogleMapLoaded } from "../../../providers/GoogleMapContext"
+import { GOOGLE_MAP_ID } from "../../../../constants"
 
 // лишь демонстрация, сюда возможно пойдет реальная геолокация пользователя
 const centerMap = { lat: 37.75296, lng: -122.467844 }
 
 const mapOptions: google.maps.MapOptions = {
   disableDefaultUI: true,
-  mapId: MAP_ID,
+  mapId: GOOGLE_MAP_ID,
   gestureHandling: "greedy",
 }
 
-interface MiniMapContainerProps {
+interface MiniMapGoogleProps {
   address: string // строка из инпута
   onCoordinatesChange: (coordinates: { lat: number; lng: number } | null) => void
 }
 
-const MiniMapContainer = memo(({ address, onCoordinatesChange }: MiniMapContainerProps) => {
-  const isLoaded = useMapLoaded()
+const MiniMapGoogle = memo(({ address, onCoordinatesChange }: MiniMapGoogleProps) => {
+  const isLoaded = useGoogleMapLoaded()
   const [map, setMap] = useState<google.maps.Map | null>(null)
   const [center, setCenter] = useState<{ lat: number; lng: number }>(centerMap)
 
@@ -100,4 +100,4 @@ const MiniMapContainer = memo(({ address, onCoordinatesChange }: MiniMapContaine
   )
 })
 
-export default MiniMapContainer
+export default MiniMapGoogle

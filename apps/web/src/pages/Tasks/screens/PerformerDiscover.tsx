@@ -10,8 +10,12 @@ import TaskPrimaryButton from "../../../shared/components/TaskPrimaryButton"
 import penWhiteIcon from "../../../assets/icons/actions/pen-white.svg"
 import loupeWhiteIcon from "../../../assets/icons/ui/loupe-white.svg"
 import closeIcon from "../../../assets/icons/ui/close-icon.svg"
-import TasksMap from "../TasksMap"
-import PerformersMap from "../PerformersMap"
+import PerformersMapGoogle from "../../../shared/components/maps/google/PerformersMapGoogle"
+import { useSelector } from "react-redux"
+import { type RootState } from "../../../store"
+import MainMap2Gis from "../../../shared/components/maps/2Gis/MainMap2Gis"
+import MainMapGoogle from "../../../shared/components/maps/google/MainMapGoogle"
+import PerformersMap2Gis from "../../../shared/components/maps/2Gis/PerformersMap2Gis"
 
 const PerformerDiscover = () => {
   const userId = 100
@@ -22,6 +26,9 @@ const PerformerDiscover = () => {
   const [isOpenModal, setIsOpenModal] = useState<boolean>(false)
 
   const [isOpenPerformerDiscover, setIsOpenPerformerDiscover] = useState(false)
+
+  const language = useSelector((state: RootState) => state.language)
+  const isRussian = language === "ru"
 
   const handleOpenPerformerDiscover = () => {
     setIsOpenModal(false)
@@ -76,15 +83,20 @@ const PerformerDiscover = () => {
           />
         ))}
 
-      {activeSection === "map" && (
-        <>
-          <TasksMap
+      {activeSection === "map" &&
+        (isRussian ? (
+          <MainMap2Gis
             selectedTask={selectedTask} // id активной таски
             handleSelectTask={handleSelectTask} // при клике на таску из списка
             tasksList={TasksList}
           />
-        </>
-      )}
+        ) : (
+          <MainMapGoogle
+            selectedTask={selectedTask} // id активной таски
+            handleSelectTask={handleSelectTask} // при клике на таску из списка
+            tasksList={TasksList}
+          />
+        ))}
 
       <Modal isOpen={isOpenModal} onClose={handleCloseTask}>
         <TaskInfo selectedOrder={selectedTask as TaskType} />
@@ -103,12 +115,12 @@ const PerformerDiscover = () => {
             <TaskPrimaryButton color="none" onClick={() => {}} icon={closeIcon} text={t("deleteTask")} />
           </>
         ) : (
-          <TaskPrimaryButton color="green" onClick={() => {}} icon={penWhiteIcon} text={t("sendTheOrder")} />
+          <TaskPrimaryButton color="green" onClick={() => {}} icon={penWhiteIcon} text={t("respondToTheTask")} />
         )}
       </Modal>
 
       <Modal isOpen={isOpenPerformerDiscover} onClose={handleClosePerformerDiscover}>
-        <PerformersMap />
+        {isRussian ? <PerformersMap2Gis /> : <PerformersMapGoogle />}
       </Modal>
     </div>
   )

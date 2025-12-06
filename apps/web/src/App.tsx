@@ -4,7 +4,7 @@ import AccessGate from "./pages/AccessGate"
 import { Navigate, Route, Routes } from "react-router-dom"
 import Home from "./pages/Home"
 import Tasks from "./pages/Tasks"
-import MapProvider from "./shared/providers/MapProvider"
+import GoogleMapProvider from "./shared/providers/GoogleMapProvider"
 import Wallet from "./pages/Wallet"
 import Profile from "./pages/Profile"
 import { useAppSelector } from "./store"
@@ -25,7 +25,7 @@ function App() {
     <AppInitializer>
       <TonConnectUIProvider manifestUrl="https://showpls-gitlab-dev.vercel.app/tonconnect-manifest.json">
         <TonWalletProvider>
-          <MapProvider>
+          <GoogleMapProvider>
             <div className="app">
               <ScrollManager />
               <Routes>
@@ -51,7 +51,7 @@ function App() {
                 theme={theme}
               />
             </div>
-          </MapProvider>
+          </GoogleMapProvider>
         </TonWalletProvider>
       </TonConnectUIProvider>
     </AppInitializer>
