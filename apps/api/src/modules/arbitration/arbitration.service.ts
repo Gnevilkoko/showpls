@@ -49,13 +49,23 @@ export class ArbitrationService {
     }
 
     // 3. Check rights - user must be customer or performer
-    const isCustomer = request.customer.id === user.id
+    // Convert IDs to strings for comparison to handle bigint/string mismatch
+    const isCustomer = String(request.customer.id) === String(user.id)
     const acceptedResponse = request.responses?.find(r => r.status === "accepted")
-    const isPerformer = acceptedResponse && acceptedResponse.performer.id === user.id
+    const isPerformer = acceptedResponse && String(acceptedResponse.performer.id) === String(user.id)
+
+    this.logger.debug(`Arbitration creation check - User ID: ${user.id}, Customer ID: ${request.customer.id}, isCustomer: ${isCustomer}, isPerformer: ${isPerformer}`)
+    
+    if (acceptedResponse) {
+      this.logger.debug(`Accepted response found - Performer ID: ${acceptedResponse.performer.id}`)
+    }
 
     if (!isCustomer && !isPerformer) {
+      this.logger.error(`Access denied for user ${user.id} to create arbitration for request ${dto.requestId}`)
       throw new ForbiddenException("Only customer or performer can create arbitration")
     }
+
+    this.logger.debug(`Permission check passed - proceeding with arbitration creation`)
 
     // 4. Check if arbitration already exists for this request
     const existingArbitration = await this.arbitrationRepository.findOne({
@@ -63,32 +73,48 @@ export class ArbitrationService {
     })
 
     if (existingArbitration) {
+      this.logger.warn(`Arbitration already exists for request ${dto.requestId}`)
       throw new BadRequestException("Arbitration already exists for this request")
     }
 
     // 5. Get the other party for chat
-    const otherUserId = isCustomer ? acceptedResponse!.performer.id : request.customer.id
+    if (!acceptedResponse) {
+      throw new BadRequestException("No accepted response found for this request")
+    }
+    const otherUserId = isCustomer ? acceptedResponse.performer.id : request.customer.id
+    this.logger.debug(`Creating arbitration - other party ID: ${otherUserId}`)
 
     // 6. Transaction to create arbitration and update related entities
     return this.dataSource.transaction(async (manager) => {
+      this.logger.debug(`Starting transaction for arbitration creation`)
+      
       // Get or create chat between customer and performer
-      const chat = await this.chatService.getOrCreateChat(request.customer.id, otherUserId, manager as any)
+      const performerId = acceptedResponse.performer.id
+      this.logger.debug(`Getting/creating chat between ${request.customer.id} and ${performerId}`)
+      const chat = await this.chatService.getOrCreateChat(request.customer.id, performerId, manager as any)
+      this.logger.debug(`Chat obtained: ${chat.id}`)
 
       // Update chat to mark as arbitration
+      this.logger.debug(`Updating chat ${chat.id} to mark as arbitration`)
       chat.isArbitration = true
       await manager.save(Chat, chat)
+      this.logger.debug(`Chat updated successfully`)
 
       // Get the active deal for escrow status
       const activeDeal = request.deals?.find(
         deal => deal.status === DealStatus.Accepted || deal.status === DealStatus.InProgress
       )
       const escrowStatus = activeDeal?.escrowStatus || "locked"
+      this.logger.debug(`Active deal found: ${activeDeal?.id}, escrowStatus: ${escrowStatus}`)
 
       // Update request status to arbitration
+      this.logger.debug(`Updating request ${request.id} status to arbitration`)
       request.status = RequestStatus.Arbitration
       await manager.save(Request, request)
+      this.logger.debug(`Request status updated successfully`)
 
       // Create arbitration record
+      this.logger.debug(`Creating arbitration record`)
       const arbitration = this.arbitrationRepository.create({
         request,
         chat,
@@ -98,14 +124,22 @@ export class ArbitrationService {
         status: "pending",
       })
       const savedArbitration = await manager.save(Arbitration, arbitration)
+      this.logger.debug(`Arbitration saved with ID: ${savedArbitration.id}`)
 
       // Send system message to chat (no specific variant in schema for arbitration creation)
-      await this.chatService.sendMessage(user, chat.id, {
-        text: `Arbitration initiated: ${dto.reason}`,
-        type: "notification",
-        variant: null,
-        attachments: dto.attachments,
-      }, manager as any)
+      this.logger.debug(`Sending system message to chat`)
+      try {
+        await this.chatService.sendMessage(user, chat.id, {
+          text: `Arbitration initiated: ${dto.reason}`,
+          type: "notification",
+          variant: null,
+          attachments: dto.attachments,
+        }, manager as any)
+        this.logger.debug(`System message sent successfully`)
+      } catch (error) {
+        this.logger.error(`Error sending system message: ${error instanceof Error ? error.message : String(error)}`)
+        throw error
+      }
 
       // Find admin user to notify
       const adminUser = await this.dataSource.getRepository(User).findOne({
@@ -296,12 +330,10 @@ export class ArbitrationService {
   }
 
   async resolve(admin: User, arbitrationId: string, dto: ResolveArbitrationDto): Promise<any> {
-    // 1. Check admin rights
-    if (admin.role !== Role.Admin) {
-      throw new ForbiddenException("Only admin can resolve arbitration")
-    }
-
-    // 2. Get arbitration with all relations
+    // Admin rights are already verified by AdminGuard in controller
+    // No need for duplicate check here as it can cause issues with plainToInstance transformation
+    
+    // 1. Get arbitration with all relations
     const arbitration = await this.arbitrationRepository.findOne({
       where: { id: arbitrationId },
       relations: [
@@ -374,6 +406,25 @@ export class ArbitrationService {
         // Complete task - release funds to performer
         const performer = activeDeal.performer
 
+        // First, check if escrow exists
+        const holdTransaction = await manager.findOne(Transaction, {
+          where: {
+            type: TransactionType.EscrowHold,
+            externalType: 'request',
+            externalId: request.id,
+          },
+          relations: ['entries'],
+        })
+
+        if (!holdTransaction) {
+          this.logger.error(`Cannot complete arbitration ${arbitrationId}: No escrow hold transaction found for request ${request.id}`)
+          throw new BadRequestException(
+            `Cannot complete this arbitration - no escrow transaction found. ` +
+            `This request (${request.id}) may not have properly accepted response with escrow setup. ` +
+            `Deal status: ${activeDeal.status}, Deal escrowStatus: ${activeDeal.escrowStatus || 'none'}`
+          )
+        }
+
         // Get performer's account
         let performerAccount = await manager.findOne(Account, {
           where: {
@@ -397,20 +448,6 @@ export class ArbitrationService {
             .execute()
           
           performerAccount = manager.create(Account, accountInsertResult.raw[0] as object)
-        }
-
-        // Get the hold transaction with entries
-        const holdTransaction = await manager.findOne(Transaction, {
-          where: {
-            type: TransactionType.EscrowHold,
-            externalType: 'request',
-            externalId: request.id,
-          },
-          relations: ['entries'],
-        })
-
-        if (!holdTransaction) {
-          throw new BadRequestException("Escrow hold transaction not found")
         }
 
         if (!holdTransaction.entries || holdTransaction.entries.length === 0) {

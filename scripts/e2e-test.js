@@ -696,6 +696,155 @@ async function runTest() {
       log("❌ Разрешение арбитража: НЕ РАБОТАЕТ", colors.red)
     }
 
+    // --- 9.9 ТЕСТ АРБИТРАЖА С REJECT И ПРОВЕРКОЙ БАЛАНСОВ ---
+    log("\n⚖️ 9.9 Тестируем арбитраж с отклонением (reject) и проверку балансов...", colors.yellow)
+    
+    try {
+      // 9.9.1 Создаем новый запрос для теста reject
+      log("   9.9.1 Создаем новый запрос для теста reject...", colors.blue)
+      const rejectReqRes = await axios.post(
+        `${API_URL}/request/create`,
+        {
+          title: `Reject Arbitration Test ${Date.now()}`,
+          description: "This request will test arbitration rejection",
+          price: 400,
+          latitude: 55.75,
+          longitude: 37.61,
+          address: "Moscow",
+          expiresAt: new Date(Date.now() + 3600000).toISOString(),
+        },
+        { headers: { Authorization: `Bearer ${CUST_TOKEN}` } }
+      )
+      const rejectRequestId = rejectReqRes.data.id
+      log(`   ✅ Запрос для теста reject создан: ${rejectRequestId}`, colors.green)
+      
+      // 9.9.2 Отклик на запрос
+      log("   9.9.2 Отклик на запрос...", colors.blue)
+      const rejectRespRes = await axios.post(
+        `${API_URL}/request/${rejectRequestId}/respond`,
+        {},
+        { headers: { Authorization: `Bearer ${PERF_TOKEN}` } }
+      )
+      const rejectResponseId = rejectRespRes.data.id
+      log(`   ✅ Отклик создан: ${rejectResponseId}`, colors.green)
+      
+      // 9.9.3 Принятие отклика
+      log("   9.9.3 Принятие отклика...", colors.blue)
+      const rejectDealRes = await axios.post(
+        `${API_URL}/responses/${rejectResponseId}/accept`,
+        { message: "Starting work" },
+        { headers: { Authorization: `Bearer ${CUST_TOKEN}` } }
+      )
+      const rejectDealId = rejectDealRes.data.deal.id
+      const rejectChatId = rejectDealRes.data.deal.chat.id
+      log(`   ✅ Сделка создана: ${rejectDealId}, чат: ${rejectChatId}`, colors.green)
+      
+      // 9.9.4 Получаем балансы ДО создания арбитража
+      log("   9.9.4 Получаем балансы ДО арбитража...", colors.blue)
+      const custBalBeforeArb = await axios.get(`${API_URL}/user/get-balances`, {
+        params: { id: 777777 },
+        headers: { Authorization: `Bearer ${CUST_TOKEN}` },
+      })
+      const perfBalBeforeArb = await axios.get(`${API_URL}/user/get-balances`, {
+        params: { id: 888888 },
+        headers: { Authorization: `Bearer ${PERF_TOKEN}` },
+      })
+      
+      const custBalBefore = custBalBeforeArb.data
+        .find((b) => BigInt(b.balance) > 0n || BigInt(b.lockedBalance) > 0n) ||
+        custBalBeforeArb.data.find((b) => b.token === "STARS" && b.blockchain === null)
+      const perfBalBefore = perfBalBeforeArb.data
+        .find((b) => BigInt(b.balance) > 0n || BigInt(b.lockedBalance) > 0n) ||
+        perfBalBeforeArb.data.find((b) => b.token === "STARS" && b.blockchain === null)
+      
+      log(`   📊 Заказчик ДО: balance=${custBalBefore.balance}, locked=${custBalBefore.lockedBalance}`, colors.blue)
+      log(`   📊 Исполнитель ДО: balance=${perfBalBefore?.balance || "0"}, locked=${perfBalBefore?.lockedBalance || "0"}`, colors.blue)
+      
+      // 9.9.5 Создание арбитража
+      log("   9.9.5 Создание арбитража от исполнителя...", colors.blue)
+      const rejectArbitrationRes = await axios.post(
+        `${API_URL}/arbitration/create`,
+        {
+          requestId: rejectRequestId,
+          reason: "Testing reject action - dispute on task quality",
+          attachments: ["https://example.com/proof.jpg"]
+        },
+        { headers: { Authorization: `Bearer ${PERF_TOKEN}` } }
+      )
+      const rejectArbitrationId = rejectArbitrationRes.data.id
+      log(`   ✅ Арбитраж создан: ${rejectArbitrationId}`, colors.green)
+      
+      await sleep(1000)
+      
+      // 9.9.6 Администратор отклоняет арбитраж (reject)
+      log("   9.9.6 Администратор отклоняет арбитраж (действие: reject)...", colors.blue)
+      const resolveRejectRes = await axios.post(
+        `${API_URL}/arbitration/${rejectArbitrationId}/resolve`,
+        {
+          action: "reject",
+          message: "Admin reviewed and rejected the arbitration. Task continues as-is."
+        },
+        { headers: { Authorization: `Bearer ${ADMIN_TOKEN}` } }
+      )
+      log(`   ✅ Арбитраж отклонен администратором: статус=${resolveRejectRes.data.status}, action=${resolveRejectRes.data.action}`, colors.green)
+      
+      await sleep(1000)
+      
+      // 9.9.7 Проверяем балансы ПОСЛЕ отклонения арбитража
+      log("   9.9.7 Получаем балансы ПОСЛЕ отклонения арбитража...", colors.blue)
+      const custBalAfterArb = await axios.get(`${API_URL}/user/get-balances`, {
+        params: { id: 777777 },
+        headers: { Authorization: `Bearer ${CUST_TOKEN}` },
+      })
+      const perfBalAfterArb = await axios.get(`${API_URL}/user/get-balances`, {
+        params: { id: 888888 },
+        headers: { Authorization: `Bearer ${PERF_TOKEN}` },
+      })
+      
+      const custBalAfter = custBalAfterArb.data
+        .find((b) => BigInt(b.balance) > 0n || BigInt(b.lockedBalance) > 0n) ||
+        custBalAfterArb.data.find((b) => b.token === "STARS" && b.blockchain === null)
+      const perfBalAfter = perfBalAfterArb.data
+        .find((b) => BigInt(b.balance) > 0n || BigInt(b.lockedBalance) > 0n) ||
+        perfBalAfterArb.data.find((b) => b.token === "STARS" && b.blockchain === null)
+      
+      log(`   📊 Заказчик ПОСЛЕ: balance=${custBalAfter.balance}, locked=${custBalAfter.lockedBalance}`, colors.blue)
+      log(`   📊 Исполнитель ПОСЛЕ: balance=${perfBalAfter?.balance || "0"}, locked=${perfBalAfter?.lockedBalance || "0"}`, colors.blue)
+      
+      // 9.9.8 Проверяем, что балансы НЕ изменились (reject не должен влиять на балансы)
+      log("   9.9.8 Проверяем, что балансы не изменились...", colors.blue)
+      
+      const custBalanceChanged = custBalBefore.balance !== custBalAfter.balance
+      const custLockedChanged = custBalBefore.lockedBalance !== custBalAfter.lockedBalance
+      const perfBalanceChanged = (perfBalBefore?.balance || "0") !== (perfBalAfter?.balance || "0")
+      const perfLockedChanged = (perfBalBefore?.lockedBalance || "0") !== (perfBalAfter?.lockedBalance || "0")
+      
+      if (!custBalanceChanged && !custLockedChanged && !perfBalanceChanged && !perfLockedChanged) {
+        log(`   ✅ ОТЛИЧНО! Балансы НЕ изменились - reject работает корректно!`, colors.green)
+      } else {
+        log(`   ⚠️ ВНИМАНИЕ: Балансы изменились после reject (не должно было произойти)`, colors.yellow)
+        if (custBalanceChanged) log(`      - Баланс заказчика изменился`, colors.yellow)
+        if (custLockedChanged) log(`      - Locked баланс заказчика изменился`, colors.yellow)
+        if (perfBalanceChanged) log(`      - Баланс исполнителя изменился`, colors.yellow)
+        if (perfLockedChanged) log(`      - Locked баланс исполнителя изменился`, colors.yellow)
+      }
+      
+      // 9.9.9 Проверяем статус запроса (должен остаться arbitration или вернуться к предыдущему)
+      log("   9.9.9 Проверяем статус запроса после reject...", colors.blue)
+      const rejectRequestStatus = await axios.get(`${API_URL}/request/${rejectRequestId}`)
+      log(`   ✅ Статус запроса после reject: ${rejectRequestStatus.data.status}`, colors.green)
+      
+      log("\n⚖️ ВСЕ ТЕСТЫ АРБИТРАЖА С REJECT: РАБОТАЮТ!", colors.green)
+    } catch (rejectError) {
+      log("\n❌ ОШИБКА В ТЕСТАХ REJECT АРБИТРАЖА:", colors.red)
+      if (rejectError.response) {
+        console.log("Response status:", rejectError.response.status)
+        console.log("Response data:", JSON.stringify(rejectError.response.data, null, 2))
+      } else {
+        console.log(rejectError.message)
+      }
+    }
+
     // --- 10. ТЕСТЫ ЗАВЕРШЕНИЯ ЗАПРОСА (COMPLETE) ---
     log("\n✅ 10. Тестируем завершение запроса (complete)...", colors.yellow)
 

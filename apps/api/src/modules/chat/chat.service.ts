@@ -264,11 +264,17 @@ export class ChatService {
       throw new NotFoundException("Chat not found")
     }
 
-    if (chat.user1.id !== user.id && chat.user2.id !== user.id && chat.admin?.id !== user.id) {
+    // Convert IDs to strings for comparison to handle bigint/string mismatch
+    const userId = String(user.id)
+    const user1Id = String(chat.user1.id)
+    const user2Id = String(chat.user2.id)
+    const adminId = chat.admin ? String(chat.admin.id) : null
+
+    if (userId !== user1Id && userId !== user2Id && userId !== adminId && user.role !== Role.Admin) {
       throw new ForbiddenException("Access denied")
     }
 
-    const receiver = chat.user1.id === user.id ? chat.user2 : chat.user1
+    const receiver = userId === user1Id ? chat.user2 : chat.user1
 
     // Use transaction if no manager provided, otherwise use the provided manager
     const completeMessage = manager ?
