@@ -81,7 +81,6 @@ export class UserService {
 
   async getBalances(userId: string): Promise<Balance[]> {
     const currencies = await this.ledger.currency.list()
-    console.log('Currencies:', currencies)
     const account = await this.ledger.account.retrieve(
       {
         ownerId: userId,

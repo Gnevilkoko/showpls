@@ -75,7 +75,6 @@ export class RequestService {
 
   private async validateBalance(user: User, price: number, errorMessage: string = "Insufficient balance"): Promise<void> {
     const balances = await this.userService.getBalances(user.id)
-    console.log('User balances:', balances)
 
     const starsBalances = balances.filter(b => b.token === Token.STARS && b.blockchain === null)
     if (starsBalances.length === 0) {
@@ -86,8 +85,6 @@ export class RequestService {
     const totalLocked = starsBalances.reduce((sum, b) => sum + BigInt(b.lockedBalance), BigInt(0))
     const availableBalance = totalBalance - totalLocked
     const priceInSmallestUnits = BigInt(Math.round(price * 1e6))
-
-    console.log('Total balance:', totalBalance.toString(), 'Locked:', totalLocked.toString(), 'Available:', availableBalance.toString(), 'Price needed:', priceInSmallestUnits.toString())
 
     if (availableBalance < priceInSmallestUnits) {
       throw new BadRequestException(errorMessage)
