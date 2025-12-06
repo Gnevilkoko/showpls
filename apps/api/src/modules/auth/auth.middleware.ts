@@ -38,7 +38,12 @@ export class AuthMiddleware implements NestMiddleware {
           throw new APIException(ErrorCode.UNAUTHORIZED, "Invalid signature or invalid token format")
         }
 
-        this.logger.error(e)
+        // Log error without sensitive data - only log error type and message, not the full error object
+        this.logger.error({
+          message: "Token verification failed",
+          errorType: e?.constructor?.name || "Unknown",
+          errorMessage: e?.message || "Unknown error"
+        })
         throw new APIException(ErrorCode.UNAUTHORIZED, e.message ? e.message : "Something wrong with the access token")
       }
     } catch (e) {

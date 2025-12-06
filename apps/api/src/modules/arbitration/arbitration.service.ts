@@ -417,11 +417,14 @@ export class ArbitrationService {
         })
 
         if (!holdTransaction) {
-          this.logger.error(`Cannot complete arbitration ${arbitrationId}: No escrow hold transaction found for request ${request.id}`)
+          this.logger.error({
+            message: "Cannot complete arbitration - no escrow hold transaction",
+            arbitrationId,
+            requestId: request.id,
+            dealStatus: activeDeal.status
+          })
           throw new BadRequestException(
-            `Cannot complete this arbitration - no escrow transaction found. ` +
-            `This request (${request.id}) may not have properly accepted response with escrow setup. ` +
-            `Deal status: ${activeDeal.status}, Deal escrowStatus: ${activeDeal.escrowStatus || 'none'}`
+            "Cannot complete this arbitration. The escrow transaction is not properly set up. Please contact support."
           )
         }
 

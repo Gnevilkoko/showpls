@@ -170,7 +170,12 @@ export class AuthController {
   @Post("sign-out")
   async signOut(@Req() req: Request) {
     req.session.destroy((e) => {
-      this.logger.error(e)
+      if (e) {
+        this.logger.error({
+          message: "Failed to destroy session",
+          errorType: e?.constructor?.name || "Unknown"
+        })
+      }
     })
   }
 

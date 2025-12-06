@@ -201,7 +201,11 @@ export class SubmissionService {
     }
 
     // Find active deal for this request where user is performer
-    this.logger.log(`Looking for deal with requestId: ${dto.requestId}, performerId: ${user.id}`)
+    this.logger.log({
+      message: "Looking for active deal",
+      requestId: dto.requestId,
+      performerId: user.id
+    })
     
     // Find deal that is either Accepted or InProgress
     const deal = await this.dealRepository.findOne({
@@ -220,7 +224,11 @@ export class SubmissionService {
       relations: ["chat"],
     })
 
-    this.logger.log(`Deal found: ${deal ? 'YES' : 'NO'}`)
+    this.logger.log({
+      message: "Deal lookup result",
+      dealFound: !!deal,
+      requestId: dto.requestId
+    })
     if (!deal) {
       // Let's check if there are any deals for this request with this performer regardless of status
       const anyDeal = await this.dealRepository.findOne({
@@ -232,8 +240,13 @@ export class SubmissionService {
       })
       
       if (anyDeal) {
-        this.logger.log(`Found a deal but with different status: ${anyDeal.status}`)
-        throw new BadRequestException(`Deal exists but has status: ${anyDeal.status}. Expected: ${DealStatus.Accepted} or ${DealStatus.InProgress}`)
+        this.logger.log({
+          message: "Deal found with incorrect status",
+          requestId: dto.requestId,
+          performerId: user.id,
+          dealStatus: anyDeal.status
+        })
+        throw new BadRequestException("Deal is not in an active state for submission")
       }
       
       // Check if there are any deals for this request at all
@@ -244,12 +257,14 @@ export class SubmissionService {
         relations: ["performer", "chat"],
       })
       
-      this.logger.log(`Total deals for this request: ${requestDeals.length}`)
-      requestDeals.forEach(d => {
-        this.logger.log(`Deal ID: ${d.id}, Performer ID: ${d.performer.id}, Status: ${d.status}`)
+      this.logger.log({
+        message: "No active deal found for performer",
+        requestId: dto.requestId,
+        performerId: user.id,
+        totalDeals: requestDeals.length
       })
       
-      throw new BadRequestException("You are not the performer of the active deal for this request")
+      throw new BadRequestException("You are not authorized to submit work for this request")
     }
 
     // 2. Validate Attachments
