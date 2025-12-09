@@ -28,9 +28,10 @@ export class BotHandler {
       return
     }
 
+    // Ищем по invoicePayload (UUID), а не по id (bigint)
     const topUp = await this.starsTopUpService.repository.findOne({
       where: {
-        id,
+        invoicePayload: id,
       },
     })
 

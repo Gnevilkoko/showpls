@@ -1,6 +1,7 @@
-import { createApi, fetchBaseQuery } from "@reduxjs/toolkit/query/react"
-import type { UserDataType } from "../shared/types"
-import { NotificationHandler } from "../shared/utils/notificationHandler"
+import { createApi } from "@reduxjs/toolkit/query/react"
+import type { UserDataType } from "../../shared/types"
+import { NotificationHandler } from "../../shared/utils/notificationHandler"
+import { publicBaseQuery } from "./baseQuery"
 
 export interface AuthRequest {
   type: "tg-mini-app" | "tg-login-widget"
@@ -14,9 +15,7 @@ export interface AuthResponse {
 
 export const authApi = createApi({
   reducerPath: "authApi",
-  baseQuery: fetchBaseQuery({
-    baseUrl: "/api",
-  }),
+  baseQuery: publicBaseQuery, // Используем publicBaseQuery (без токена)
   tagTypes: ["Auth"],
   endpoints: (builder) => ({
     signIn: builder.mutation<AuthResponse, AuthRequest>({

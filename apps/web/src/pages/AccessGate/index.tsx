@@ -8,7 +8,7 @@ import { BOT_ID } from "../../constants"
 import type { TelegramAuthDataType } from "../../shared/types"
 import { useAppDispatch } from "../../store"
 import { setAuthData } from "../../store/userSlice"
-import { useSignInMutation } from "../../store/authApi"
+import { useSignInMutation } from "../../store/api/authApi"
 
 const AccessGate = () => {
   const dispatch = useAppDispatch()

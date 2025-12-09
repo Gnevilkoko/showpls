@@ -43,6 +43,19 @@ export type UserDataType = {
   createdAt: string
 }
 
+// ⚠️ ВНИМАНИЕ: Эти типы устарели и используются только для совместимости со старым кодом
+// НОВЫЙ КОД должен использовать типы из backend.ts напрямую!
+// Адаптеры для преобразования находятся в adapters.ts
+
+// Реэкспорт типов бекенда для удобства импорта
+// Можно импортировать как: import type { RequestBackend } from "../../shared/types"
+// или напрямую: import type { RequestBackend } from "../../shared/types/backend"
+export * from "./backend.ts"
+
+// Реэкспорт адаптеров
+export * from "./adapters.ts"
+
+// Устаревшие типы (будут удалены после миграции на типы бекенда)
 export type ChatOrderType = {
   order: TaskType
   escrowStatus: "locked" | "released" | "rejected" | null
@@ -96,6 +109,9 @@ export type TransactionType = {
   date: string
 }
 
+// ⚠️ УСТАРЕЛО: Используйте RequestBackend из backend.ts напрямую!
+// TaskType оставлен только для совместимости со старым кодом
+// Для новых компонентов используйте RequestBackend + адаптеры из adapters.ts
 export type TaskType = {
   id: string
   title: string
@@ -144,6 +160,21 @@ export type PerformerType = {
   lastSeenAt: Date
   rating: number
 }
+
+// ============================================================================
+// РЕЭКСПОРТ ТИПОВ БЕКЕНДА (основной источник правды)
+// ============================================================================
+// ✅ ИСПОЛЬЗУЙТЕ ТИПЫ БЕКЕНДА НАПРЯМУЮ в новом коде!
+// Можно импортировать как: import type { RequestBackend } from "../../shared/types"
+// или напрямую: import type { RequestBackend } from "../../shared/types/backend"
+export * from "./backend.ts"
+
+// ============================================================================
+// РЕЭКСПОРТ АДАПТЕРОВ (для преобразования в типы фронтенда)
+// ============================================================================
+// Используйте адаптеры только там, где нужны преобразования для UI
+// (например, для Google Maps: latitude/longitude → position)
+export * from "./adapters.ts"
 
 // export type UserFromBackType = {
 //   telegram_data: TgUserType

@@ -40,6 +40,8 @@ const resources = {
       tasksPage: {
         customerTitlePage: "What do you want to see?",
         performerTitlePage: "Find what you can show!",
+        titleTask: "Title task",
+        placeholderTitleTask: "Enter the title of the task",
         describeTask: "Describe task",
         placeholderTask: "Share details about what you need. E.g. take a photo of a new street art mural downtown",
         addFiles: "Add files",
@@ -146,6 +148,7 @@ const resources = {
         paymentSuccess: "Payment completed successfully!",
         walletDisconnected: "Wallet disconnected successfully",
         profileUpdated: "Profile updated successfully",
+        taskCreated: "Task created successfully!",
       },
       info: {
         newUpdate: "New update available",
@@ -158,6 +161,7 @@ const resources = {
         insufficientFunds: "Insufficient funds",
         lowBalance: "Low balance",
         paymentCancelled: "Payment was cancelled.",
+        invalidFields: "Please fill in all fields correctly",
       },
       default: {
         loadingComplete: "Loading complete",
@@ -257,6 +261,8 @@ const resources = {
       tasksPage: {
         customerTitlePage: "Что вы хотите увидеть?",
         performerTitlePage: "Найдите то, что вы можете показать!",
+        titleTask: "Заголовок задачи",
+        placeholderTitleTask: "Введите заголовок задачи",
         describeTask: "Опишите задачу",
         placeholderTask:
           "Поделитесь подробностями о том, что вам нужно. Например, сфотографируйте новую уличную роспись в центре города",
@@ -364,6 +370,7 @@ const resources = {
         paymentSuccess: "Оплата успешно завершена!",
         walletDisconnected: "TON Кошелек успешно отключен",
         profileUpdated: "Профиль успешно обновлен",
+        taskCreated: "Задача успешно создана!",
       },
       info: {
         newUpdate: "Доступно новое обновление",
@@ -376,6 +383,7 @@ const resources = {
         insufficientFunds: "Недостаточно средств",
         lowBalance: "Низкий баланс",
         paymentCancelled: "Оплата была отменена.",
+        invalidFields: "Пожалуйста, заполните все поля правильно",
       },
       default: {
         loadingComplete: "Загрузка завершена",

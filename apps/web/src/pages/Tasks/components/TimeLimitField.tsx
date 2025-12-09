@@ -10,6 +10,8 @@ interface TimeLimitFieldProps {
   timeMinutes: string
   setTimeHours: (hour: string) => void
   setTimeMinutes: (minute: string) => void
+  isValid: boolean
+  warningFieldsFlag: boolean
 }
 
 const TimeLimitField = ({
@@ -19,20 +21,18 @@ const TimeLimitField = ({
   timeMinutes,
   setTimeHours,
   setTimeMinutes,
+  isValid,
+  warningFieldsFlag,
 }: TimeLimitFieldProps) => {
   const { t } = useTranslation()
 
   const hoursOptions = Array.from({ length: 24 }, (_, i) => i)
   const minutesOptions = Array.from({ length: 6 }, (_, i) => i * 10)
 
-  const isValidTime =
-    !isUrgent ||
-    (timeHours.trim().length > 0 && timeMinutes.trim().length > 0 && !(timeHours === "0" && timeMinutes === "0"))
-
   return (
-    <CustomerBanner icon={clockIcon} title={t("tasksPage.timeLimit")} isValid={isValidTime}>
+    <CustomerBanner icon={clockIcon} title={t("tasksPage.timeLimit")} isValid={isValid}>
       {isUrgent && (
-        <div className="time-selectors">
+        <div className={`time-selectors ${warningFieldsFlag && !isValid ? "warning" : ""}`}>
           <TimeSelector
             value={timeHours}
             setValue={setTimeHours}

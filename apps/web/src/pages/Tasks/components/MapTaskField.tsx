@@ -9,20 +9,21 @@ import MiniMap2Gis from "../../../shared/components/maps/2Gis/MiniMap2Gis"
 interface MapTaskFieldProps {
   value: string
   onChange: (value: string) => void
-  mapCoordinates: { lat: number; lng: number } | null
   setMapCoordinates: (coordinates: { lat: number; lng: number } | null) => void
+  isValid: boolean
+  warningFieldsFlag: boolean
 }
 
-const MapTaskField = ({ value, onChange, mapCoordinates, setMapCoordinates }: MapTaskFieldProps) => {
+const MapTaskField = ({ value, onChange, setMapCoordinates, isValid, warningFieldsFlag }: MapTaskFieldProps) => {
   const { t } = useTranslation()
   const language = useSelector((state: RootState) => state.language)
   const isRussian = language === "ru"
 
   return (
-    <CustomerBanner icon={locationIcon} title={t("tasksPage.location")} isValid={mapCoordinates !== null}>
+    <CustomerBanner icon={locationIcon} title={t("tasksPage.location")} isValid={isValid}>
       <input
         type="text"
-        className="input-location"
+        className={`input-location ${warningFieldsFlag && !isValid ? "warning" : ""}`}
         value={value}
         onChange={(e) => onChange(e.target.value)}
         placeholder={t("tasksPage.locationPlaceholder")}

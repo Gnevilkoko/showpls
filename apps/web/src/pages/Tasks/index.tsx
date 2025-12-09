@@ -1,4 +1,4 @@
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import Header from "../../shared/components/Header"
 import { useLocation } from "react-router-dom"
 import ToggleProfileMode from "../../shared/components/ToggleProfileMode"
@@ -16,6 +16,10 @@ const Tasks = () => {
     locationState?.mode === "createTask" ? "customer" : "performer"
   )
 
+  useEffect(() => {
+    window.scrollTo({ top: 0, behavior: "smooth" })
+  }, [activeMode])
+
   return (
     <div className="page tasks">
       <Header />
@@ -26,7 +30,7 @@ const Tasks = () => {
 
       <ToggleProfileMode activeMode={activeMode} callback={(val: "customer" | "performer") => setActiveMode(val)} />
 
-      {activeMode === "customer" && <CustomerTaskForm />}
+      {activeMode === "customer" && <CustomerTaskForm callback={() => setActiveMode("performer")} />}
 
       {activeMode === "performer" && <PerformerDiscover />}
 

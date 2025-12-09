@@ -12,6 +12,8 @@ interface DescriptionTaskFieldProps {
   handleUpload: (e: ChangeEvent<HTMLInputElement>) => void
   handleImageClick: (index: number) => void
   handleRemove: (url: string) => void
+  isValid: boolean
+  warningFieldsFlag: boolean
 }
 
 const DescriptionTaskField = ({
@@ -21,13 +23,15 @@ const DescriptionTaskField = ({
   handleUpload,
   handleImageClick,
   handleRemove,
+  isValid,
+  warningFieldsFlag,
 }: DescriptionTaskFieldProps) => {
   const { t } = useTranslation()
 
   return (
-    <CustomerBanner icon={pencilIcon} title={t("tasksPage.describeTask")} isValid={value.trim().length > 10}>
+    <CustomerBanner icon={pencilIcon} title={t("tasksPage.describeTask")} isValid={isValid}>
       <textarea
-        className="describe__input"
+        className={`describe__input ${warningFieldsFlag && !isValid ? "warning" : ""}`}
         placeholder={t("tasksPage.placeholderTask")}
         value={value}
         onChange={(e) => onChange(e.target.value)}

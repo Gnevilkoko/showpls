@@ -1,7 +1,7 @@
 import { createSlice, createAsyncThunk, type PayloadAction } from "@reduxjs/toolkit"
 import i18n from "../i18n"
 import type { TelegramWebAppUserType } from "../shared/types"
-import { userApi } from "./userApi"
+import { userApiEndpoints } from "./api/userApi"
 
 // Получаем список всех доступных языков из i18n
 export const AVAILABLE_LANGUAGES = Object.keys(i18n.options.resources || {})
@@ -28,7 +28,7 @@ export const initLanguageFromTgAsync = createAsyncThunk(
 
     try {
       await dispatch(
-        userApi.endpoints.updateLanguage.initiate({
+        userApiEndpoints.updateLanguage.initiate({
           language: langToSet as "en" | "ru",
         })
       ).unwrap()

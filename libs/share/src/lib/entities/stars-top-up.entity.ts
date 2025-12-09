@@ -26,6 +26,13 @@ export class StarsTopUp {
   })
   link: string
 
+  @Column("varchar", {
+    length: 255,
+    nullable: false,
+    unique: true,
+  })
+  invoicePayload: string // UUID для Telegram invoice payload
+
   @Column("boolean", {
     default: false,
   })

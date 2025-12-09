@@ -1,5 +1,5 @@
-import { createApi, fetchBaseQuery } from "@reduxjs/toolkit/query/react"
-import type { RootState } from "./index"
+import { createApi } from "@reduxjs/toolkit/query/react"
+import { authenticatedBaseQuery } from "./baseQuery"
 
 export interface UpdateLanguageRequest {
   language: "en" | "ru"
@@ -12,24 +12,11 @@ export interface UpdateLanguageResponse {
 
 export const userApi = createApi({
   reducerPath: "userApi",
-  baseQuery: fetchBaseQuery({
-    baseUrl: "/api",
-    prepareHeaders: (headers, { getState }) => {
-      // Получаем токен из состояния
-      const state = getState() as RootState
-      const token = state.user?.accessToken
-
-      if (token) {
-        headers.set("authorization", `Bearer ${token}`)
-      }
-
-      return headers
-    },
-  }),
+  baseQuery: authenticatedBaseQuery,
   tagTypes: ["User"],
   endpoints: (builder) => ({
     updateLanguage: builder.mutation<UpdateLanguageResponse, UpdateLanguageRequest>({
-      query: (body) => ({
+      query: (body: UpdateLanguageRequest) => ({
         url: "/user/set-language-code",
         method: "POST",
         body: { code: body.language },
@@ -40,3 +27,8 @@ export const userApi = createApi({
 })
 
 export const { useUpdateLanguageMutation } = userApi
+
+// Экспортируем endpoints для использования в thunks (например, в languageSlice)
+export const userApiEndpoints = {
+  updateLanguage: userApi.endpoints.updateLanguage,
+}

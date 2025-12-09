@@ -847,6 +847,26 @@ $border-color-active-order: var(--border-color-active-order);
   color: $text-primary;
 }
 
+.title__input {
+  all: unset;
+  box-sizing: border-box;
+  padding: 12px;
+  background-color: $bg-secondary;
+  border: 1px solid $border-color;
+  border-radius: 10px;
+
+  font-family: Inter;
+  font-weight: 400;
+  font-size: 14px;
+  color: $text-primary;
+
+  transition: border-color 0.3s ease;
+
+  &.warning {
+    border-color: red;
+  }
+}
+
 .describe__input {
   all: unset;
   box-sizing: border-box;
@@ -860,6 +880,12 @@ $border-color-active-order: var(--border-color-active-order);
   font-weight: 400;
   font-size: 14px;
   color: $text-primary;
+
+  transition: border-color 0.3s ease;
+
+  &.warning {
+    border-color: red;
+  }
 }
 
 .describe__input::placeholder {
@@ -922,6 +948,12 @@ $border-color-active-order: var(--border-color-active-order);
   font-weight: 400;
   font-size: 14px;
   color: $text-primary;
+
+  transition: border-color 0.3s ease;
+
+  &.warning {
+    border-color: red;
+  }
 }
 
 .input-location::placeholder {
@@ -1045,6 +1077,14 @@ $border-color-active-order: var(--border-color-active-order);
   align-items: center;
   gap: 10px;
 
+  transition: border-color 0.3s ease;
+
+  &.warning {
+    .time-dropdown-trigger {
+      border-color: red;
+    }
+  }
+
   .time-selector {
     flex: 1;
     position: relative;
@@ -1143,6 +1183,12 @@ $border-color-active-order: var(--border-color-active-order);
   background-image: url("./assets/stars-budget.svg");
   background-repeat: no-repeat;
   background-position: right 8px center;
+
+  transition: border-color 0.3s ease;
+
+  &.warning {
+    border-color: red;
+  }
 }
 
 .budget-input::placeholder {
@@ -1233,6 +1279,10 @@ $border-color-active-order: var(--border-color-active-order);
   font-weight: 700;
   font-size: 16px;
   color: $text-primary;
+
+  &.warning {
+    border-color: red;
+  }
 }
 
 .coming-soon {
@@ -3390,7 +3440,7 @@ $border-color-active-order: var(--border-color-active-order);
   padding: 14px;
   box-sizing: border-box;
   cursor: pointer;
-  z-index: 1;
+  z-index: 50;
 }
 
 .performer-item__user-info-wrapper {

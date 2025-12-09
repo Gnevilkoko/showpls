@@ -29,12 +29,12 @@ export class StarsTopUpService {
   ) {}
 
   async create({ amount, userId }: CreateStarsTopUp) {
-    const id = randomUUID()
+    const invoicePayload = randomUUID() // UUID для Telegram invoice payload
 
     const link = await this.bot.telegram.createInvoiceLink({
       title: "Top Up",
       description: `Пополнение баланса на ${amount} Stars`,
-      payload: id,
+      payload: invoicePayload,
       currency: "XTR",
       prices: [
         {
@@ -50,7 +50,8 @@ export class StarsTopUpService {
       .insert()
       .into(StarsTopUp)
       .values({
-        id,
+        // id не указываем - будет сгенерирован автоматически как bigint
+        invoicePayload, // Сохраняем UUID в отдельное поле
         amount: (amount * 1e6).toString(),
         paid: false,
         link,
@@ -108,9 +109,10 @@ export class StarsTopUpService {
         return await this.repository.manager.transaction("SERIALIZABLE", async (manager) => {
           const repository = manager.getRepository(StarsTopUp)
 
+          // Ищем по invoicePayload (UUID), а не по id (bigint)
           const topUp = await repository.findOne({
             where: {
-              id,
+              invoicePayload: id,
             },
           })
 
@@ -141,7 +143,7 @@ export class StarsTopUpService {
           }
 
           await repository.update(
-            { id },
+            { invoicePayload: id },
             {
               paid: true,
               txid,
@@ -177,9 +179,10 @@ export class StarsTopUpService {
         return await this.repository.manager.transaction("SERIALIZABLE", async (manager) => {
           const repository = manager.getRepository(StarsTopUp)
 
+          // Ищем по invoicePayload (UUID), а не по id (bigint)
           const topUp = await repository.findOne({
             where: {
-              id,
+              invoicePayload: id,
             },
           })
 
@@ -206,7 +209,7 @@ export class StarsTopUpService {
           }
 
           await repository.update(
-            { id },
+            { invoicePayload: id },
             {
               refunded: true,
             }

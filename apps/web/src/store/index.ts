@@ -3,8 +3,10 @@ import { useDispatch, useSelector, type TypedUseSelectorHook } from "react-redux
 import userReducer from "./userSlice"
 import languageReducer from "./languageSlice"
 import themeReducer from "./themeSlice"
-import { authApi } from "./authApi"
-import { userApi } from "./userApi"
+import { authApi } from "./api/authApi"
+import { userApi } from "./api/userApi"
+import { requestApi } from "./api/requestApi"
+import { uploadApi } from "./api/uploadApi"
 
 export const store = configureStore({
   reducer: {
@@ -13,8 +15,11 @@ export const store = configureStore({
     theme: themeReducer,
     [authApi.reducerPath]: authApi.reducer,
     [userApi.reducerPath]: userApi.reducer,
+    [requestApi.reducerPath]: requestApi.reducer,
+    [uploadApi.reducerPath]: uploadApi.reducer,
   },
-  middleware: (getDefaultMiddleware) => getDefaultMiddleware().concat(authApi.middleware, userApi.middleware),
+  middleware: (getDefaultMiddleware) =>
+    getDefaultMiddleware().concat(authApi.middleware, userApi.middleware, requestApi.middleware, uploadApi.middleware),
 })
 
 export type RootState = ReturnType<typeof store.getState>
