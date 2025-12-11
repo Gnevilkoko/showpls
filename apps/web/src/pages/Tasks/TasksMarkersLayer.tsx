@@ -54,7 +54,7 @@ const TasksMarkersLayer = ({ map, selectedTask, onClick, tasksList }: MarkersLay
 
         // Создаем React root для рендера React компонента внутрь DOM элемента маркера
         const root = createRoot(content)
-        root.render(<MarkerContent count={task.price} image={starsWhiteIcon} />)
+        root.render(<MarkerContent count={Number(task.price)} image={starsWhiteIcon} />)
 
         // Создаем AdvancedMarkerElement и добавляем на карту
         const marker = new AdvancedMarkerElement({

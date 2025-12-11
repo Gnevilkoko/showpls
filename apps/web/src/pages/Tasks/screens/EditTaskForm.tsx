@@ -1,32 +1,51 @@
-import plusActionBannerIcon from "../../../assets/icons/actions/plus-action-banner.svg"
-import searchActionBannerIcon from "../../../assets/icons/actions/search-action-banner.svg"
-import { useTranslation } from "react-i18next"
-import { useState, useMemo, useCallback, type ChangeEvent } from "react"
-import type { APIError, UploadedImageType } from "../../../shared/types"
 import ImageViewer from "../../../shared/components/ImageViewer"
-import CustomerButton from "../components/CustomerButton"
+import BudgetField from "../components/BudgetField"
 import DescriptionTaskField from "../components/DescriptionTaskField"
 import MapTaskField from "../components/MapTaskField"
 import TimeLimitField from "../components/TimeLimitField"
-import BudgetField from "../components/BudgetField"
-import Modal from "../../../shared/components/Modal"
-import PerformersMapGoogle from "../../../shared/components/maps/google/PerformersMapGoogle"
-import VerifProofField from "../components/VerifProofField"
-import { useSelector } from "react-redux"
-import type { RootState } from "../../../store"
-import PerformersMap2Gis from "../../../shared/components/maps/2Gis/PerformersMap2Gis"
 import TitleTaskField from "../components/TitleTaskField"
+import VerifProofField from "../components/VerifProofField"
 import { useNotification } from "../../../shared/hooks/useNotification"
-import { useCreateRequestMutation, type CreateRequestInput } from "../../../store/api/requestApi"
-import { NotificationHandler } from "../../../shared/utils/notificationHandler"
+import { useState, useMemo, useCallback, useEffect, type ChangeEvent } from "react"
+import type { APIError, UploadedImageType } from "../../../shared/types"
+import { useUpdateRequestMutation, useGetRequestQuery, type UpdateRequestInput } from "../../../store/api/requestApi"
 import { useUploadFileMutation } from "../../../store/api/uploadApi"
 import { toast } from "react-toastify"
+import { NotificationHandler } from "../../../shared/utils/notificationHandler"
+import penWhiteIcon from "../../../assets/icons/actions/pen-white.svg"
+import TaskPrimaryButton from "../../../shared/components/TaskPrimaryButton"
+import { useTranslation } from "react-i18next"
 
-const CustomerTaskForm = ({ callback }: { callback: () => void }) => {
+// TODO: пока нигде не используется, использовать в списке своих задач в профиле, редактируем только черновики!
+/* использование компонента в модальном окне:
+<TaskPrimaryButton color="green" onClick={handleEditTask} icon={penWhiteIcon} text={t("editToTask")} />
+
+<Modal
+isOpen={isOpenEditTask}
+onClose={() => {
+  setIsOpenEditTask(false)
+  setIsOpenModal(true)
+}}
+>
+{selectedTask && (
+  <EditTaskForm
+    taskId={selectedTask.id}
+    callback={() => {
+      setIsOpenEditTask(false)
+      setIsOpenModal(true)
+      refetch() // Обновляем список задач после редактирования
+    }}
+  />
+)}
+</Modal>
+*/
+
+const EditTaskForm = ({ callback, taskId }: { callback: () => void; taskId: string }) => {
   const { t } = useTranslation()
-  const language = useSelector((state: RootState) => state.language)
-  const isRussian = language === "ru"
   const notification = useNotification()
+
+  // Загрузка данных задачи
+  const { data: requestData, isLoading: isLoadingRequest } = useGetRequestQuery(taskId)
 
   // Состояния для валидации инпутов
   const [taskTitle, setTaskTitle] = useState("")
@@ -45,18 +64,46 @@ const CustomerTaskForm = ({ callback }: { callback: () => void }) => {
 
   const [verifProof, setVerifProof] = useState<"base" | "pro">("base")
 
+  // Инициализация формы данными задачи
+  useEffect(() => {
+    if (requestData) {
+      setTaskTitle(requestData.title)
+      setTaskDescription(requestData.description)
+      setBudget(String(requestData.price))
+      setAddress(requestData.address || "")
+      setMapCoordinates({ lat: requestData.latitude, lng: requestData.longitude })
+      setIsUrgent(requestData.isUrgent)
+
+      // Предзаполнение attachments (существующие файлы с сервера)
+      const existingAttachments: UploadedImageType[] = requestData.attachments.map((att) => ({
+        url: att.url,
+        // file отсутствует для существующих файлов с сервера
+      }))
+      setAttachmentsList(existingAttachments)
+
+      // Предзаполнение verifProof из metadata
+      const verifProofValue = (requestData.metadata?.verifProof as "base" | "pro" | undefined) || "base"
+      setVerifProof(verifProofValue)
+
+      // Предзаполнение времени для срочных задач
+      if (requestData.isUrgent && requestData.deadlineAt) {
+        const deadline = new Date(requestData.deadlineAt)
+        const now = new Date()
+        const diffMs = deadline.getTime() - now.getTime()
+
+        if (diffMs > 0) {
+          const totalMinutes = Math.floor(diffMs / (1000 * 60))
+          const hours = Math.floor(totalMinutes / 60)
+          const minutes = totalMinutes % 60
+          setTimeHours(String(hours))
+          setTimeMinutes(String(minutes))
+        }
+      }
+    }
+  }, [requestData])
+
   const handleChangeVerifProof = (value: "base" | "pro") => {
     setVerifProof(value)
-  }
-
-  const [isOpenPerformerDiscover, setIsOpenPerformerDiscover] = useState(false)
-
-  const handleOpenPerformerDiscover = () => {
-    setIsOpenPerformerDiscover(true)
-  }
-
-  const handleClosePerformerDiscover = () => {
-    setIsOpenPerformerDiscover(false)
   }
 
   const handleUpload = (e: ChangeEvent<HTMLInputElement>) => {
@@ -112,7 +159,7 @@ const CustomerTaskForm = ({ callback }: { callback: () => void }) => {
     }, 10000)
   }, [])
 
-  const [createRequest, { isLoading: isCreating }] = useCreateRequestMutation()
+  const [updateRequest] = useUpdateRequestMutation()
   const [uploadFile] = useUploadFileMutation()
 
   // Загрузка файлов на сервер
@@ -182,7 +229,7 @@ const CustomerTaskForm = ({ callback }: { callback: () => void }) => {
 
   // Подготовка данных для API
   const prepareRequestData = useCallback(
-    (attachmentUrls: string[], deadlineAt: string | null): CreateRequestInput => {
+    (attachmentUrls: string[], deadlineAt: string | null): UpdateRequestInput => {
       return {
         title: taskTitle.trim(),
         description: taskDescription.trim(),
@@ -202,7 +249,7 @@ const CustomerTaskForm = ({ callback }: { callback: () => void }) => {
   )
 
   // Основной обработчик отправки формы
-  const handlePublishRequest = useCallback(async () => {
+  const handleEditTask = useCallback(async () => {
     // Валидация формы
     if (!validation.isValid) {
       showWarningOnFields()
@@ -220,11 +267,11 @@ const CustomerTaskForm = ({ callback }: { callback: () => void }) => {
       // Подготовить данные для API
       const requestData = prepareRequestData(attachmentUrls, deadlineAt)
 
-      // Создать задачу
-      await createRequest(requestData).unwrap()
+      // Обновить задачу
+      await updateRequest({ id: taskId, body: requestData }).unwrap()
 
       // Обработать успех
-      notification.showSuccess("taskCreated")
+      notification.showSuccess("taskUpdated")
 
       callback()
     } catch (error: unknown) {
@@ -241,7 +288,7 @@ const CustomerTaskForm = ({ callback }: { callback: () => void }) => {
         uploadError.originalStatus === 503 ||
         (typeof uploadError.status === "number" && uploadError.status >= 500)
 
-      // Если это не ошибка загрузки файлов, обрабатываем как ошибку создания задачи
+      // Если это не ошибка загрузки файлов, обрабатываем как ошибку обновления задачи
       if (!isUploadError) {
         // Проверяем, является ли это API ошибкой
         if (NotificationHandler.isAPIError(error)) {
@@ -251,7 +298,7 @@ const CustomerTaskForm = ({ callback }: { callback: () => void }) => {
           const errorMessage =
             (error as { data?: { message?: string }; message?: string })?.data?.message ||
             (error as { message?: string })?.message ||
-            "Failed to create task"
+            "Failed to update task"
           NotificationHandler.showError(error as APIError, errorMessage)
         }
       }
@@ -264,9 +311,20 @@ const CustomerTaskForm = ({ callback }: { callback: () => void }) => {
     attachmentsList,
     calculateDeadlineAt,
     prepareRequestData,
-    createRequest,
+    updateRequest,
+    taskId,
     callback,
   ])
+
+  // Показываем индикатор загрузки пока загружаются данные задачи
+  if (isLoadingRequest) {
+    return <div className="status-state-container">{t("loading")}</div>
+  }
+
+  // Если данные задачи не загружены, показываем ошибку
+  if (!requestData) {
+    return <div className="status-state-container">{t("errorLoadingTask")}</div>
+  }
 
   return (
     <>
@@ -321,21 +379,7 @@ const CustomerTaskForm = ({ callback }: { callback: () => void }) => {
         warningFieldsFlag={warningFields}
       />
 
-      <CustomerButton
-        img={plusActionBannerIcon}
-        title={t("tasksPage.publishRequest")}
-        color="green"
-        onClick={handlePublishRequest}
-        disabled={isCreating}
-      />
-
-      <CustomerButton
-        img={searchActionBannerIcon}
-        title={t("tasksPage.findPerformer")}
-        description={t("tasksPage.sendDirect")}
-        color="blue"
-        onClick={handleOpenPerformerDiscover}
-      />
+      <TaskPrimaryButton color="green" onClick={handleEditTask} icon={penWhiteIcon} text={t("editToTask")} />
 
       {selectedImageIndex !== null && (
         <ImageViewer
@@ -344,12 +388,8 @@ const CustomerTaskForm = ({ callback }: { callback: () => void }) => {
           onClose={handleCloseImageViewer}
         />
       )}
-
-      <Modal isOpen={isOpenPerformerDiscover} onClose={handleClosePerformerDiscover}>
-        {isRussian ? <PerformersMap2Gis /> : <PerformersMapGoogle />}
-      </Modal>
     </>
   )
 }
 
-export default CustomerTaskForm
+export default EditTaskForm

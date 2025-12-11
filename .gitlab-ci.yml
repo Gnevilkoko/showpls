@@ -1,0 +1,197 @@
+stages:
+  - build
+  - deploy
+
+variables:
+  NODE_VERSION: "20"
+  BEGET_USER: "${BEGET_SSH_USER}"
+  BEGET_HOST: "${BEGET_SSH_HOST}"
+  BEGET_PORT: "${BEGET_SSH_PORT}"
+  BEGET_BACKEND_PATH: "~/showpls/backend"
+  BEGET_FRONTEND_PUBLIC: "~/demo.showpls.com/public_html"
+
+# Кэширование node_modules и Nx кэша
+cache:
+  key: ${CI_COMMIT_REF_SLUG}
+  paths:
+    - node_modules/
+    - .nx/cache/
+
+# ============================================
+# БИЛД БЕКЕНДА
+# ============================================
+build:backend:
+  stage: build
+  image: node:${NODE_VERSION}
+  only:
+    - dev
+  script:
+    - echo "🔨 Building backend..."
+    - npm ci
+    - NODE_ENV=production npx nx build api
+    - echo "✅ Backend build completed"
+  artifacts:
+    paths:
+      - dist/apps/api/
+    expire_in: 1 hour
+  tags:
+    - docker
+
+# ============================================
+# БИЛД ФРОНТЕНДА
+# ============================================
+build:frontend:
+  stage: build
+  image: node:${NODE_VERSION}
+  only:
+    - dev
+  script:
+    - echo "🔨 Building frontend..."
+    - npm ci
+    - NODE_ENV=production npx nx build web
+    - echo "✅ Frontend build completed"
+  artifacts:
+    paths:
+      - dist/apps/web/
+    expire_in: 1 hour
+  tags:
+    - docker
+
+# ============================================
+# ДЕПЛОЙ БЕКЕНДА
+# ============================================
+deploy:backend:
+  stage: deploy
+  image: alpine:latest
+  only:
+    - dev
+  before_script:
+    - apk add --no-cache openssh-client rsync
+    - eval $(ssh-agent -s)
+    - echo "$BEGET_SSH_PRIVATE_KEY" | tr -d '\r' | ssh-add -
+    - mkdir -p ~/.ssh
+    - chmod 700 ~/.ssh
+    - ssh-keyscan -p ${BEGET_PORT} ${BEGET_HOST} >> ~/.ssh/known_hosts
+    - chmod 644 ~/.ssh/known_hosts
+  script:
+    - echo "🚀 Deploying backend to Beget..."
+
+    # Создание директорий на сервере
+    - |
+      ssh -p ${BEGET_PORT} ${BEGET_USER}@${BEGET_HOST} << 'EOF'
+        mkdir -p ${BEGET_BACKEND_PATH}
+        mkdir -p ~/showpls/logs
+      EOF
+
+    # Копирование собранного бекенда
+    - rsync -avz --delete -e "ssh -p ${BEGET_PORT}" \
+      dist/apps/api/ \
+      ${BEGET_USER}@${BEGET_HOST}:${BEGET_BACKEND_PATH}/
+
+    # Копирование package.json и package-lock.json для установки зависимостей
+    - scp -P ${BEGET_PORT} package.json package-lock.json ${BEGET_USER}@${BEGET_HOST}:${BEGET_BACKEND_PATH}/
+
+    # Установка зависимостей и запуск на сервере
+    - |
+      ssh -p ${BEGET_PORT} ${BEGET_USER}@${BEGET_HOST} << 'EOF'
+        cd ${BEGET_BACKEND_PATH}
+        
+        # Загрузка переменных окружения из ~/.env
+        if [ -f ~/.env ]; then
+          # Удаляем комментарии и пустые строки, загружаем переменные
+          set -a
+          source ~/.env
+          set +a
+          echo "✅ Environment variables loaded from ~/.env"
+        else
+          echo "⚠️  Warning: ~/.env file not found!"
+        fi
+        
+        # Установка зависимостей продакшн
+        echo "📦 Installing production dependencies..."
+        npm ci --production
+        
+        # Остановка старого процесса PM2
+        echo "🛑 Stopping old PM2 process..."
+        pm2 stop showpls-api || true
+        pm2 delete showpls-api || true
+        
+        # Запуск нового процесса с переменными окружения
+        echo "▶️  Starting backend with PM2..."
+        # PM2 автоматически подхватит переменные окружения из текущей сессии
+        pm2 start dist/apps/api/main.js \
+          --name showpls-api \
+          --log ~/showpls/logs/api.log \
+          --update-env \
+          --time
+        
+        # Сохранение конфигурации PM2
+        pm2 save
+        
+        # Проверка статуса
+        pm2 status
+        
+        echo "✅ Backend deployed successfully"
+      EOF
+
+    - echo "✅ Backend deployment completed"
+  dependencies:
+    - build:backend
+  tags:
+    - docker
+
+# ============================================
+# ДЕПЛОЙ ФРОНТЕНДА
+# ============================================
+deploy:frontend:
+  stage: deploy
+  image: alpine:latest
+  only:
+    - dev
+  before_script:
+    - apk add --no-cache openssh-client rsync
+    - eval $(ssh-agent -s)
+    - echo "$BEGET_SSH_PRIVATE_KEY" | tr -d '\r' | ssh-add -
+    - mkdir -p ~/.ssh
+    - chmod 700 ~/.ssh
+    - ssh-keyscan -p ${BEGET_PORT} ${BEGET_HOST} >> ~/.ssh/known_hosts
+    - chmod 644 ~/.ssh/known_hosts
+  script:
+    - echo "🚀 Deploying frontend to Beget..."
+
+    # Создание директорий на сервере
+    - |
+      ssh -p ${BEGET_PORT} ${BEGET_USER}@${BEGET_HOST} << 'EOF'
+        mkdir -p ${BEGET_FRONTEND_PUBLIC}
+      EOF
+
+    # Копирование собранного фронтенда в публичную директорию
+    - rsync -avz --delete -e "ssh -p ${BEGET_PORT}" \
+      dist/apps/web/ \
+      ${BEGET_USER}@${BEGET_HOST}:${BEGET_FRONTEND_PUBLIC}/
+
+    # Создание .htaccess для проксирования API запросов
+    - |
+      ssh -p ${BEGET_PORT} ${BEGET_USER}@${BEGET_HOST} << 'EOF'
+        cat > ${BEGET_FRONTEND_PUBLIC}/.htaccess << 'HTACCESS'
+        RewriteEngine On
+
+        # Проксирование API запросов на бекенд (порт 8080)
+        RewriteCond %{REQUEST_URI} ^/api/(.*)$
+        RewriteRule ^api/(.*)$ http://localhost:8080/$1 [P,L]
+
+        # Для всех остальных запросов - отдавать статику фронтенда
+        RewriteCond %{REQUEST_FILENAME} !-f
+        RewriteCond %{REQUEST_FILENAME} !-d
+        RewriteRule ^(.*)$ /index.html [L]
+        HTACCESS
+        
+        chmod 644 ${BEGET_FRONTEND_PUBLIC}/.htaccess
+        echo "✅ .htaccess file created successfully"
+      EOF
+
+    - echo "✅ Frontend deployment completed"
+  dependencies:
+    - build:frontend
+  tags:
+    - docker

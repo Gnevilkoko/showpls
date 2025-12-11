@@ -1,5 +1,5 @@
 export type UploadedImageType = {
-  file: File
+  file?: File // Опционально: для новых файлов есть file, для существующих (с сервера) - нет
   url: string
 }
 

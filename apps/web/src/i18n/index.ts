@@ -134,6 +134,8 @@ const resources = {
         orderCreateError: "Failed to create order",
         paymentFailed: "Payment failed, please try again.",
         somethingWentWrong: "Something went wrong, please try again later",
+        errorCancellingTask: "Error cancelling task, please try again later",
+        errorRespondingToTask: "Error responding to task, please try again later",
       },
       success: {
         dataSaved: "Data saved successfully!",
@@ -149,6 +151,8 @@ const resources = {
         walletDisconnected: "Wallet disconnected successfully",
         profileUpdated: "Profile updated successfully",
         taskCreated: "Task created successfully!",
+        taskCancelled: "Task cancelled successfully!",
+        taskResponded: "You have successfully responded to the task!",
       },
       info: {
         newUpdate: "New update available",
@@ -221,6 +225,12 @@ const resources = {
       youMadeNewOffer: "You have made a new offer",
       cancelOffer: "Cancel the offer",
       respondToTheTask: "Respond to the task",
+      retry: "Retry",
+      noTasksFound: "No tasks found, please try again later",
+      errorLoadingTasks: "Error loading tasks, please try again later",
+      responseTask: "Response to the task",
+      placeholderResponseTask:
+        "You can share how you will perform the task, increasing your chances of being selected as a performer",
     },
   },
   ru: {
@@ -356,6 +366,8 @@ const resources = {
         orderCreateError: "Не удалось создать заказ",
         paymentFailed: "Ошибка при оплате. Попробуйте ещё раз.",
         somethingWentWrong: "Что-то пошло не так, попробуйте позже",
+        errorCancellingTask: "Ошибка при отмене задачи, попробуйте позже",
+        errorRespondingToTask: "Ошибка при отклике на задачу, попробуйте позже",
       },
       success: {
         dataSaved: "Данные сохранены успешно!",
@@ -371,6 +383,8 @@ const resources = {
         walletDisconnected: "TON Кошелек успешно отключен",
         profileUpdated: "Профиль успешно обновлен",
         taskCreated: "Задача успешно создана!",
+        taskCancelled: "Задача была успешно отменена!",
+        taskResponded: "Вы успешно откликнулись на задачу!",
       },
       info: {
         newUpdate: "Доступно новое обновление",
@@ -442,6 +456,12 @@ const resources = {
       youMadeNewOffer: "Вы сделали новое предложение",
       cancelOffer: "Отменить предложение",
       respondToTheTask: "Откликнуться на задачу",
+      retry: "Повторить",
+      noTasksFound: "Задач не найдено, попробуйте позже",
+      errorLoadingTasks: "Ошибка загрузки задач, попробуйте позже",
+      responseTask: "Отклик на задачу",
+      placeholderResponseTask:
+        "Вы можете поделится тем, как будете выполнять задачу, повысив шанс быть выбранным исполнителем",
     },
   },
 }

@@ -16,11 +16,13 @@ export type TaskType = Omit<RequestBackend, "latitude" | "longitude" | "attachme
   customer_id: number
   performer_id: number | null
   // Дополнительные поля для UI
-  mode: "base" | "pro" // Можно вычислять из metadata или всегда "base" для MVP
+  mode: "base" | "pro" // Вычисляется из metadata.verifProof
   tags: {
     type: "hLeft" | "km"
     count: number
   }[]
+  // Флаг: арбитраж согласен закрыть задачу (из DealBackend, если есть)
+  arbitrationApproved: boolean
 }
 
 /**
@@ -45,14 +47,19 @@ export function adaptRequestToTask(request: RequestBackend): TaskType {
     }
   }
 
+  // Вычисление mode из metadata
+  const verifProof = request.metadata?.verifProof as "base" | "pro" | undefined
+  const mode: "base" | "pro" = verifProof === "pro" ? "pro" : "base"
+
   return {
     ...request,
     position: { lat: request.latitude, lng: request.longitude },
     attachments: request.attachments.map((att) => att.url),
     customer_id: parseInt(request.customer.id),
     performer_id: request.performer ? parseInt(request.performer.id) : null,
-    mode: "base", // Для MVP всегда base
+    mode, // Вычисляется из metadata.verifProof
     tags,
+    arbitrationApproved: false, // По умолчанию false, так как это поле из DealBackend
   }
 }
 

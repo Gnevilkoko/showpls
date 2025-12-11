@@ -39,7 +39,7 @@ const MainMap2Gis = memo(({ selectedTask, handleSelectTask, tasksList }: MapCont
       coordinates: [task.position.lng, task.position.lat],
       html: `<div class="custom-marker map2gis-marker ${task.mode === "pro" ? "accent" : ""}">
           <div class="custom-marker__content">
-            ${task.price}
+            ${Number(task.price)}
             <span><img src="${starsWhiteIcon}" /></span>
           </div>
         </div>`,

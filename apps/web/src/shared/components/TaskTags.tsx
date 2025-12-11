@@ -15,7 +15,7 @@ const TaskTags = ({ task }: TaskTagsProps) => {
       {task.mode === "base" && <div className="tag badge blue">{t("tasksPage.base")}</div>}
 
       <div className="tag stars">
-        {task.price}
+        {Number(task.price)}
 
         <span>
           <img src={starsWhiteIcon} alt="Stars Icon" />

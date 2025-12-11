@@ -807,6 +807,10 @@ $border-color-active-order: var(--border-color-active-order);
 
   box-shadow: 0px 2px 5px 0px #262b3108, 0px 10px 10px 0px #262b3105, 0px 22px 13px 0px #262b3103,
     0px 40px 16px 0px #262b3100, 0px 62px 17px 0px #262b3100;
+
+  &.no-padding {
+    padding: 0;
+  }
 }
 
 .describe__content {
@@ -3674,4 +3678,23 @@ $border-color-active-order: var(--border-color-active-order);
   &--gray {
     background-color: #666;
   }
+}
+
+.status-state-container {
+  width: 100%;
+  display: flex;
+  gap: 20px;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  padding: 20px 0;
+  box-sizing: border-box;
+  text-align: center;
+
+  height: 100%;
+  font-family: Inter;
+  font-weight: 500;
+  font-size: 16px;
+  line-height: 100%;
+  color: $text-secondary;
 }
