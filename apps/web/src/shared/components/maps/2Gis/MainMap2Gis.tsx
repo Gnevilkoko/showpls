@@ -10,19 +10,68 @@ interface MapContainerProps {
   selectedTask: TaskType | null
   handleSelectTask: (task: TaskType) => void
   tasksList: TaskType[]
+  onBoundsChange?: (bounds: { north: number; south: number; east: number; west: number } | null) => void
 }
 
 // Центр карты Москвы, для 2ГИС нужно
 // инвертировать гугловские координаты, сначала lng, потом lat
 const centerMap = [37.623965, 55.74982]
 
-const MainMap2Gis = memo(({ selectedTask, handleSelectTask, tasksList }: MapContainerProps) => {
+const MainMap2Gis = memo(({ selectedTask, handleSelectTask, tasksList, onBoundsChange }: MapContainerProps) => {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const mapRef = useRef<any>(null)
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const clustererRef = useRef<any>(null)
   const isMapInitializedRef = useRef(false)
   const isMapReadyRef = useRef(false)
+
+  // Функция для получения bounds карты (оптимизированная)
+  const getBounds = useCallback((): { north: number; south: number; east: number; west: number } | null => {
+    if (!mapRef.current || !isMapReadyRef.current) {
+      return null
+    }
+
+    try {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const mapInstance: any = mapRef.current
+
+      // 2GIS mapgl API возвращает bounds через getBounds()
+      if (typeof mapInstance.getBounds !== "function") {
+        return null
+      }
+
+      const bounds = mapInstance.getBounds()
+      if (!bounds) {
+        return null
+      }
+
+      // 2GIS возвращает объект с northEast и southWest (массивы [lng, lat])
+      if ("northEast" in bounds && "southWest" in bounds) {
+        const ne = bounds.northEast
+        const sw = bounds.southWest
+
+        // Проверяем, что это массивы
+        if (!Array.isArray(ne) || !Array.isArray(sw) || ne.length < 2 || sw.length < 2) {
+          return null
+        }
+
+        return {
+          north: ne[1], // lat из northEast
+          south: sw[1], // lat из southWest
+          east: ne[0], // lng из northEast
+          west: sw[0], // lng из southWest
+        }
+      }
+
+      return null
+    } catch (error) {
+      console.error("Error getting bounds from 2GIS map:", error)
+      return null
+    }
+  }, [])
+
+  // Ref для хранения функции очистки событий
+  const cleanupEventsRef = useRef<(() => void) | null>(null)
 
   const theme = useAppSelector((state: RootState) => state.theme)
   // Меняем тему на лету
@@ -56,7 +105,7 @@ const MainMap2Gis = memo(({ selectedTask, handleSelectTask, tasksList }: MapCont
         clusterStyle: (count: number) => {
           return {
             type: "html" as const,
-            html: `<div class="cluster">${count}</div>`,
+            html: `<div class="cluster map2gis">${count}</div>`,
           }
         },
       })
@@ -65,7 +114,37 @@ const MainMap2Gis = memo(({ selectedTask, handleSelectTask, tasksList }: MapCont
 
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       clustererInstance.on("click", (event: any) => {
-        if (event.target.type === "marker" && event.target.data?.task) {
+        // Клик по кластеру - приближаем карту к меткам в кластере
+        if (event.target.type === "cluster" && event.target.data) {
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          const clusterMarkers: any[] = event.target.data
+
+          if (clusterMarkers && Array.isArray(clusterMarkers) && clusterMarkers.length > 0) {
+            // Получаем координаты всех маркеров в кластере
+            const coordinates = clusterMarkers
+              // eslint-disable-next-line @typescript-eslint/no-explicit-any
+              .map((marker: any) => marker.coordinates)
+              // eslint-disable-next-line @typescript-eslint/no-explicit-any
+              .filter((coords: any) => coords && Array.isArray(coords) && coords.length >= 2)
+
+            if (coordinates.length > 0) {
+              // Вычисляем центр области (среднее значение координат)
+              const lngs = coordinates.map((coords: number[]) => coords[0])
+              const lats = coordinates.map((coords: number[]) => coords[1])
+
+              const centerLng = (Math.min(...lngs) + Math.max(...lngs)) / 2
+              const centerLat = (Math.min(...lats) + Math.max(...lats)) / 2
+
+              // Приближаем карту к кластеру
+              if (mapInstance.setCenter && mapInstance.setZoom) {
+                mapInstance.setCenter([centerLng, centerLat])
+                mapInstance.setZoom(18)
+              }
+            }
+          }
+        }
+        // Клик по отдельному маркеру - открываем задачу
+        else if (event.target.type === "marker" && event.target.data?.task) {
           handleSelectTask(event.target.data.task)
         }
       })
@@ -106,10 +185,64 @@ const MainMap2Gis = memo(({ selectedTask, handleSelectTask, tasksList }: MapCont
           const markers = createMarkers(tasksList)
           clustererRef.current = createClusterer(mapInstance, markers)
         }
+
+        // Подключаем события изменения карты ПОСЛЕ того, как карта готова
+        if (onBoundsChange && mapInstance.on) {
+          // Debounce для оптимизации (500ms)
+          let debounceTimer: number | null = null
+          const DEBOUNCE_DELAY = 500
+
+          const updateBounds = () => {
+            // Очищаем предыдущий таймер
+            if (debounceTimer !== null) {
+              clearTimeout(debounceTimer)
+            }
+
+            // Устанавливаем новый таймер
+            debounceTimer = window.setTimeout(() => {
+              const bounds = getBounds()
+              if (bounds) {
+                onBoundsChange(bounds)
+              }
+              debounceTimer = null
+            }, DEBOUNCE_DELAY)
+          }
+
+          // Подключаем только события окончания движения/зума (не во время движения)
+          // Это предотвращает избыточные вызовы
+          mapInstance.on("moveend", updateBounds)
+          mapInstance.on("zoomend", updateBounds)
+
+          // Сохраняем функцию очистки
+          cleanupEventsRef.current = () => {
+            if (debounceTimer !== null) {
+              clearTimeout(debounceTimer)
+              debounceTimer = null
+            }
+            if (mapInstance.off) {
+              mapInstance.off("moveend", updateBounds)
+              mapInstance.off("zoomend", updateBounds)
+            }
+          }
+
+          // Первоначальное получение bounds (с небольшой задержкой для стабильности)
+          setTimeout(() => {
+            const initialBounds = getBounds()
+            if (initialBounds) {
+              onBoundsChange(initialBounds)
+            }
+          }, 300)
+        }
       })
     })
 
     return () => {
+      // Очищаем события
+      if (cleanupEventsRef.current) {
+        cleanupEventsRef.current()
+        cleanupEventsRef.current = null
+      }
+
       if (clustererRef.current) {
         clustererRef.current.destroy()
         clustererRef.current = null

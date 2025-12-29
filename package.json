@@ -25,6 +25,7 @@
     "@casl/ability": "^6.7.3",
     "@casl/react": "^5.0.0",
     "@faker-js/faker": "^9.9.0",
+    "@googlemaps/markerclusterer": "^2.6.2",
     "@keyv/redis": "^5.1.4",
     "@liaoliaots/nestjs-redis": "^10.0.0",
     "@nestjs/bull": "^11.0.4",

@@ -25,7 +25,7 @@ const MarkerContent = ({ count, image }: MarkerContentProps) => {
   )
 }
 
-const centerMap = { lat: 37.75296, lng: -122.467844 }
+const centerMap = { lat: 55.74982, lng: 37.623965 }
 
 const mapOptions: google.maps.MapOptions = {
   disableDefaultUI: true,

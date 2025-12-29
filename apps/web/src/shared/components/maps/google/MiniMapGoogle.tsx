@@ -5,7 +5,7 @@ import { useGoogleMapLoaded } from "../../../providers/GoogleMapContext"
 import { GOOGLE_MAP_ID } from "../../../../constants"
 
 // лишь демонстрация, сюда возможно пойдет реальная геолокация пользователя
-const centerMap = { lat: 37.75296, lng: -122.467844 }
+const centerMap = { lat: 55.74982, lng: 37.623965 }
 
 const mapOptions: google.maps.MapOptions = {
   disableDefaultUI: true,

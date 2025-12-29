@@ -1,7 +1,7 @@
 // Адаптеры для преобразования типов бекенда в типы фронтенда
 // Используются только там, где нужны специфичные для UI преобразования
 
-import type { RequestBackend, ChatListItem, MessageBackend } from "./backend"
+import type { RequestBackend, ChatListItem, MessageBackend, RequestMapItem, RequestStatus } from "./backend"
 
 /**
  * Преобразует RequestBackend в TaskType для использования в UI
@@ -147,5 +147,54 @@ export function adaptMessageBackendToMessage(message: MessageBackend, order?: Ta
     created_at: new Date(message.createdAt).getTime(),
     is_read: message.isRead,
     order,
+  }
+}
+
+/**
+ * Преобразует RequestMapItem в TaskType для отображения на карте
+ * RequestMapItem - упрощенная версия задачи для карты (только id, title, price, status, lng, lat)
+ *
+ * ВАЖНО: RequestMapItem содержит только минимальные данные, поэтому недостающие поля заполняются дефолтными значениями
+ */
+export function adaptRequestMapItemToTask(mapItem: RequestMapItem): TaskType {
+  // Вычисляем tags (пустой массив, так как в RequestMapItem нет expiresAt/deadlineAt)
+  const tags: TaskType["tags"] = []
+
+  // Вычисляем mode (по умолчанию "base", так как в RequestMapItem нет metadata)
+  const mode: "base" | "pro" = "base"
+
+  // Текущая дата для дефолтных значений временных полей
+  const now = new Date().toISOString()
+
+  return {
+    // Основные поля из RequestMapItem
+    id: mapItem.id,
+    title: mapItem.title,
+    price: mapItem.price,
+    status: mapItem.status as RequestStatus,
+
+    // Поля с дефолтными значениями (отсутствуют в RequestMapItem)
+    description: "",
+    attachments: [],
+    address: null,
+    createdAt: now,
+    updatedAt: now,
+    acceptedAt: null,
+    completedAt: null,
+    cancelledAt: null,
+    expiresAt: null,
+    deadlineAt: null,
+    isUrgent: false,
+    metadata: undefined,
+    responses: undefined,
+    submission: undefined,
+
+    // Преобразованные поля для UI
+    position: { lat: mapItem.lat, lng: mapItem.lng },
+    customer_id: 0, // RequestMapItem не содержит customer_id
+    performer_id: null, // RequestMapItem не содержит performer_id
+    mode,
+    tags,
+    arbitrationApproved: false, // RequestMapItem не содержит arbitrationApproved
   }
 }

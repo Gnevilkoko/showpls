@@ -1,15 +1,16 @@
 import { useTranslation } from "react-i18next"
-import { useEffect, useRef, useState, useMemo } from "react"
+import { useEffect, useRef, useState, useMemo, useCallback } from "react"
 import { useNavigate } from "react-router-dom"
 import { useSelector } from "react-redux"
 import type { TaskType } from "../../../shared/types"
 import {
   useCancelRequestMutation,
   useGetRequestListQuery,
+  useGetRequestMapQuery,
   useRespondToRequestMutation,
 } from "../../../store/api/requestApi"
 import type { RequestListParams } from "../../../store/api/requestApi"
-import { adaptRequestToTask } from "../../../shared/types/adapters"
+import { adaptRequestToTask, adaptRequestMapItemToTask } from "../../../shared/types/adapters"
 import { useAppSelector, type RootState } from "../../../store"
 import { NotificationHandler } from "../../../shared/utils/notificationHandler"
 import Modal from "../../../shared/components/Modal"
@@ -35,6 +36,30 @@ const DEFAULT_FILTERS: RequestListParams = {
   sortBy: "createdAt",
   sortOrder: "desc",
 }
+const DEBOUNCE_DELAY_MS = 500 // Задержка для debounce обновления bounds
+const MAX_BOUNDS_SIZE_KM = 1000 // Максимальный размер bounding box в километрах
+
+// Функция для расчета расстояния между двумя точками в километрах (формула гаверсинуса)
+function calculateDistanceKm(lat1: number, lon1: number, lat2: number, lon2: number): number {
+  const R = 6371 // Радиус Земли в километрах
+  const dLat = ((lat2 - lat1) * Math.PI) / 180
+  const dLon = ((lon2 - lon1) * Math.PI) / 180
+  const a =
+    Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+    Math.cos((lat1 * Math.PI) / 180) * Math.cos((lat2 * Math.PI) / 180) * Math.sin(dLon / 2) * Math.sin(dLon / 2)
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a))
+  return R * c
+}
+
+// Валидация размера bounding box
+function validateBoundsSize(north: number, south: number, east: number, west: number): boolean {
+  // Вычисляем размеры по широте и долготе
+  const latDistance = calculateDistanceKm(south, (east + west) / 2, north, (east + west) / 2)
+  const lngDistance = calculateDistanceKm((north + south) / 2, west, (north + south) / 2, east)
+
+  // Проверяем, что оба размера не превышают максимум
+  return latDistance <= MAX_BOUNDS_SIZE_KM && lngDistance <= MAX_BOUNDS_SIZE_KM
+}
 
 const PerformerDiscover = () => {
   const { t } = useTranslation()
@@ -43,25 +68,21 @@ const PerformerDiscover = () => {
   const language = useSelector((state: RootState) => state.language)
   const isRussian = language === "ru"
 
-  // API запросы и мутации
-  const {
-    data: requestListData,
-    isLoading,
-    error,
-    refetch,
-  } = useGetRequestListQuery(DEFAULT_FILTERS, {
-    skip: false,
-    refetchOnMountOrArgChange: true,
-  })
-  const [cancelRequest] = useCancelRequestMutation()
-  const [respondToRequest] = useRespondToRequestMutation()
-
   // Состояния UI
   const [activeSection, setActiveSection] = useState<"list" | "map">("list")
   const [selectedTask, setSelectedTask] = useState<TaskType | null>(null)
   const [isOpenModal, setIsOpenModal] = useState(false)
   const [isOpenResponseTask, setIsOpenResponseTask] = useState(false)
   const [isOpenPerformerDiscover, setIsOpenPerformerDiscover] = useState(false)
+
+  // Состояния для карты (bounds)
+  const [mapBounds, setMapBounds] = useState<{
+    north: number
+    south: number
+    east: number
+    west: number
+  } | null>(null)
+  const debounceTimerRef = useRef<number | null>(null)
 
   // Состояния формы отклика
   const [responseTaskMessage, setResponseTaskMessage] = useState("")
@@ -70,16 +91,106 @@ const PerformerDiscover = () => {
   // Refs
   const listTaskRefs = useRef<Record<string, HTMLDivElement | null>>({})
 
-  // Преобразование данных
-  const tasks = useMemo(() => {
+  // API запросы для списка задач
+  const {
+    data: requestListData,
+    isLoading: isLoadingList,
+    error: listError,
+    refetch: refetchList,
+  } = useGetRequestListQuery(DEFAULT_FILTERS, {
+    skip: activeSection !== "list",
+    refetchOnMountOrArgChange: true,
+  })
+
+  // API запросы для карты (используем bounds)
+  const {
+    data: requestMapData,
+    isLoading: isLoadingMap,
+    error: mapError,
+  } = useGetRequestMapQuery(
+    mapBounds
+      ? {
+          north: mapBounds.north,
+          south: mapBounds.south,
+          east: mapBounds.east,
+          west: mapBounds.west,
+        }
+      : // Дефолтные bounds (не будут использованы из-за skip)
+        {
+          north: 90,
+          south: -90,
+          east: 180,
+          west: -180,
+        },
+    {
+      skip: activeSection !== "map" || !mapBounds,
+    }
+  )
+
+  const [cancelRequest] = useCancelRequestMutation()
+  const [respondToRequest] = useRespondToRequestMutation()
+
+  // Обработчик изменения bounds карты с debounce и валидацией
+  const handleBoundsChange = useCallback(
+    (bounds: { north: number; south: number; east: number; west: number } | null) => {
+      // Очищаем предыдущий таймер
+      if (debounceTimerRef.current !== null) {
+        clearTimeout(debounceTimerRef.current)
+      }
+
+      // Устанавливаем новый таймер
+      debounceTimerRef.current = window.setTimeout(() => {
+        if (!bounds) {
+          setMapBounds(null)
+          return
+        }
+
+        // Валидация размера bounding box
+        const isValid = validateBoundsSize(bounds.north, bounds.south, bounds.east, bounds.west)
+        if (isValid) {
+          setMapBounds(bounds)
+        } else {
+          // Если bounds слишком большие, не обновляем (не делаем запрос)
+          setMapBounds(null)
+        }
+        debounceTimerRef.current = null
+      }, DEBOUNCE_DELAY_MS)
+    },
+    []
+  )
+
+  // Очистка таймера при размонтировании
+  useEffect(() => {
+    return () => {
+      if (debounceTimerRef.current) {
+        clearTimeout(debounceTimerRef.current)
+      }
+    }
+  }, [])
+
+  // Преобразование данных для списка
+  const listTasks = useMemo(() => {
     const requests = requestListData?.items || []
     return requests.map((request) => adaptRequestToTask(request))
   }, [requestListData])
 
+  // Преобразование данных для карты
+  const mapTasks = useMemo(() => {
+    const mapItems = requestMapData || []
+    return mapItems.map((item) => adaptRequestMapItemToTask(item))
+  }, [requestMapData])
+
+  // Выбираем задачи в зависимости от активной секции
+  const tasks = activeSection === "list" ? listTasks : mapTasks
+  const isLoading = activeSection === "list" ? isLoadingList : isLoadingMap
+  const error = activeSection === "list" ? listError : mapError
+
   // Обновление списка при смене секции
   useEffect(() => {
-    refetch()
-  }, [activeSection, refetch])
+    if (activeSection === "list") {
+      refetchList()
+    }
+  }, [activeSection, refetchList])
 
   // Обработчики задач
   const handleSelectTask = (task: TaskType) => {
@@ -97,7 +208,9 @@ const PerformerDiscover = () => {
       await cancelRequest(taskId).unwrap()
       NotificationHandler.showSuccessTranslated("taskCancelled")
       handleCloseTask()
-      refetch()
+      if (activeSection === "list") {
+        refetchList()
+      }
     } catch {
       NotificationHandler.showErrorTranslated("errorCancellingTask")
     }
@@ -121,7 +234,9 @@ const PerformerDiscover = () => {
       }).unwrap()
 
       NotificationHandler.showSuccessTranslated("taskResponded")
-      refetch()
+      if (activeSection === "list") {
+        refetchList()
+      }
       handleCloseResponseModal()
       navigate(`/chat/${response.chatId}`)
     } catch {
@@ -174,7 +289,14 @@ const PerformerDiscover = () => {
       {activeSection === "list" && error && (
         <div className="status-state-container">
           <span>{t("errorLoadingTasks")}</span>
-          <button onClick={() => refetch()} className="task__button">
+          <button
+            onClick={() => {
+              if (activeSection === "list") {
+                refetchList()
+              }
+            }}
+            className="task__button"
+          >
             {t("retry")}
           </button>
         </div>
@@ -204,7 +326,12 @@ const PerformerDiscover = () => {
 
       {/* Карта */}
       {activeSection === "map" && (
-        <MapComponent selectedTask={selectedTask} handleSelectTask={handleSelectTask} tasksList={tasks} />
+        <MapComponent
+          selectedTask={selectedTask}
+          handleSelectTask={handleSelectTask}
+          tasksList={tasks}
+          onBoundsChange={handleBoundsChange}
+        />
       )}
 
       {/* Модалка с деталями задачи */}

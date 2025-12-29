@@ -1556,13 +1556,17 @@ $border-color-active-order: var(--border-color-active-order);
   background-color: #ff8b00;
   border-radius: 100px;
   padding: 6px 11px;
-  transform: translate(-50%, calc(-100%));
   transform-origin: center bottom;
+  cursor: pointer;
 
   font-family: Inter;
   font-weight: 500;
   font-size: 16px;
   color: #ffffff;
+
+  &.map2gis {
+    transform: translate(-50%, calc(-100%));
+  }
 }
 
 // =========== toggle-profile-mode ===========
