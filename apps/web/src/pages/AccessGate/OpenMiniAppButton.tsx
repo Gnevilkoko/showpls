@@ -1,11 +1,8 @@
 import telegramLogo from "../../assets/images/telegram-logo.svg"
-import { BOT_USERNAME } from "../../constants"
+import { TG_SCHEME, TME_LINK } from "../../constants"
 
-const TG_SCHEME = `tg://resolve?domain=${BOT_USERNAME}`
-const TME_LINK = `https://t.me/${BOT_USERNAME}`
-
-const OpenTelegramButton = () => {
-  const handleOpenTg = () => {
+const OpenMiniAppButton = () => {
+  const handleOpenMiniApp = () => {
     // открываем нативное приложение
     window.location.href = TG_SCHEME
 
@@ -19,7 +16,7 @@ const OpenTelegramButton = () => {
   }
 
   return (
-    <button className="access-gate__button-switch-telegram" onClick={handleOpenTg}>
+    <button className="access-gate__button-switch-telegram" onClick={handleOpenMiniApp}>
       <img src={telegramLogo} alt="Telegram Logo" />
 
       <span>Continue with Mini App</span>
@@ -27,4 +24,4 @@ const OpenTelegramButton = () => {
   )
 }
 
-export default OpenTelegramButton
+export default OpenMiniAppButton

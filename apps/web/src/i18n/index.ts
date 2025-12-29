@@ -133,6 +133,8 @@ const resources = {
         dataSaveError: "Failed to save data",
         orderCreateError: "Failed to create order",
         paymentFailed: "Payment failed, please try again.",
+        topUpCreateError: "Failed to create top-up. Please try again.",
+        invalidServerResponse: "Invalid response from server. Please try again.",
         somethingWentWrong: "Something went wrong, please try again later",
         errorCancellingTask: "Error cancelling task, please try again later",
         errorRespondingToTask: "Error responding to task, please try again later",
@@ -231,6 +233,7 @@ const resources = {
       responseTask: "Response to the task",
       placeholderResponseTask:
         "You can share how you will perform the task, increasing your chances of being selected as a performer",
+      openMiniApp: "Open Telegram Mini App",
     },
   },
   ru: {
@@ -365,6 +368,8 @@ const resources = {
         dataSaveError: "Не удалось сохранить данные",
         orderCreateError: "Не удалось создать заказ",
         paymentFailed: "Ошибка при оплате. Попробуйте ещё раз.",
+        topUpCreateError: "Не удалось создать пополнение. Пожалуйста, попробуйте снова.",
+        invalidServerResponse: "Некорректный ответ от сервера. Пожалуйста, попробуйте снова.",
         somethingWentWrong: "Что-то пошло не так, попробуйте позже",
         errorCancellingTask: "Ошибка при отмене задачи, попробуйте позже",
         errorRespondingToTask: "Ошибка при отклике на задачу, попробуйте позже",
@@ -462,6 +467,7 @@ const resources = {
       responseTask: "Отклик на задачу",
       placeholderResponseTask:
         "Вы можете поделится тем, как будете выполнять задачу, повысив шанс быть выбранным исполнителем",
+      openMiniApp: "Открыть Telegram Mini App",
     },
   },
 }

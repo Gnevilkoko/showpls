@@ -1,7 +1,7 @@
 import background from "../../assets/images/access-gate-bg.webp"
 // import logoAnimation from "../../assets/animations/logo-animation.json"
 import logoAnimation from "../../assets/animations/new-logo-animation.json"
-import OpenTelegramButton from "./OpenTelegramButton"
+import OpenMiniAppButton from "./OpenMiniAppButton"
 import TelegramLoginButton from "./TelegramLoginButton"
 import Lottie from "lottie-react"
 import { BOT_ID } from "../../constants"
@@ -54,7 +54,7 @@ const AccessGate = () => {
             Every smartphone, camera, drone can earn with Showpls
           </p>
 
-          <OpenTelegramButton />
+          <OpenMiniAppButton />
 
           <TelegramLoginButton botId={BOT_ID} onAuthCallback={handleAuthCallback} />
         </div>

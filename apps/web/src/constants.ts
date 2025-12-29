@@ -1,5 +1,7 @@
 export const BOT_USERNAME = import.meta.env.VITE_BOT_USERNAME
 export const BOT_ID = import.meta.env.VITE_BOT_ID
+export const TG_SCHEME = `tg://resolve?domain=${BOT_USERNAME}`
+export const TME_LINK = `https://t.me/${BOT_USERNAME}`
 
 export const API_KEY_GOOGLE_MAPS = "AIzaSyDJt2qqfPntS72Iw0qakVpDC7vH9VwzHn0"
 // export const GOOGLE_MAP_ID = "326e5c0581dc4ddc71a87e5d"
