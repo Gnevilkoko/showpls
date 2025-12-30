@@ -60,7 +60,8 @@
       "outputs": ["{options.reportsDirectory}"],
       "options": {
         "passWithNoTests": true,
-        "reportsDirectory": "../../coverage/apps/web"
+        "reportsDirectory": "../../coverage/apps/web",
+        "reporter": "verbose"
       }
     },
     "lint": {

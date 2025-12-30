@@ -3,6 +3,7 @@ import { useDispatch, useSelector, type TypedUseSelectorHook } from "react-redux
 import userReducer from "./userSlice"
 import languageReducer from "./languageSlice"
 import themeReducer from "./themeSlice"
+import socketReducer from "./socketSlice"
 import { authApi } from "./api/authApi"
 import { userApi } from "./api/userApi"
 import { requestApi } from "./api/requestApi"
@@ -13,6 +14,7 @@ export const store = configureStore({
     user: userReducer,
     language: languageReducer,
     theme: themeReducer,
+    socket: socketReducer,
     [authApi.reducerPath]: authApi.reducer,
     [userApi.reducerPath]: userApi.reducer,
     [requestApi.reducerPath]: requestApi.reducer,

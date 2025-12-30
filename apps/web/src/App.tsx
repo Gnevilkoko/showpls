@@ -16,6 +16,7 @@ import ScrollManager from "./shared/components/ScrollManager"
 import { ToastContainer } from "react-toastify"
 import "react-toastify/dist/ReactToastify.css"
 import Chat from "./pages/Chat"
+import SocketManager from "./shared/components/SocketManager"
 
 function App() {
   const userData = useAppSelector((state) => state.user.userData)
@@ -27,6 +28,7 @@ function App() {
         <TonWalletProvider>
           <GoogleMapProvider>
             <div className="app">
+              <SocketManager />
               <ScrollManager />
               <Routes>
                 {/* Если userData нет → открываем AccessGate, иначе редиректим на /home */}

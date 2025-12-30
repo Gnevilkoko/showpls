@@ -1,3 +1,4 @@
+/// <reference types="vitest" />
 import { defineConfig } from "vite"
 import react from "@vitejs/plugin-react"
 
@@ -15,7 +16,7 @@ export default defineConfig({
     // Добавляем только в режиме разработки
     ...(isDev && {
       strictPort: false,
-      allowedHosts: ["gneissoid-khedivial-genesis.ngrok-free.dev"],
+      allowedHosts: ["presentively-acanthous-joni.ngrok-free.dev"],
     }),
     fs: {
       allow: [".."],
@@ -24,5 +25,15 @@ export default defineConfig({
   build: {
     outDir: "dist/apps/web",
     emptyOutDir: true,
+  },
+  test: {
+    globals: true,
+    environment: "jsdom",
+    setupFiles: ["./src/test-setup.ts"],
+    include: ["**/*.{test,spec}.{js,mjs,cjs,ts,mts,cts,jsx,tsx}"],
+    coverage: {
+      provider: "v8",
+      reportsDirectory: "../../coverage/apps/web",
+    },
   },
 })
