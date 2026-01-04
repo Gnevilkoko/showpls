@@ -57,7 +57,7 @@ export function useMapBounds(
 
   const [bounds, setBounds] = useState<MapBounds | null>(null)
   const [isValid, setIsValid] = useState(false)
-  const debounceTimerRef = useRef<number | null>(null)
+  const debounceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   const updateBounds = useCallback(() => {
     if (!enabled) {
