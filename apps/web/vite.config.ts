@@ -16,7 +16,8 @@ export default defineConfig({
     // Добавляем только в режиме разработки
     ...(isDev && {
       strictPort: false,
-      allowedHosts: ["presentively-acanthous-joni.ngrok-free.dev"],
+      // разрешаем все ngrok домены (паттерн)
+      allowedHosts: [".ngrok-free.dev", ".ngrok.io", ".ngrok.app"],
     }),
     fs: {
       allow: [".."],
