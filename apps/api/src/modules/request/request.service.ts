@@ -20,10 +20,10 @@ import { UserService } from "../user/user.service"
 import { ChatService } from "../chat/chat.service"
 import { NotificationService } from "../notification/notification.service"
 import { ChatGateway } from "../chat/chat.gateway"
-import { createHash } from 'crypto'
-import axios from 'axios'
-import { InjectQueue } from '@nestjs/bullmq'
-import { Queue } from 'bullmq'
+import { createHash } from "crypto"
+import axios from "axios"
+import { InjectQueue } from "@nestjs/bullmq"
+import { Queue } from "bullmq"
 
 @Injectable()
 export class RequestService {
@@ -48,8 +48,8 @@ export class RequestService {
     private readonly chatService: ChatService,
     private readonly notificationService: NotificationService,
     private readonly chatGateway: ChatGateway,
-    @InjectQueue('request-expiration')
-    private readonly requestExpirationQueue: Queue,
+    @InjectQueue("request-expiration")
+    private readonly requestExpirationQueue: Queue
   ) {}
 
   private async validateAttachments(attachments: string[]): Promise<{ url: string; hash: string }[]> {
@@ -58,11 +58,11 @@ export class RequestService {
     for (const url of attachments) {
       try {
         // Download file
-        const response = await axios.get(url, { responseType: 'arraybuffer' })
+        const response = await axios.get(url, { responseType: "arraybuffer" })
         const buffer = Buffer.from(response.data)
 
         // Calculate SHA256 hash
-        const hash = createHash('sha256').update(buffer).digest('hex')
+        const hash = createHash("sha256").update(buffer).digest("hex")
 
         results.push({ url, hash })
       } catch (error) {
@@ -73,17 +73,21 @@ export class RequestService {
     return results
   }
 
-  private async validateBalance(user: User, price: number, errorMessage: string = "Insufficient balance"): Promise<void> {
+  private async validateBalance(
+    user: User,
+    price: number,
+    errorMessage: string = "Insufficient balance"
+  ): Promise<void> {
     const balances = await this.userService.getBalances(user.id)
 
-    const starsBalances = balances.filter(b => b.token === Token.STARS && b.blockchain === null)
+    const starsBalances = balances.filter((b) => b.token === Token.STARS && b.blockchain === null)
     if (starsBalances.length === 0) {
       throw new BadRequestException("User has no STARS balance")
     }
 
     const totalBalance = starsBalances.reduce((sum, b) => sum + BigInt(b.balance), BigInt(0))
-    const totalLocked = starsBalances.reduce((sum, b) => sum + BigInt(b.lockedBalance), BigInt(0))
-    const availableBalance = totalBalance - totalLocked
+    // Note: The balance field already excludes locked amounts, so we use it directly as available
+    const availableBalance = totalBalance
     const priceInSmallestUnits = BigInt(Math.round(price * 1e6))
 
     if (availableBalance < priceInSmallestUnits) {
@@ -113,6 +117,11 @@ export class RequestService {
     } else if (!dto.isUrgent) {
       expiresAt = new Date(Date.now() + 168 * 60 * 60 * 1000)
     }
+
+    if (expiresAt && expiresAt.getTime() < Date.now()) {
+      throw new BadRequestException("ExpiresAt cannot be in the past!")
+    }
+
     return expiresAt
   }
 
@@ -134,8 +143,8 @@ export class RequestService {
       status: RequestStatus.Published,
       // Map DTO location to PostGIS Point (longitude first!)
       location: {
-        type: 'Point',
-        coordinates: [dto.longitude, dto.latitude]
+        type: "Point",
+        coordinates: [dto.longitude, dto.latitude],
       },
       address: dto.address || null,
       metadata: dto.metadata || {},
@@ -184,14 +193,14 @@ export class RequestService {
       if (delay > 0) {
         try {
           await this.requestExpirationQueue.add(
-            'expire-request',
+            "expire-request",
             { requestId: savedRequest.id },
             {
               delay,
               jobId: `${savedRequest.id}_expire`,
               attempts: 3,
               backoff: {
-                type: 'exponential',
+                type: "exponential",
                 delay: 2000,
               },
               removeOnComplete: 100,
@@ -201,8 +210,10 @@ export class RequestService {
           this.logger.log(`Scheduled expiration job for request ${savedRequest.id} with delay ${delay}ms`)
         } catch (error) {
           this.logger.error(
-            `Failed to schedule expiration job for request ${savedRequest.id}: ${error instanceof Error ? error.message : 'Unknown error'}`,
-            error instanceof Error ? error.stack : undefined,
+            `Failed to schedule expiration job for request ${savedRequest.id}: ${
+              error instanceof Error ? error.message : "Unknown error"
+            }`,
+            error instanceof Error ? error.stack : undefined
           )
           // Не прерываем транзакцию, но логируем ошибку
         }
@@ -240,7 +251,14 @@ export class RequestService {
 
     // Wrap in transaction
     return this.dataSource.transaction(async (manager) => {
-      const { savedRequest, attachments } = await this.createRequestInTransaction(dto, user, attachmentHashes, expiresAt, manager, false)
+      const { savedRequest, attachments } = await this.createRequestInTransaction(
+        dto,
+        user,
+        attachmentHashes,
+        expiresAt,
+        manager,
+        false
+      )
 
       // TODO: Invalidate geo-cache
 
@@ -300,21 +318,25 @@ export class RequestService {
 
     // Wrap in transaction
     return this.dataSource.transaction(async (manager) => {
-      const { savedRequest, attachments, response } = await this.createRequestInTransaction(dto, user, attachmentHashes, expiresAt, manager, true, performer)
+      const { savedRequest, attachments, response } = await this.createRequestInTransaction(
+        dto,
+        user,
+        attachmentHashes,
+        expiresAt,
+        manager,
+        true,
+        performer
+      )
 
       // Create or get existing chat between customer and performer
       const chat = await this.chatService.getOrCreateChat(user.id, performer.id)
 
       // Send system message with task offer
-      await this.chatService.sendMessage(
-        user,
-        chat.id,
-        {
-          text: `New task offer: ${dto.title}`,
-          type: "notification",
-          variant: "newTask"
-        }
-      )
+      await this.chatService.sendMessage(user, chat.id, {
+        text: `New task offer: ${dto.title}`,
+        type: "notification",
+        variant: "newTask",
+      })
 
       // Notify performer only through notification service (queue)
       await this.notificationService.send(String(performer.id), "newTask", {
@@ -322,7 +344,7 @@ export class RequestService {
         title: dto.title,
         price: dto.price,
         chatId: chat.id,
-        responseId: response!.id
+        responseId: response!.id,
       })
 
       // TODO: Invalidate geo-cache
@@ -355,7 +377,6 @@ export class RequestService {
     })
   }
 
-
   async findAll(user: User, query: ListRequestsDto): Promise<any> {
     const {
       status,
@@ -370,16 +391,18 @@ export class RequestService {
       limit = 20,
       offset = 0,
       sortBy = "createdAt",
-      sortOrder = "desc"
+      sortOrder = "desc",
     } = query
 
     // Clone for count query
-    const countQueryBuilder = this.requestRepository.createQueryBuilder("request")
+    const countQueryBuilder = this.requestRepository
+      .createQueryBuilder("request")
       .leftJoin("request.customer", "customer")
       .leftJoin("request.responses", "responses")
       .leftJoin("responses.performer", "performer")
 
-    const queryBuilder = this.requestRepository.createQueryBuilder("request")
+    const queryBuilder = this.requestRepository
+      .createQueryBuilder("request")
       .leftJoinAndSelect("request.customer", "customer")
       .leftJoinAndSelect("request.attachments", "attachments")
       .leftJoin("request.responses", "responses", "responses.status = :acceptedStatus", { acceptedStatus: "accepted" })
@@ -408,20 +431,30 @@ export class RequestService {
     // Bounding box filter
     if (north !== undefined && south !== undefined && east !== undefined && west !== undefined) {
       queryBuilder.andWhere("ST_Within(request.location, ST_MakeEnvelope(:west, :south, :east, :north, 4326))", {
-        west, south, east, north
+        west,
+        south,
+        east,
+        north,
       })
       countQueryBuilder.andWhere("ST_Within(request.location, ST_MakeEnvelope(:west, :south, :east, :north, 4326))", {
-        west, south, east, north
+        west,
+        south,
+        east,
+        north,
       })
     }
 
     // Radius filter
     if (radius && latitude !== undefined && longitude !== undefined) {
       queryBuilder.andWhere("ST_DWithin(request.location, ST_Point(:longitude, :latitude, 4326), :radius)", {
-        longitude, latitude, radius: radius * 1000 // km to meters
+        longitude,
+        latitude,
+        radius: radius * 1000, // km to meters
       })
       countQueryBuilder.andWhere("ST_DWithin(request.location, ST_Point(:longitude, :latitude, 4326), :radius)", {
-        longitude, latitude, radius: radius * 1000 // km to meters
+        longitude,
+        latitude,
+        radius: radius * 1000, // km to meters
       })
     }
 
@@ -445,18 +478,19 @@ export class RequestService {
     const requests = await queryBuilder.getMany()
 
     // Format response
-    const items = requests.map(request => {
+    const items = requests.map((request) => {
       const item: any = {
         id: request.id,
         title: request.title,
         description: request.description,
         price: request.price,
         status: request.status,
-        attachments: request.attachments?.map(att => ({
-          id: att.id,
-          url: att.url,
-          hash: att.hash,
-        })) || [],
+        attachments:
+          request.attachments?.map((att) => ({
+            id: att.id,
+            url: att.url,
+            hash: att.hash,
+          })) || [],
         latitude: request.location.coordinates[1],
         longitude: request.location.coordinates[0],
         customer: {
@@ -465,12 +499,14 @@ export class RequestService {
           lastName: request.customer.lastName,
           avatar: request.customer.avatar,
         },
-        performer: request.responses?.[0]?.performer ? {
-          id: request.responses[0].performer.id,
-          firstName: request.responses[0].performer.firstName,
-          lastName: request.responses[0].performer.lastName,
-          avatar: request.responses[0].performer.avatar,
-        } : null,
+        performer: request.responses?.[0]?.performer
+          ? {
+              id: request.responses[0].performer.id,
+              firstName: request.responses[0].performer.firstName,
+              lastName: request.responses[0].performer.lastName,
+              avatar: request.responses[0].performer.avatar,
+            }
+          : null,
         createdAt: request.createdAt.toISOString(),
         expiresAt: request.expiresAt?.toISOString() || null,
         deadlineAt: request.deadlineAt?.toISOString() || null,
@@ -498,7 +534,7 @@ export class RequestService {
       items,
       total,
       limit,
-      offset
+      offset,
     }
   }
 
@@ -513,14 +549,15 @@ export class RequestService {
     }
 
     const isCustomer = user && request.customer.id === user.id
-    const isPerformer = user && request.responses.some(r => r.performer.id === user.id)
-    const isPublishedOrAccepted = request.status === RequestStatus.Published || request.status === RequestStatus.Accepted
+    const isPerformer = user && request.responses.some((r) => r.performer.id === user.id)
+    const isPublishedOrAccepted =
+      request.status === RequestStatus.Published || request.status === RequestStatus.Accepted
 
     // Filter responses based on user role
     let responses: any[] = []
     if (isCustomer && isPublishedOrAccepted) {
       // Show all responses
-      responses = request.responses.map(r => ({
+      responses = request.responses.map((r) => ({
         id: r.id,
         performer: {
           id: r.performer.id,
@@ -534,20 +571,22 @@ export class RequestService {
       }))
     } else if (isPerformer && isPublishedOrAccepted) {
       // Show only own response
-      const ownResponse = request.responses.find(r => r.performer.id === user!.id)
+      const ownResponse = request.responses.find((r) => r.performer.id === user!.id)
       if (ownResponse) {
-        responses = [{
-          id: ownResponse.id,
-          performer: {
-            id: ownResponse.performer.id,
-            firstName: ownResponse.performer.firstName,
-            lastName: ownResponse.performer.lastName,
-            avatar: ownResponse.performer.avatar,
+        responses = [
+          {
+            id: ownResponse.id,
+            performer: {
+              id: ownResponse.performer.id,
+              firstName: ownResponse.performer.firstName,
+              lastName: ownResponse.performer.lastName,
+              avatar: ownResponse.performer.avatar,
+            },
+            status: ownResponse.status,
+            message: ownResponse.message,
+            createdAt: ownResponse.createdAt.toISOString(),
           },
-          status: ownResponse.status,
-          message: ownResponse.message,
-          createdAt: ownResponse.createdAt.toISOString(),
-        }]
+        ]
       }
     }
     // For others, no responses
@@ -560,28 +599,31 @@ export class RequestService {
         return new Date(b.serverTs).getTime() - new Date(a.serverTs).getTime()
       })
       const latestSubmission = sortedSubmissions[0]
-      
+
       submission = {
         id: latestSubmission.id,
         status: latestSubmission.status,
         serverTs: latestSubmission.serverTs,
         proofMeta: latestSubmission.proofMeta,
-        attachments: latestSubmission.attachments?.map(att => ({
-          id: att.id,
-          url: att.url,
-          hash: att.hash,
-        })) || [],
+        attachments:
+          latestSubmission.attachments?.map((att) => ({
+            id: att.id,
+            url: att.url,
+            hash: att.hash,
+          })) || [],
       }
     }
 
     // Find performer (accepted one)
-    const acceptedResponse = request.responses.find(r => r.status === "accepted")
-    const performer = acceptedResponse ? {
-      id: acceptedResponse.performer.id,
-      firstName: acceptedResponse.performer.firstName,
-      lastName: acceptedResponse.performer.lastName,
-      avatar: acceptedResponse.performer.avatar,
-    } : null
+    const acceptedResponse = request.responses.find((r) => r.status === "accepted")
+    const performer = acceptedResponse
+      ? {
+          id: acceptedResponse.performer.id,
+          firstName: acceptedResponse.performer.firstName,
+          lastName: acceptedResponse.performer.lastName,
+          avatar: acceptedResponse.performer.avatar,
+        }
+      : null
 
     return {
       id: request.id,
@@ -589,11 +631,12 @@ export class RequestService {
       description: request.description,
       price: request.price,
       status: request.status,
-      attachments: request.attachments?.map(att => ({
-        id: att.id,
-        url: att.url,
-        hash: att.hash,
-      })) || [],
+      attachments:
+        request.attachments?.map((att) => ({
+          id: att.id,
+          url: att.url,
+          hash: att.hash,
+        })) || [],
       latitude: request.location.coordinates[1],
       longitude: request.location.coordinates[0],
       customer: {
@@ -664,8 +707,8 @@ export class RequestService {
     if (dto.price !== undefined) updateData.price = dto.price
     if (dto.latitude !== undefined && dto.longitude !== undefined) {
       updateData.location = {
-        type: 'Point',
-        coordinates: [dto.longitude, dto.latitude]
+        type: "Point",
+        coordinates: [dto.longitude, dto.latitude],
       }
     }
     if (dto.address !== undefined) updateData.address = dto.address
@@ -678,15 +721,15 @@ export class RequestService {
     if (dto.price !== undefined && dto.price !== request.price) {
       // Check user balance - only STARS are used for payment
       const balances = await this.userService.getBalances(user.id)
-      const starsBalances = balances.filter(b => b.token === Token.STARS && b.blockchain === null)
+      const starsBalances = balances.filter((b) => b.token === Token.STARS && b.blockchain === null)
       if (starsBalances.length === 0) {
         throw new BadRequestException("User has no STARS balance")
       }
 
       // Sum all STARS balances to handle duplicate currency entries
+      // Note: The balance field already excludes locked amounts, so we use it directly as available
       const totalBalance = starsBalances.reduce((sum, b) => sum + BigInt(b.balance), BigInt(0))
-      const totalLocked = starsBalances.reduce((sum, b) => sum + BigInt(b.lockedBalance), BigInt(0))
-      const availableBalance = totalBalance - totalLocked
+      const availableBalance = totalBalance
       const priceInSmallestUnits = BigInt(Math.round(dto.price * 1e6))
       if (availableBalance < priceInSmallestUnits) {
         throw new BadRequestException("Insufficient balance")
@@ -840,24 +883,25 @@ export class RequestService {
       )
 
       // 4.2 Update Request status
-      await manager.update(Request, { id }, {
-        status: RequestStatus.Cancelled,
-        cancelledAt: new Date()
-      })
+      await manager.update(
+        Request,
+        { id },
+        {
+          status: RequestStatus.Cancelled,
+          cancelledAt: new Date(),
+        }
+      )
 
       // 4.3 Update all related Response statuses
       if (request.responses && request.responses.length > 0) {
-        await manager.update(Response,
-          { request: { id } },
-          { status: ResponseStatus.Cancelled }
-        )
+        await manager.update(Response, { request: { id } }, { status: ResponseStatus.Cancelled })
       }
 
       // 4.4 Update Deal if exists
       // Find any deals associated with this request
       const dealRepository = manager.getRepository("Deal")
       const deals = await dealRepository.find({
-        where: { request: { id } }
+        where: { request: { id } },
       })
 
       if (deals.length > 0) {
@@ -865,46 +909,45 @@ export class RequestService {
           { request: { id } },
           {
             status: "cancelled",
-            escrowStatus: "rejected"
+            escrowStatus: "rejected",
           }
         )
       }
 
       // 4.5 Cancel scheduled auto-cancellation
-      await this.requestExpirationQueue.getJobs(['waiting']).then(jobs => {
-        const job = jobs.find(job => job.data.requestId === id)
+      await this.requestExpirationQueue.getJobs(["waiting"]).then((jobs) => {
+        const job = jobs.find((job) => job.data.requestId === id)
         if (job) {
           job.remove()
         }
       })
 
       // 4.6 Notify performer if assigned
-      const acceptedResponse = request.responses.find(r => r.status === ResponseStatus.Accepted)
+      const acceptedResponse = request.responses.find((r) => r.status === ResponseStatus.Accepted)
       if (acceptedResponse && acceptedResponse.performer) {
         // Get or create chat
         const chat = await this.chatService.getOrCreateChat(user.id, acceptedResponse.performer.id, manager as any)
-        
+
         // Send chat message with taskCancelled variant
-        await this.chatService.sendMessage(user, chat.id, {
-          text: `Task cancelled: ${request.title}`,
-          type: "notification",
-          variant: "taskCancelled",
-        }, manager as any)
+        await this.chatService.sendMessage(
+          user,
+          chat.id,
+          {
+            text: `Task cancelled: ${request.title}`,
+            type: "notification",
+            variant: "taskCancelled",
+          },
+          manager as any
+        )
 
         // Notify performer through notification service (queue)
         await this.notificationService.send(String(acceptedResponse.performer.id), "taskCancelled", {
           requestId: id,
-          title: request.title
+          title: request.title,
         })
 
         // Send WebSocket order:status_changed events to both parties
-        this.chatGateway.notifyOrderStatusChanged(
-          user.id,
-          id,
-          RequestStatus.Cancelled,
-          chat.id,
-          "rejected"
-        )
+        this.chatGateway.notifyOrderStatusChanged(user.id, id, RequestStatus.Cancelled, chat.id, "rejected")
         this.chatGateway.notifyOrderStatusChanged(
           acceptedResponse.performer.id,
           id,
@@ -921,20 +964,22 @@ export class RequestService {
       const updatedRequest = await manager.findOne(Request, {
         where: { id },
         relations: ["customer", "responses", "responses.performer", "attachments", "submissions"],
-      });
+      })
 
       if (!updatedRequest) {
-        throw new NotFoundException("Request not found");
+        throw new NotFoundException("Request not found")
       }
 
       // Find performer (accepted one)
-      const acceptedResponseForPerformer = updatedRequest.responses.find(r => r.status === "accepted");
-      const performer = acceptedResponseForPerformer ? {
-        id: acceptedResponseForPerformer.performer.id,
-        firstName: acceptedResponseForPerformer.performer.firstName,
-        lastName: acceptedResponseForPerformer.performer.lastName,
-        avatar: acceptedResponseForPerformer.performer.avatar,
-      } : null;
+      const acceptedResponseForPerformer = updatedRequest.responses.find((r) => r.status === "accepted")
+      const performer = acceptedResponseForPerformer
+        ? {
+            id: acceptedResponseForPerformer.performer.id,
+            firstName: acceptedResponseForPerformer.performer.firstName,
+            lastName: acceptedResponseForPerformer.performer.lastName,
+            avatar: acceptedResponseForPerformer.performer.avatar,
+          }
+        : null
 
       // Return the updated request with the cancelled status
       return {
@@ -943,11 +988,12 @@ export class RequestService {
         description: updatedRequest.description,
         price: updatedRequest.price,
         status: RequestStatus.Cancelled, // Explicitly set the cancelled status
-        attachments: updatedRequest.attachments?.map(att => ({
-          id: att.id,
-          url: att.url,
-          hash: att.hash,
-        })) || [],
+        attachments:
+          updatedRequest.attachments?.map((att) => ({
+            id: att.id,
+            url: att.url,
+            hash: att.hash,
+          })) || [],
         latitude: updatedRequest.location.coordinates[1],
         longitude: updatedRequest.location.coordinates[0],
         customer: {
@@ -968,7 +1014,7 @@ export class RequestService {
         metadata: updatedRequest.metadata,
         responses: [], // Empty responses for cancelled requests
         submission: null,
-      };
+      }
     })
   }
 
@@ -995,7 +1041,7 @@ export class RequestService {
 
     // 4. Find the active deal (status = accepted or in_progress)
     const activeDeal = request.deals?.find(
-      deal => deal.status === DealStatus.Accepted || deal.status === DealStatus.InProgress
+      (deal) => deal.status === DealStatus.Accepted || deal.status === DealStatus.InProgress
     )
 
     if (!activeDeal) {
@@ -1010,7 +1056,7 @@ export class RequestService {
       const holdTransaction = await manager.findOne(Transaction, {
         where: {
           type: TransactionType.EscrowHold,
-          externalType: 'request',
+          externalType: "request",
           externalId: id,
         },
       })
@@ -1038,9 +1084,9 @@ export class RequestService {
             ownerType: AccountOwnerType.User,
             ownerId: performer.id.toString(),
           })
-          .returning('*')
+          .returning("*")
           .execute()
-        
+
         performerAccount = manager.create(Account, accountInsertResult.raw[0] as object)
       }
 
@@ -1048,7 +1094,7 @@ export class RequestService {
       const currency = await this.getCurrency()
 
       // Ensure balance exists for performer
-      const Balance = manager.getRepository('Balance')
+      const Balance = manager.getRepository("Balance")
       let performerBalance = await Balance.findOne({
         where: {
           accountId: performerAccount.id,
@@ -1061,16 +1107,16 @@ export class RequestService {
         const balanceInsertResult = await manager
           .createQueryBuilder()
           .insert()
-          .into('balance')
+          .into("balance")
           .values({
             accountId: performerAccount.id,
             currencyId: currency.id,
-            amount: '0',
-            lockedAmount: '0',
+            amount: "0",
+            lockedAmount: "0",
             updatedAt: new Date(),
             createdAt: new Date(),
           })
-          .returning('*')
+          .returning("*")
           .execute()
       }
 
@@ -1079,11 +1125,8 @@ export class RequestService {
         ...holdTransaction.meta,
         to: performerAccount.id,
       }
-      
-      await manager.update(Transaction,
-        { id: holdTransaction.id },
-        { meta: updatedMeta as any }
-      )
+
+      await manager.update(Transaction, { id: holdTransaction.id }, { meta: updatedMeta as any })
 
       // FINANCIAL ACTION: Transfer funds to performer through Ledger escrow release
       await this.ledger.escrow.release(
@@ -1095,29 +1138,42 @@ export class RequestService {
       )
 
       // Update Request
-      await manager.update(Request, { id }, {
-        status: RequestStatus.Completed,
-        completedAt: new Date(),
-      })
+      await manager.update(
+        Request,
+        { id },
+        {
+          status: RequestStatus.Completed,
+          completedAt: new Date(),
+        }
+      )
 
       // Update Deal
-      await manager.update(Deal, { id: activeDeal.id }, {
-        status: DealStatus.Completed,
-        escrowStatus: "released",
-      })
+      await manager.update(
+        Deal,
+        { id: activeDeal.id },
+        {
+          status: DealStatus.Completed,
+          escrowStatus: "released",
+        }
+      )
 
       // Get or verify chat
-      const chat = activeDeal.chat || await this.chatService.getOrCreateChat(user.id, performer.id)
+      const chat = activeDeal.chat || (await this.chatService.getOrCreateChat(user.id, performer.id))
 
       // Update isActiveOrder = false in chat
       await this.chatService.updateIsActiveOrder(chat.id, false)
 
       // Send chat message with taskCompleted variant
-      await this.chatService.sendMessage(user, chat.id, {
-        text: "Task completed, funds released",
-        type: "notification",
-        variant: "taskCompleted",
-      }, manager as any)
+      await this.chatService.sendMessage(
+        user,
+        chat.id,
+        {
+          text: "Task completed, funds released",
+          type: "notification",
+          variant: "taskCompleted",
+        },
+        manager as any
+      )
 
       // Notify performer: "Task completed, funds released"
       await this.notificationService.send(String(performer.id), "taskCompleted", {
@@ -1127,20 +1183,8 @@ export class RequestService {
       })
 
       // Notify about order status change via WebSocket with complete info
-      this.chatGateway.notifyOrderStatusChanged(
-        user.id,
-        id,
-        RequestStatus.Completed,
-        chat.id,
-        "released"
-      )
-      this.chatGateway.notifyOrderStatusChanged(
-        performer.id,
-        id,
-        RequestStatus.Completed,
-        chat.id,
-        "released"
-      )
+      this.chatGateway.notifyOrderStatusChanged(user.id, id, RequestStatus.Completed, chat.id, "released")
+      this.chatGateway.notifyOrderStatusChanged(performer.id, id, RequestStatus.Completed, chat.id, "released")
 
       // Return updated request
       const updatedRequest = await manager.findOne(Request, {

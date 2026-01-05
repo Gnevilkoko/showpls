@@ -1,18 +1,9 @@
 import { Inject, Injectable, BadRequestException } from '@nestjs/common'
 import { InjectRepository } from '@nestjs/typeorm'
-import { Repository } from 'typeorm'
-import { Request, User } from '@share/entities'
+import { Repository, In } from 'typeorm'
+import { Request, User, FileAttachment, Response } from '@share/entities'
 import { CACHE_MANAGER } from '@nestjs/cache-manager'
 import { Cache } from 'cache-manager'
-
-interface RequestMapItem {
-  id: string
-  title: string
-  price: number
-  status: string
-  lng: number
-  lat: number
-}
 
 interface PerformerNearby {
   id: string
@@ -38,6 +29,7 @@ export class GeoService {
 
   /**
    * Get requests within map bounds with Redis caching
+   * Returns full request details (same as GET /request/:id)
    * Handles meridian crossing (180/-180 longitude)
    */
   async getRequestsInBounds(
@@ -45,7 +37,7 @@ export class GeoService {
     south: number,
     east: number,
     west: number,
-  ): Promise<RequestMapItem[]> {
+  ): Promise<any[]> {
     // Validate bounding box size
     const latDiff = Math.abs(north - south)
     const lngDiff = Math.abs(east - west)
@@ -60,57 +52,94 @@ export class GeoService {
 
     // Check cache first
     const cacheKey = `geo:requests:${north}:${south}:${east}:${west}`
-    const cached = await this.cacheManager.get<RequestMapItem[]>(cacheKey)
+    const cached = await this.cacheManager.get<any[]>(cacheKey)
     if (cached) {
       return cached
     }
 
-    let results: RequestMapItem[]
+    let requestIds: string[]
 
     // Check if meridian crossing occurs (west > east)
     if (west > east) {
       // Meridian crossing: use raw SQL with OR logic
       const query = `
-        SELECT 
-          id, 
-          title, 
-          price, 
-          status, 
-          ST_X(location::geometry) as lng, 
-          ST_Y(location::geometry) as lat 
-        FROM request 
-        WHERE status IN ('published', 'accepted') 
+        SELECT id FROM request 
+        WHERE status IN ('published', 'accepted')
         AND (ST_X(location::geometry) >= $1 OR ST_X(location::geometry) <= $2) 
         AND ST_Y(location::geometry) BETWEEN $3 AND $4
       `
-      results = await this.requestRepository.query(query, [west, east, south, north])
+      const results = await this.requestRepository.query(query, [west, east, south, north])
+      requestIds = results.map((r: any) => r.id)
     } else {
       // Standard bounds: use ST_MakeEnvelope
       const query = `
-        SELECT 
-          id, 
-          title, 
-          price, 
-          status, 
-          ST_X(location::geometry) as lng, 
-          ST_Y(location::geometry) as lat 
-        FROM request 
+        SELECT id FROM request 
         WHERE status IN ('published', 'accepted') 
         AND ST_Within(location::geometry, ST_MakeEnvelope($1, $2, $3, $4, 4326))
       `
-      results = await this.requestRepository.query(query, [west, south, east, north])
+      const results = await this.requestRepository.query(query, [west, south, east, north])
+      requestIds = results.map((r: any) => r.id)
     }
 
-    // Convert price to number (it comes as string from DB)
-    const formattedResults = results.map(r => ({
-      ...r,
-      price: Number(r.price),
-      lng: Number(r.lng),
-      lat: Number(r.lat),
-    }))
+    // Fetch full request entities with all relations
+    let requests: Request[] = []
+    if (requestIds.length > 0) {
+      requests = await this.requestRepository.find({
+        where: { id: In(requestIds) },
+        relations: ["customer", "attachments", "responses", "responses.performer"],
+      })
+    }
 
-    // Cache for 15 seconds to optimize Redis load with frequent location updates
-    await this.cacheManager.set(cacheKey, formattedResults, 15000)
+    // Format response to match GET /request/:id structure
+    const formattedResults = requests.map(request => {
+      // Find accepted performer
+      const acceptedResponse = request.responses?.find(r => r.status === "accepted")
+      const performer = acceptedResponse ? {
+        id: acceptedResponse.performer.id,
+        firstName: acceptedResponse.performer.firstName,
+        lastName: acceptedResponse.performer.lastName,
+        avatar: acceptedResponse.performer.avatar,
+      } : null
+
+      // Format responses (empty array for unauthenticated map requests)
+      const responses: any[] = []
+
+      return {
+        id: request.id,
+        title: request.title,
+        description: request.description,
+        price: request.price,
+        status: request.status,
+        attachments: request.attachments?.map(att => ({
+          id: att.id,
+          url: att.url,
+          hash: att.hash,
+        })) || [],
+        latitude: request.location.coordinates[1],
+        longitude: request.location.coordinates[0],
+        customer: {
+          id: request.customer.id,
+          firstName: request.customer.firstName,
+          lastName: request.customer.lastName,
+          avatar: request.customer.avatar,
+        },
+        performer,
+        createdAt: request.createdAt.toISOString(),
+        updatedAt: request.updatedAt.toISOString(),
+        acceptedAt: request.acceptedAt?.toISOString() || null,
+        completedAt: request.completedAt?.toISOString() || null,
+        cancelledAt: request.cancelledAt?.toISOString() || null,
+        expiresAt: request.expiresAt?.toISOString() || null,
+        deadlineAt: request.deadlineAt?.toISOString() || null,
+        isUrgent: request.isUrgent,
+        metadata: request.metadata,
+        responses,
+        submission: null,
+      }
+    })
+
+    // Cache for 5 minutes
+    await this.cacheManager.set(cacheKey, formattedResults, 300000)
 
     return formattedResults
   }
