@@ -8,6 +8,7 @@ import { authApi } from "./api/authApi"
 import { userApi } from "./api/userApi"
 import { requestApi } from "./api/requestApi"
 import { uploadApi } from "./api/uploadApi"
+import { chatApi } from "./api/chatApi"
 
 export const store = configureStore({
   reducer: {
@@ -19,9 +20,16 @@ export const store = configureStore({
     [userApi.reducerPath]: userApi.reducer,
     [requestApi.reducerPath]: requestApi.reducer,
     [uploadApi.reducerPath]: uploadApi.reducer,
+    [chatApi.reducerPath]: chatApi.reducer,
   },
   middleware: (getDefaultMiddleware) =>
-    getDefaultMiddleware().concat(authApi.middleware, userApi.middleware, requestApi.middleware, uploadApi.middleware),
+    getDefaultMiddleware().concat(
+      authApi.middleware,
+      userApi.middleware,
+      requestApi.middleware,
+      uploadApi.middleware,
+      chatApi.middleware
+    ),
 })
 
 export type RootState = ReturnType<typeof store.getState>
