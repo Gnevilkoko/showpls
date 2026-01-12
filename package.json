@@ -14,7 +14,9 @@
     "typeorm": "export NODE_ENV=development && ts-node -r tsconfig-paths/register --project apps/api/tsconfig.app.json ./node_modules/typeorm/cli",
     "migration:generate": "npm run typeorm -- -d apps/api/src/typeorm-datasource.ts migration:generate",
     "migration:run": "npm run typeorm -- -d apps/api/src/typeorm-datasource.ts migration:run",
-    "migration:revert": "npm run typeorm -- -d apps/api/src/typeorm-datasource.ts migration:revert"
+    "migration:revert": "npm run typeorm -- -d apps/api/src/typeorm-datasource.ts migration:revert",
+    "test:api": "nx test api --runInBand --silent",
+    "test:ledger": "nx test ledger --runInBand --silent"
   },
   "private": true,
   "dependencies": {

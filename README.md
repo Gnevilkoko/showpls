@@ -4,13 +4,14 @@ docker-compose -f docker-compose-local.yaml up -d
 ```
 ### Launch tests
 ```shell
-docker-compose -f docker-compose-local.yaml exec api nx test api --runInBand --silent
-docker-compose -f docker-compose-local.yaml exec api nx test ledger --runInBand --silent
+docker-compose -f docker-compose-local.yaml exec -w /app api npm run test:api
+docker-compose -f docker-compose-local.yaml exec -w /app api npm run test:ledger
 ```
 
 ---
 
-## Launch dev api and web outside Docker
+## Launch dev api and web outside Docker.
+### Suitable if you don't have node/npm installed locally
 ### Postgres, redis will be inside docker
 
 ```shell
@@ -23,6 +24,6 @@ npm run dev:web
 
 ```shell
 docker-compose -f dev-docker-compose.yaml up -d 
-nx test api --runInBand --silent
-nx test ledger --runInBand --silent
+npm run test:api ### OR: nx test api --runInBand --silent
+npm run test:ledger ### OR: nx test ledger --runInBand --silent
 ```
