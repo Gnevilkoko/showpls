@@ -10,7 +10,7 @@ docker-compose -f docker-compose-local.yaml exec api nx test ledger --runInBand 
 
 ---
 
-## For local purpose: launch dev api and web outside Docker
+## Launch dev api and web outside Docker
 ### Postgres, redis will be inside docker
 
 ```shell
