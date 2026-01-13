@@ -44,7 +44,7 @@ services:
       - "traefik.http.services.backend.loadbalancer.server.url=http://127.0.0.1:8080"
       - "traefik.http.services.backend.loadbalancer.server.port=8080"
     networks:
-      - mainnet  
+      - mainnet
 
   web:
     image: node:lts-alpine

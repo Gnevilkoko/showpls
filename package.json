@@ -5,11 +5,11 @@
   "scripts": {
     "build:web": "nx build web",
     "build:web:prod": "nx build web --prod",
-    "dev:web": "nx serve web",
+    "dev:web": "nx run web:serve",
     "preview:web": "nx preview web",
     "build:api": "nx build api",
     "build:api:prod": "nx build api --prod",
-    "dev:api": "nx serve api",
+    "dev:api": "nx run api:dev",
     "preview:api": "nx preview api",
     "typeorm": "export NODE_ENV=development && ts-node -r tsconfig-paths/register --project apps/api/tsconfig.app.json ./node_modules/typeorm/cli",
     "migration:generate": "npm run typeorm -- -d apps/api/src/typeorm-datasource.ts migration:generate",
