@@ -9,6 +9,9 @@ import { userApi } from "./api/userApi"
 import { requestApi } from "./api/requestApi"
 import { uploadApi } from "./api/uploadApi"
 import { chatApi } from "./api/chatApi"
+import { responseApi } from "./api/responseApi"
+import { submissionApi } from "./api/submissionApi"
+import { arbitrationApi } from "./api/arbitrationApi"
 
 export const store = configureStore({
   reducer: {
@@ -21,6 +24,9 @@ export const store = configureStore({
     [requestApi.reducerPath]: requestApi.reducer,
     [uploadApi.reducerPath]: uploadApi.reducer,
     [chatApi.reducerPath]: chatApi.reducer,
+    [responseApi.reducerPath]: responseApi.reducer,
+    [submissionApi.reducerPath]: submissionApi.reducer,
+    [arbitrationApi.reducerPath]: arbitrationApi.reducer,
   },
   middleware: (getDefaultMiddleware) =>
     getDefaultMiddleware().concat(
@@ -28,7 +34,10 @@ export const store = configureStore({
       userApi.middleware,
       requestApi.middleware,
       uploadApi.middleware,
-      chatApi.middleware
+      chatApi.middleware,
+      responseApi.middleware,
+      submissionApi.middleware,
+      arbitrationApi.middleware
     ),
 })
 
