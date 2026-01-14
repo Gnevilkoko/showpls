@@ -27,7 +27,7 @@ export class ChatService {
     private readonly responseRepository: Repository<Response>,
     @InjectDataSource()
     private readonly dataSource: DataSource,
-    private readonly chatGateway: ChatGateway,
+    private readonly chatGateway: ChatGateway
   ) {}
 
   async getOrCreateChat(user1Id: string, user2Id: string, manager?: DataSource): Promise<Chat> {
@@ -74,22 +74,24 @@ export class ChatService {
     const { isFavorite, search, limit = 10, page = 1 } = query
     const offset = (page - 1) * limit
 
-    const qb = this.chatRepository.createQueryBuilder("chat")
+    const qb = this.chatRepository
+      .createQueryBuilder("chat")
       .leftJoinAndSelect("chat.user1", "user1")
       .leftJoinAndSelect("chat.user2", "user2")
       .leftJoinAndSelect("chat.admin", "admin")
       .where(
         new Brackets((qb) => {
-          qb.where("chat.user1Id = :userId", { userId: user.id })
-            .orWhere("chat.user2Id = :userId", { userId: user.id })
+          qb.where("chat.user1Id = :userId", { userId: user.id }).orWhere("chat.user2Id = :userId", { userId: user.id })
         })
       )
 
     if (isFavorite) {
       qb.andWhere(
         new Brackets((qb) => {
-          qb.where("chat.user1Id = :userId AND chat.isFavorite = :isFavorite", { userId: user.id, isFavorite: true })
-            .orWhere("chat.user2Id = :userId AND chat.isFavorite2 = :isFavorite", { userId: user.id, isFavorite: true })
+          qb.where("chat.user1Id = :userId AND chat.isFavorite = :isFavorite", {
+            userId: user.id,
+            isFavorite: true,
+          }).orWhere("chat.user2Id = :userId AND chat.isFavorite2 = :isFavorite", { userId: user.id, isFavorite: true })
         })
       )
     }
@@ -110,19 +112,15 @@ export class ChatService {
     // 1. isActiveOrder === true
     // 2. Showpls Agent (id = 0) - Assuming we handle this by ID or specific logic, but for now standard sorting
     // 3. lastUpdate DESC
-    qb.orderBy("chat.isActiveOrder", "DESC")
-      .addOrderBy("chat.lastUpdate", "DESC")
+    qb.orderBy("chat.isActiveOrder", "DESC").addOrderBy("chat.lastUpdate", "DESC")
 
-    const [items, total] = await qb
-      .take(limit)
-      .skip(offset)
-      .getManyAndCount()
+    const [items, total] = await qb.take(limit).skip(offset).getManyAndCount()
 
     // Calculate counts
     const countUnread = await this.calculateTotalUnread(user.id)
     const countUnreadFavorite = await this.calculateTotalUnreadFavorite(user.id)
 
-    const mappedItems = items.map(chat => {
+    const mappedItems = items.map((chat) => {
       const isUser1 = chat.user1.id === user.id
       const otherUser = isUser1 ? chat.user2 : chat.user1
       const myCountUnread = isUser1 ? chat.countUnread : chat.countUnread2
@@ -174,7 +172,8 @@ export class ChatService {
     await this.chatRepository.save(chat)
 
     // Messages
-    const messageQb = this.messageRepository.createQueryBuilder("message")
+    const messageQb = this.messageRepository
+      .createQueryBuilder("message")
       .leftJoinAndSelect("message.sender", "sender")
       .leftJoinAndSelect("message.receiver", "receiver")
       .where("message.chatId = :chatId", { chatId: id })
@@ -188,10 +187,7 @@ export class ChatService {
     const page = query.page || 1
     const offset = (page - 1) * limit
 
-    const [messages, totalMessages] = await messageQb
-      .take(limit)
-      .skip(offset)
-      .getManyAndCount()
+    const [messages, totalMessages] = await messageQb.take(limit).skip(offset).getManyAndCount()
 
     // Deals
     const deals = await this.dealRepository.find({
@@ -208,19 +204,21 @@ export class ChatService {
     // Or maybe just responses where one is performer and other is customer?
     // The spec says "Все Response для задач в этом чате".
     // Let's fetch responses where (performer=user1 AND request.customer=user2) OR (performer=user2 AND request.customer=user1)
-    const responses = await this.responseRepository.createQueryBuilder("response")
+    const responses = await this.responseRepository
+      .createQueryBuilder("response")
       .leftJoinAndSelect("response.request", "request")
       .leftJoinAndSelect("response.performer", "performer")
       .leftJoinAndSelect("request.customer", "customer")
       .where(
         new Brackets((qb) => {
-          qb.where("performer.id = :u1 AND customer.id = :u2", { u1: chat.user1.id, u2: chat.user2.id })
-            .orWhere("performer.id = :u2 AND customer.id = :u1", { u2: chat.user1.id, u1: chat.user2.id })
+          qb.where("performer.id = :u1 AND customer.id = :u2", { u1: chat.user1.id, u2: chat.user2.id }).orWhere(
+            "performer.id = :u2 AND customer.id = :u1",
+            { u2: chat.user1.id, u1: chat.user2.id }
+          )
         })
       )
       .orderBy("response.createdAt", "DESC")
       .getMany()
-
 
     return {
       chat: {
@@ -233,6 +231,8 @@ export class ChatService {
         isFavorite: chat.user1.id === user.id ? chat.isFavorite : chat.isFavorite2,
         isActiveOrder: chat.isActiveOrder,
         isArbitration: chat.isArbitration,
+        isRead: true, // При открытии чата countUnread сбрасывается в 0 (строки 166-172)
+        countUnread: 0, // Всегда 0 после открытия чата
       },
       messages: messages.reverse(), // Return in chronological order for UI usually, but API spec implies list. Let's keep it consistent with query (DESC) or reverse if needed. Usually chat APIs return latest first or oldest first depending on pagination strategy.
       // Spec says "GET /chat/:id ... Returns Chat + Messages (paginated)".
@@ -277,11 +277,18 @@ export class ChatService {
     const receiver = userId === user1Id ? chat.user2 : chat.user1
 
     // Use transaction if no manager provided, otherwise use the provided manager
-    const completeMessage = manager ?
-      await this.sendMessageWithManager(user, chat, receiver, dto, chatRepo, messageRepo) :
-      await this.dataSource.transaction(async (txManager) => {
-        return this.sendMessageWithManager(user, chat, receiver, dto, txManager.getRepository(Chat), txManager.getRepository(ChatMessage))
-      })
+    const completeMessage = manager
+      ? await this.sendMessageWithManager(user, chat, receiver, dto, chatRepo, messageRepo)
+      : await this.dataSource.transaction(async (txManager) => {
+          return this.sendMessageWithManager(
+            user,
+            chat,
+            receiver,
+            dto,
+            txManager.getRepository(Chat),
+            txManager.getRepository(ChatMessage)
+          )
+        })
 
     // Use the complete message with relations for notifications
     this.chatGateway.notifyReceiver(receiver.id, completeMessage, chat.id)
@@ -386,7 +393,8 @@ export class ChatService {
 
     // Use transaction to ensure data consistency
     const result = await this.dataSource.transaction(async (manager) => {
-      const qb = manager.createQueryBuilder()
+      const qb = manager
+        .createQueryBuilder()
         .update(ChatMessage)
         .set({ isRead: true })
         .where("chatId = :chatId", { chatId })
@@ -461,7 +469,7 @@ export class ChatService {
 
       // Send system message to both users (no specific variant in schema for admin join)
       const messageText = "Admin joined the chat"
-      
+
       // Create message for user1
       const message1 = manager.create(ChatMessage, {
         chat,
@@ -505,7 +513,7 @@ export class ChatService {
     // Notify both users about the new message
     this.chatGateway.notifyReceiver(chat.user1.id, completeMessage1, chat.id)
     this.chatGateway.notifyReceiver(chat.user2.id, completeMessage2, chat.id)
-    
+
     // Notify both users about chat update
     this.chatGateway.notifyChatUpdate(chat.user1.id, chat.id, {
       isArbitration: true,
@@ -539,10 +547,7 @@ export class ChatService {
 
   private async calculateTotalUnread(userId: string): Promise<number> {
     const chats = await this.chatRepository.find({
-      where: [
-        { user1: { id: userId } },
-        { user2: { id: userId } },
-      ],
+      where: [{ user1: { id: userId } }, { user2: { id: userId } }],
       relations: ["user1", "user2"],
     })
 
@@ -576,7 +581,13 @@ export class ChatService {
   /**
    * Notify user about order status changes via WebSocket
    */
-  notifyOrderStatusChanged(userId: string, orderId: string, status: string, chatId?: string, escrowStatus?: string | null): void {
+  notifyOrderStatusChanged(
+    userId: string,
+    orderId: string,
+    status: string,
+    chatId?: string,
+    escrowStatus?: string | null
+  ): void {
     this.chatGateway.notifyOrderStatusChanged(userId, orderId, status, chatId, escrowStatus)
   }
 }

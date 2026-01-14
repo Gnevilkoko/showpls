@@ -149,12 +149,23 @@ export const chatApi = createApi({
       }),
       // Оптимистичное обновление: сразу показываем сообщение в UI
       async onQueryStarted({ chatId, body }, { dispatch, queryFulfilled, getState }) {
-        // Получаем текущего пользователя из state
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         const state = getState() as any
         const currentUser = state.user?.userData
 
         if (!currentUser) return
+
+        // Получаем данные чата из кэша для определения receiver
+        const chatData = chatApi.endpoints.getChat.select({ id: chatId })(state)
+        const chat = chatData?.data?.chat
+
+        // Определяем receiver из данных чата (если есть в кэше)
+        const receiver =
+          chat && chat.user1.id === currentUser.id
+            ? chat.user2
+            : chat && chat.user2.id === currentUser.id
+            ? chat.user1
+            : { id: "", firstName: "", lastName: null as string | null, avatar: null as string | null }
 
         // Создаем временное сообщение для оптимистичного обновления
         const tempMessage: MessageBackend = {
@@ -167,13 +178,7 @@ export const chatApi = createApi({
             lastName: currentUser.lastName,
             avatar: currentUser.avatar,
           },
-          receiver: {
-            // Receiver будет заполнен сервером, пока используем пустой объект
-            id: "",
-            firstName: "",
-            lastName: null,
-            avatar: null,
-          },
+          receiver, // Используем реальные данные receiver из кэша
           text: body.text || null,
           attachments: body.attachments || [],
           createdAt: new Date().toISOString(),
@@ -183,13 +188,14 @@ export const chatApi = createApi({
         // Оптимистично обновляем только кэш getChat для открытого чата
         const patchResult = dispatch(
           chatApi.util.updateQueryData("getChat", { id: chatId }, (draft) => {
-            // Убеждаемся, что messages существует
-            if (!draft.messages) {
+            if (!draft?.messages) {
               draft.messages = []
             }
             draft.messages.push(tempMessage)
-            draft.chat.lastMessage = getLastMessageText({ text: body.text || null, attachments: body.attachments })
-            draft.chat.lastUpdate = new Date().toISOString()
+            if (draft.chat) {
+              draft.chat.lastMessage = getLastMessageText({ text: body.text || null, attachments: body.attachments })
+              draft.chat.lastUpdate = new Date().toISOString()
+            }
           })
         )
 
@@ -200,6 +206,8 @@ export const chatApi = createApi({
           // Заменяем временное сообщение на реальное
           dispatch(
             chatApi.util.updateQueryData("getChat", { id: chatId }, (draft) => {
+              if (!draft?.messages) return
+
               const index = draft.messages.findIndex((m) => m.id === tempMessage.id)
               if (index !== -1) {
                 draft.messages[index] = serverMessage
@@ -208,15 +216,15 @@ export const chatApi = createApi({
                 draft.messages.push(serverMessage)
               }
               // Обновляем lastMessage и lastUpdate из ответа сервера
-              draft.chat.lastMessage = getLastMessageText(serverMessage)
-              draft.chat.lastUpdate = serverMessage.createdAt
+              if (draft.chat) {
+                draft.chat.lastMessage = getLastMessageText(serverMessage)
+                draft.chat.lastUpdate = serverMessage.createdAt
+              }
             })
           )
         } catch {
           // При ошибке откатываем оптимистичное обновление только для getChat
-          if (patchResult) {
-            patchResult.undo()
-          }
+          patchResult?.undo()
         }
       },
       invalidatesTags: (_result, _error, { chatId }) => [
@@ -372,19 +380,23 @@ export const chatApiHelpers = {
    * @param message - Новое сообщение от сервера
    */
   addMessageToCache: (dispatch: AppDispatch, chatId: string, message: MessageBackend) => {
-    // Обновляем кэш чата
     dispatch(
       chatApi.util.updateQueryData("getChat", { id: chatId }, (draft) => {
+        // Защитная проверка: если кэш не существует, выходим
+        if (!draft?.messages) return
+
         // Проверяем, нет ли уже такого сообщения (избегаем дубликатов)
         const exists = draft.messages.some((m) => m.id === message.id)
         if (!exists) {
           draft.messages.push(message)
-          // Сортируем по дате (если нужно)
+          // Сортируем по дате
           draft.messages.sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime())
         }
         // Обновляем lastMessage и lastUpdate
-        draft.chat.lastMessage = getLastMessageText(message)
-        draft.chat.lastUpdate = message.createdAt
+        if (draft.chat) {
+          draft.chat.lastMessage = getLastMessageText(message)
+          draft.chat.lastUpdate = message.createdAt
+        }
       })
     )
   },
@@ -396,9 +408,11 @@ export const chatApiHelpers = {
    * @param updates - Обновления чата (lastMessage, lastUpdate, countUnread и т.д.)
    */
   updateChatInCache: (dispatch: AppDispatch, chatId: string, updates: Partial<ChatListItem>) => {
-    // Обновляем кэш чата
     dispatch(
       chatApi.util.updateQueryData("getChat", { id: chatId }, (draft) => {
+        // Защитная проверка: если кэш не существует, выходим
+        if (!draft?.chat) return
+
         if (updates.lastMessage !== undefined) {
           draft.chat.lastMessage = updates.lastMessage
         }
@@ -421,6 +435,9 @@ export const chatApiHelpers = {
   updateCountersInCache: (dispatch: AppDispatch, counters: { countUnread: number; countUnreadFavorite: number }) => {
     dispatch(
       chatApi.util.updateQueryData("getChatList", {}, (draft) => {
+        // Защитная проверка: если кэш не существует, выходим
+        if (!draft) return
+
         draft.countUnread = counters.countUnread
         draft.countUnreadFavorite = counters.countUnreadFavorite
       })
