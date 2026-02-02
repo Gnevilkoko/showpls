@@ -10,10 +10,23 @@ export interface UpdateLanguageResponse {
   message?: string
 }
 
+export interface Balance {
+  token: string
+  blockchain: string | null
+  balance: string
+  lockedBalance: string
+}
+
+export interface GetBalancesRequest {
+  id: string
+}
+
+export type GetBalancesResponse = Balance[]
+
 export const userApi = createApi({
   reducerPath: "userApi",
   baseQuery: authenticatedBaseQuery,
-  tagTypes: ["User"],
+  tagTypes: ["User", "Balances"],
   endpoints: (builder) => ({
     updateLanguage: builder.mutation<UpdateLanguageResponse, UpdateLanguageRequest>({
       query: (body: UpdateLanguageRequest) => ({
@@ -23,12 +36,20 @@ export const userApi = createApi({
       }),
       invalidatesTags: ["User"],
     }),
+    getBalances: builder.query<GetBalancesResponse, GetBalancesRequest>({
+      query: ({ id }) => ({
+        url: "/user/get-balances",
+        params: { id },
+      }),
+      providesTags: ["Balances"],
+    }),
   }),
 })
 
-export const { useUpdateLanguageMutation } = userApi
+export const { useUpdateLanguageMutation, useGetBalancesQuery, useLazyGetBalancesQuery } = userApi
 
 // Экспортируем endpoints для использования в thunks (например, в languageSlice)
 export const userApiEndpoints = {
   updateLanguage: userApi.endpoints.updateLanguage,
+  getBalances: userApi.endpoints.getBalances,
 }

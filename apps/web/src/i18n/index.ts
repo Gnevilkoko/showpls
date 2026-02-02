@@ -36,6 +36,7 @@ const resources = {
         availableFunds: "Available funds",
         onHold: "on hold",
         starsNotSupported: "Stars top-up is only available in Telegram Mini App",
+        waitingConfirmation: "Waiting for payment confirmation...",
       },
       tasksPage: {
         customerTitlePage: "What do you want to see?",
@@ -168,6 +169,7 @@ const resources = {
         lowBalance: "Low balance",
         paymentCancelled: "Payment was cancelled.",
         invalidFields: "Please fill in all fields correctly",
+        paymentProcessing: "Payment is being processed. Balance will update shortly.",
       },
       default: {
         loadingComplete: "Loading complete",
@@ -270,6 +272,7 @@ const resources = {
         availableFunds: "Доступно средств",
         onHold: "на удержании",
         starsNotSupported: "Пополнение звезд возможно только через Telegram Mini App",
+        waitingConfirmation: "Ожидание подтверждения платежа...",
       },
       tasksPage: {
         customerTitlePage: "Что вы хотите увидеть?",
@@ -403,6 +406,7 @@ const resources = {
         lowBalance: "Низкий баланс",
         paymentCancelled: "Оплата была отменена.",
         invalidFields: "Пожалуйста, заполните все поля правильно",
+        paymentProcessing: "Платёж обрабатывается. Баланс скоро обновится.",
       },
       default: {
         loadingComplete: "Загрузка завершена",

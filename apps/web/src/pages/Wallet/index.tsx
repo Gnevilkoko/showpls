@@ -2,7 +2,7 @@ import walletIcon from "../../assets/images/wallet-new.svg"
 import starsIcon from "../../assets/icons/status/stars.svg"
 import lockIcon from "../../assets/icons/status/lock.svg"
 import { useTranslation } from "react-i18next"
-import { useState } from "react"
+import { useState, useRef, useCallback, useEffect } from "react"
 import { tgService } from "../../services/webApp"
 import TonWalletConnect from "./TonWalletConnect"
 import Navigation from "../../shared/components/Navigation"
@@ -11,6 +11,13 @@ import { useAppSelector } from "../../store"
 import { useNotification } from "../../shared/hooks/useNotification"
 import TransactionsList from "./components/TransactionsList"
 import { TG_SCHEME, TME_LINK } from "../../constants"
+import { useGetBalancesQuery, useLazyGetBalancesQuery } from "../../store/api/userApi"
+
+const formatBalance = (balanceStr: string): string => {
+  const balance = BigInt(balanceStr)
+  const whole = balance / BigInt(1e6)
+  return whole.toString()
+}
 
 const Wallet = () => {
   const { t } = useTranslation()
@@ -19,7 +26,73 @@ const Wallet = () => {
   const [isOpenModalTopUp, setIsOpenModalTopUp] = useState(false)
   const [activeSection, setActiveSection] = useState<"stars" | "ton">("stars")
   const [stars, setStars] = useState<number>(1)
+  const [isWaitingPaymentConfirmation, setIsWaitingPaymentConfirmation] = useState(false)
   const userToken = useAppSelector((state) => state.user.accessToken)
+  const userData = useAppSelector((state) => state.user.userData)
+
+  const { data: balances, isLoading: isBalancesLoading } = useGetBalancesQuery(
+    { id: userData?.id ?? "" },
+    { skip: !userData?.id }
+  )
+  const [triggerGetBalances] = useLazyGetBalancesQuery()
+
+  const pollingIntervalRef = useRef<number | null>(null)
+  const pollingTimeoutRef = useRef<number | null>(null)
+
+  const starsBalance = balances?.find((b) => b.token === "STARS" && b.blockchain === null)
+  const availableBalance = starsBalance ? formatBalance(starsBalance.balance) : "0"
+  const lockedBalance = starsBalance ? formatBalance(starsBalance.lockedBalance) : "0"
+
+  const stopPolling = useCallback(() => {
+    if (pollingIntervalRef.current) {
+      clearInterval(pollingIntervalRef.current)
+      pollingIntervalRef.current = null
+    }
+    if (pollingTimeoutRef.current) {
+      clearTimeout(pollingTimeoutRef.current)
+      pollingTimeoutRef.current = null
+    }
+    setIsWaitingPaymentConfirmation(false)
+  }, [])
+
+  const startBalancePolling = useCallback(
+    (previousBalance: string) => {
+      if (!userData?.id) return
+
+      setIsWaitingPaymentConfirmation(true)
+
+      const POLLING_INTERVAL = 500
+      const POLLING_TIMEOUT = 10000
+
+      pollingIntervalRef.current = window.setInterval(async () => {
+        try {
+          const result = await triggerGetBalances({ id: userData.id }).unwrap()
+          const newStarsBalance = result.find((b) => b.token === "STARS" && b.blockchain === null)
+
+          if (newStarsBalance && BigInt(newStarsBalance.balance) > BigInt(previousBalance)) {
+            stopPolling()
+            notification.showSuccess("paymentSuccess")
+            setIsOpenModalTopUp(false)
+          }
+        } catch {
+          // Продолжаем polling при ошибке
+        }
+      }, POLLING_INTERVAL)
+
+      pollingTimeoutRef.current = window.setTimeout(() => {
+        stopPolling()
+        notification.showWarning("paymentProcessing")
+        setIsOpenModalTopUp(false)
+      }, POLLING_TIMEOUT)
+    },
+    [userData?.id, triggerGetBalances, stopPolling, notification]
+  )
+
+  useEffect(() => {
+    return () => {
+      stopPolling()
+    }
+  }, [stopPolling])
 
   const isInTelegram = window.Telegram?.WebApp?.initData
 
@@ -74,11 +147,12 @@ const Wallet = () => {
         return
       }
 
+      const currentBalance = starsBalance?.balance ?? "0"
+
       webApp.openInvoice(data.link, (status) => {
         switch (status) {
           case "paid":
-            notification.showSuccess("paymentSuccess")
-            setIsOpenModalTopUp(false)
+            startBalancePolling(currentBalance)
             break
           case "cancelled":
             notification.showWarning("paymentCancelled")
@@ -107,7 +181,7 @@ const Wallet = () => {
           </div>
 
           <div className="wallet__stars-status">
-            <span className="count-hold-stars">40</span>
+            <span className="count-hold-stars">{isBalancesLoading ? "..." : lockedBalance}</span>
 
             <img src={starsIcon} alt="Telegram Stars Icon" />
 
@@ -120,7 +194,7 @@ const Wallet = () => {
             <span className="wallet-content__available">{t("miniWallet.available")}</span>
 
             <div className="wallet-content">
-              <span className="count-stars">120</span>
+              <span className="count-stars">{isBalancesLoading ? "..." : availableBalance}</span>
 
               <div className="tg-stars-icon__container">
                 <img src={starsIcon} alt="Telegram Stars Icon" className="tg-stars-icon" />
@@ -170,7 +244,11 @@ const Wallet = () => {
         </div>
 
         {activeSection === "stars" &&
-          (isInTelegram ? (
+          (isWaitingPaymentConfirmation ? (
+            <div className="payment-confirmation-waiting">
+              <span>{t("miniWallet.waitingConfirmation")}</span>
+            </div>
+          ) : isInTelegram ? (
             <>
               <input
                 type="number"
