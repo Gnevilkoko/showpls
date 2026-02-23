@@ -14,13 +14,21 @@ import { MarkReadDto } from "./dto/mark-read.dto"
 @ApiTags("Chat")
 @Controller("chat")
 export class ChatController {
-  constructor(private readonly chatService: ChatService) {}
+  constructor(private readonly chatService: ChatService) { }
 
   @ApiSecurity("jwt-auth")
   @UseGuards(AuthGuard)
   @Get("list")
   async findAll(@GetUser() user: User, @Query() query: ChatListDto) {
     return this.chatService.findAll(user, query)
+  }
+
+  @ApiSecurity("jwt-auth")
+  @UseGuards(AuthGuard)
+  @Post("saved")
+  async createSavedChat(@GetUser() user: User) {
+    const chat = await this.chatService.getOrCreateChat(String(user.id), String(user.id))
+    return { chatId: chat.id }
   }
 
   @ApiSecurity("jwt-auth")

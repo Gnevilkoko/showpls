@@ -18,6 +18,19 @@ export default defineConfig({
       strictPort: false,
       // разрешаем все хосты (для ngrok и т.д.)
       allowedHosts: true,
+      proxy: {
+        "/api": {
+          target: process.env.VITE_API_URL || "http://127.0.0.1:8080",
+          changeOrigin: true,
+          secure: false,
+        },
+        "/chat/ws": {
+          target: process.env.VITE_API_URL || "http://127.0.0.1:8080",
+          ws: true,
+          changeOrigin: true,
+          secure: false,
+        },
+      },
     }),
     fs: {
       allow: [".."],

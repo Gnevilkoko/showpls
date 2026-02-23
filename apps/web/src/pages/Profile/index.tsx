@@ -6,13 +6,8 @@ import statsStarWhiteIcon from "../../assets/icons/status/stats-star-white.svg"
 import penIcon from "../../assets/icons/actions/pen.svg"
 import forwardIcon from "../../assets/icons/ui/forward.svg"
 import likeTagIcon from "../../assets/icons/ui/like-tag.svg"
-import boxIcon from "../../assets/icons/ui/box.svg"
-import securitySafeIcon from "../../assets/icons/ui/security-safe.svg"
 import notificationIcon from "../../assets/icons/status/notification.svg"
 import globalLangIcon from "../../assets/icons/ui/global-lang.svg"
-import supportIcon from "../../assets/icons/ui/support.svg"
-import documentTextIcon from "../../assets/icons/ui/document-text.svg"
-import messageQuestionIcon from "../../assets/icons/ui/message-question.svg"
 import { useState } from "react"
 import MiniWallet from "../../shared/components/MiniWallet"
 import ToggleProfileMode from "../../shared/components/ToggleProfileMode"
@@ -89,7 +84,7 @@ const Profile = () => {
           <img src={userData.avatar || userIcon} alt="Profile Avatar" className="profile__avatar" />
 
           <div className="stats-star">
-            <span>4.8</span>
+            <span>{(userData as any).rating ?? 5}</span>
 
             <img src={statsStarWhiteIcon} alt="Stats Star Icon" />
           </div>
@@ -103,11 +98,11 @@ const Profile = () => {
           <div className="profile__location">
             <img src={locationGreenIcon} alt="Location Icon" />
 
-            <span>Istanbul, Turkey</span>
+            <span>{userData.city || "Istanbul, Turkey"}</span>
           </div>
 
           <span className="profile__status-profession">
-            {t("freelancer")} {t("photographer")}
+            {userData.about || `${t("freelancer")} ${t("photographer")}`}
           </span>
         </div>
       </div>
@@ -157,16 +152,12 @@ const Profile = () => {
         <div className="profile__options-wrapper">
           {activeMode === "performer" && <div className="dash" />}
 
-          <ProfileBtnItem title={t("myOrders")} icon={boxIcon} onClick={() => {}} />
-
-          <ProfileBtnItem title={t("verification")} icon={securitySafeIcon} onClick={() => {}} />
-
           <ProfileBtnItem
             title={t("notifications")}
             icon={notificationIcon}
             onClick={() => setIsOpenNotifications(true)}
           >
-            <div className="profile__option-count">2</div>
+            <div className="profile__option-count">0</div>
           </ProfileBtnItem>
 
           <div className="dash" />
@@ -208,14 +199,6 @@ const Profile = () => {
               ))}
             </ul>
           </ProfileBtnItem>
-
-          <ProfileBtnItem title={t("support")} icon={supportIcon} onClick={() => {}} />
-
-          <ProfileBtnItem title={t("about")} icon={messageQuestionIcon} onClick={() => {}} />
-
-          <div className="dash" />
-
-          <ProfileBtnItem title={t("privacySecurity")} icon={documentTextIcon} onClick={() => {}} />
         </div>
       </div>
 

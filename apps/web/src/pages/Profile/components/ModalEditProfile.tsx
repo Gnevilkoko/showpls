@@ -1,7 +1,8 @@
 import { useState } from "react"
 import Modal from "../../../shared/components/Modal"
 import { useNotification } from "../../../shared/hooks/useNotification"
-import { useAppSelector } from "../../../store"
+import { useAppSelector, useAppDispatch } from "../../../store"
+import { updateUserPartial } from "../../../store/userSlice"
 import { useFileToBase64 } from "../../../shared/hooks/useFileToBase64"
 import { useTranslation } from "react-i18next"
 import TaskPrimaryButton from "../../../shared/components/TaskPrimaryButton"
@@ -26,6 +27,7 @@ const ModalEditProfile = ({ isOpenEditProfile, setIsOpenEditProfile }: ModalEdit
   )
   const [newLocation, setNewLocation] = useState<string>(userData?.city || "")
   const [newAbout, setNewAbout] = useState<string>(userData?.about || "")
+  const dispatch = useAppDispatch()
 
   const handleClearNewData = () => {
     setTimeout(() => {
@@ -57,6 +59,19 @@ const ModalEditProfile = ({ isOpenEditProfile, setIsOpenEditProfile }: ModalEdit
     if (newAvatarFile) {
       base64 = await convertToBase64(newAvatarFile)
     }
+
+    const [firstName, ...rest] = newName.trim().split(" ")
+    const lastName = rest.join(" ") || null
+
+    dispatch(updateUserPartial({
+      firstName: firstName || userData?.firstName,
+      lastName,
+      city: newLocation,
+      about: newAbout,
+      ...(newAvatar && { avatar: newAvatar }),
+    }))
+
+    handleClearNewData()
 
     console.log("base64", base64)
     console.log("newName", newName)

@@ -3,16 +3,19 @@ import { memo, useEffect, useRef, useCallback } from "react"
 import { Clusterer } from "@2gis/mapgl-clusterer"
 import { API_KEY_2GIS, STYLE_DARK_2GIS, STYLE_LIGHT_2GIS } from "../../../../constants"
 import type { PerformerType } from "../../../types"
-import { performersData } from "../../../../pages/Tasks/performersData"
 import statsStarWhiteIcon from "../../../../assets/icons/status/stats-star-white.svg"
 import PerformerItem from "../../../../pages/Tasks/PerformerItem"
 import { useAppSelector, type RootState } from "../../../../store"
+import { useGetNearbyPerformersQuery } from "../../../../store/api/requestApi"
+import type { PerformerNearby } from "../../../../shared/types/backend"
 
-// Центр карты Москвы, для 2ГИС нужно
-// инвертировать гугловские координаты, сначала lng, потом lat
+interface PerformersMap2GisProps {
+  taskId?: string
+}
+
 const centerMap = [37.623965, 55.74982]
 
-const PerformersMap2Gis = memo(() => {
+const PerformersMap2Gis = memo(({ taskId }: PerformersMap2GisProps) => {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const mapRef = useRef<any>(null)
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -21,6 +24,14 @@ const PerformersMap2Gis = memo(() => {
   const isMapReadyRef = useRef(false)
   const mapPerformerRefs = useRef<Record<string, HTMLDivElement | null>>({})
   const performersContainerRef = useRef<HTMLDivElement | null>(null)
+
+  // Получаем исполнителей с бэкенда
+  const { data: nearbyPerformersData } = useGetNearbyPerformersQuery(
+    { requestId: taskId! },
+    { skip: !taskId }
+  )
+
+  const performersList = nearbyPerformersData?.items || []
 
   const theme = useAppSelector((state: RootState) => state.theme)
   // Меняем тему на лету
@@ -31,7 +42,7 @@ const PerformersMap2Gis = memo(() => {
   }, [theme])
 
   // Плавный скролл к выбранному исполнителю в списке
-  const scrollToSelectedPerformer = useCallback((performer: PerformerType) => {
+  const scrollToSelectedPerformer = useCallback((performer: PerformerType | PerformerNearby) => {
     if (!mapRef.current || !isMapReadyRef.current || !performersContainerRef.current) return
 
     const itemRef = mapPerformerRefs.current[performer.id.toString()]
@@ -57,7 +68,10 @@ const PerformersMap2Gis = memo(() => {
     }
 
     // Центрирование карты на выбранном исполнителе
-    const coordinates = [performer.position.lng, performer.position.lat]
+    const lat = "position" in performer ? performer.position.lat : performer.latitude
+    const lng = "position" in performer ? performer.position.lng : performer.longitude
+    const coordinates = [lng, lat]
+
     if (mapRef.current.easeTo) {
       mapRef.current.easeTo({ center: coordinates })
     } else if (mapRef.current.setCenter) {
@@ -68,10 +82,10 @@ const PerformersMap2Gis = memo(() => {
   }, [])
 
   // Создание маркеров из списка исполнителей
-  const createMarkers = useCallback((performers: PerformerType[]) => {
+  const createMarkers = useCallback((performers: PerformerNearby[]) => {
     return performers.map((performer) => ({
       type: "html" as const,
-      coordinates: [performer.position.lng, performer.position.lat],
+      coordinates: [performer.longitude, performer.latitude],
       html: `<div class="custom-marker map2gis-marker ${performer.rating >= 4.5 ? "accent" : ""}">
           <div class="custom-marker__content">
             ${performer.rating}${performer.rating % 1 === 0 ? ".0" : ""}
@@ -137,8 +151,8 @@ const PerformersMap2Gis = memo(() => {
         isMapReadyRef.current = true
 
         // Создаём маркеры после готовности карты
-        if (performersData.length) {
-          const markers = createMarkers(performersData)
+        if (performersList.length) {
+          const markers = createMarkers(performersList)
           clustererRef.current = createClusterer(mapInstance, markers)
         }
       })
@@ -165,16 +179,25 @@ const PerformersMap2Gis = memo(() => {
 
       <div className="map-performers-wrapper">
         <div className="map-performers-container" ref={performersContainerRef}>
-          {performersData.map((performer) => (
-            <PerformerItem
-              key={performer.id}
-              performer={performer}
-              ref={(el: HTMLDivElement | null) => {
-                mapPerformerRefs.current[performer.id.toString()] = el
-              }}
-              handleSelectPerformer={() => scrollToSelectedPerformer(performer)}
-            />
-          ))}
+          {performersList.map((performer) => {
+            // Адаптируем PerformerNearby к PerformerType для совместимости с PerformerItem
+            const adaptedPerformer = {
+              ...performer,
+              position: { lat: performer.latitude, lng: performer.longitude },
+              lastSeenAt: new Date() // Fallback так как бекенд пока не возвращает lastSeenAt
+            }
+
+            return (
+              <PerformerItem
+                key={performer.id}
+                performer={adaptedPerformer}
+                ref={(el: HTMLDivElement | null) => {
+                  mapPerformerRefs.current[performer.id.toString()] = el
+                }}
+                handleSelectPerformer={() => scrollToSelectedPerformer(performer)}
+              />
+            )
+          })}
         </div>
       </div>
     </>

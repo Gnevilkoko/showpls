@@ -4,40 +4,12 @@ import { initLanguageFromTgAsync } from "../../store/languageSlice"
 import { setAuthData } from "../../store/userSlice"
 import { useSignInMutation } from "../../store/api/authApi"
 import { tgService } from "../../services/webApp"
-import type { TelegramWebAppUserType, UserDataType } from "../types"
 import { useTranslation } from "react-i18next"
 
 interface AppInitializerProps {
   children: React.ReactNode
 }
 
-const getFallbackUserData = (userFromTg: TelegramWebAppUserType): UserDataType => {
-  return {
-    id: userFromTg.id.toString(),
-    role: "normal",
-    tgId: userFromTg.id.toString(),
-    username: userFromTg.username || null,
-    firstName: userFromTg.first_name,
-    lastName: userFromTg.last_name || null,
-    languageCode: userFromTg.language_code || "en",
-    avatar: userFromTg.photo_url || null,
-    banned: false,
-    lastSeenAt: Date.now().toString(),
-    createdAt: Date.now().toString(),
-    city: "Istanbul, Turkey",
-    about: "freelancer photographer",
-  }
-}
-
-const setFallbackAuth = (userFromTg: TelegramWebAppUserType, dispatch: ReturnType<typeof useAppDispatch>) => {
-  const tempUser = getFallbackUserData(userFromTg)
-  dispatch(
-    setAuthData({
-      accessToken: "temp-token",
-      userData: tempUser,
-    })
-  )
-}
 
 const AppInitializer = ({ children }: AppInitializerProps) => {
   const { t } = useTranslation()
@@ -75,14 +47,8 @@ const AppInitializer = ({ children }: AppInitializerProps) => {
               )
             }
           } catch {
-            // Fallback к Telegram данным при ошибке бэкенда
-            if (userFromTg) {
-              setFallbackAuth(userFromTg, dispatch)
-            }
+            // Auth failed, do nothing, so user stays unauthenticated
           }
-        } else if (userFromTg) {
-          // Fallback к Telegram данным если нет initData
-          setFallbackAuth(userFromTg, dispatch)
         }
       } finally {
         setIsInitialized(true)

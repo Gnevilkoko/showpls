@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react"
+import { useEffect, useMemo } from "react"
 import type { ChatType } from "../../../shared/types"
 import { useInView } from "react-intersection-observer"
 import { useTranslation } from "react-i18next"
@@ -8,12 +8,13 @@ interface ChatsListProps {
   list: ChatType[]
   isFavoriteList: boolean
   searchValue: string
+  hasMore: boolean
+  isFetching: boolean
+  onLoadMore: () => void
 }
 
-const ChatsList = ({ list, isFavoriteList, searchValue }: ChatsListProps) => {
+const ChatsList = ({ list, isFavoriteList, searchValue, hasMore, isFetching, onLoadMore }: ChatsListProps) => {
   const { t } = useTranslation()
-  const countVisibleChats = 10
-  const [visibleCount, setVisibleCount] = useState(countVisibleChats)
   const { ref, inView } = useInView({
     threshold: 0,
   })
@@ -50,33 +51,25 @@ const ChatsList = ({ list, isFavoriteList, searchValue }: ChatsListProps) => {
     return result
   }, [list, isFavoriteList, searchValue])
 
-  // Сброс видимого количества при изменении фильтра или поиска
-  useEffect(() => {
-    setVisibleCount(countVisibleChats)
-  }, [searchValue, isFavoriteList])
 
-  const visibleChats = useMemo(() => filteredChats.slice(0, visibleCount), [filteredChats, visibleCount])
 
   // Подгрузка новых чатов при достижении низа
   useEffect(() => {
-    if (inView) {
-      setVisibleCount((prev) =>
-        // позволяет не подгружать более чем вообще существует в списке
-        Math.min(prev + countVisibleChats, filteredChats.length)
-      )
+    if (inView && hasMore && !isFetching) {
+      onLoadMore()
     }
-  }, [inView, filteredChats.length])
+  }, [inView, hasMore, isFetching, onLoadMore])
 
   return (
     <div className="chats-list">
-      {visibleChats.length > 0 ? (
-        visibleChats.map((chat: ChatType) => <ChatItem key={chat.chat_id} chat={chat} />)
+      {filteredChats.length > 0 ? (
+        filteredChats.map((chat: ChatType) => <ChatItem key={chat.chat_id} chat={chat} />)
       ) : (
         <p className="zero-chats-paragraph">{t("noChatsFound")}</p>
       )}
 
-      <p ref={ref} className={`loading-chats-paragraph ${visibleCount < filteredChats.length ? "visible" : ""}`}>
-        {t("loadingChats")}
+      <p ref={ref} className={`loading-chats-paragraph ${hasMore ? "visible" : ""}`}>
+        {isFetching ? t("loadingChats") : ""}
       </p>
     </div>
   )

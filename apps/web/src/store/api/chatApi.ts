@@ -7,6 +7,7 @@ import type {
   ResponseBackend,
   DealBackend,
 } from "../../shared/types/backend"
+import type { RootState } from "../index"
 
 /**
  * Helper функция для построения query параметров с дефолтными значениями
@@ -106,7 +107,7 @@ export const chatApi = createApi({
     // Endpoint для получения списка чатов
     getChatList: builder.query<ChatListResponse, ChatListParams>({
       query: (params) => {
-        const queryParams = buildQueryParams(params as Record<string, unknown>, { page: 1, limit: 10 })
+        const queryParams = buildQueryParams(params as Record<string, unknown>, { page: 1, limit: 15 })
 
         return {
           url: "/chat/list",
@@ -114,12 +115,30 @@ export const chatApi = createApi({
           params: queryParams,
         }
       },
+      serializeQueryArgs: ({ endpointName, queryArgs }) => {
+        return `${endpointName}-${queryArgs.isFavorite || false}-${queryArgs.search || ""}`
+      },
+      merge: (currentCache, newItems, { arg }) => {
+        if (arg.page === 1 || !arg.page) {
+          return newItems
+        }
+        const existingIds = new Set(currentCache.items.map((i) => i.chatId))
+        const uniques = newItems.items.filter((i) => !existingIds.has(i.chatId))
+
+        currentCache.items.push(...uniques)
+        currentCache.total = newItems.total
+        currentCache.countUnread = newItems.countUnread
+        currentCache.countUnreadFavorite = newItems.countUnreadFavorite
+      },
+      forceRefetch({ currentArg, previousArg }) {
+        return currentArg?.page !== previousArg?.page
+      },
       providesTags: (result) =>
         result && result.items
           ? [
-              ...result.items.map(({ chatId }) => ({ type: "Chat" as const, id: chatId })),
-              { type: "Chat" as const, id: "LIST" },
-            ]
+            ...result.items.map(({ chatId }) => ({ type: "Chat" as const, id: chatId })),
+            { type: "Chat" as const, id: "LIST" },
+          ]
           : [{ type: "Chat" as const, id: "LIST" }],
     }),
 
@@ -149,8 +168,7 @@ export const chatApi = createApi({
       }),
       // Оптимистичное обновление: сразу показываем сообщение в UI
       async onQueryStarted({ chatId, body }, { dispatch, queryFulfilled, getState }) {
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        const state = getState() as any
+        const state = getState() as RootState
         const currentUser = state.user?.userData
 
         if (!currentUser) return
@@ -164,8 +182,8 @@ export const chatApi = createApi({
           chat && chat.user1.id === currentUser.id
             ? chat.user2
             : chat && chat.user2.id === currentUser.id
-            ? chat.user1
-            : { id: "", firstName: "", lastName: null as string | null, avatar: null as string | null }
+              ? chat.user1
+              : { id: "", firstName: "", lastName: null as string | null, avatar: null as string | null }
 
         // Создаем временное сообщение для оптимистичного обновления
         const tempMessage: MessageBackend = {
@@ -275,8 +293,7 @@ export const chatApi = createApi({
       // Оптимистичное обновление: обновляем только открытый чат
       async onQueryStarted({ chatId, body }, { dispatch, queryFulfilled, getState }) {
         // Получаем текущего пользователя для определения какие сообщения помечать
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        const state = getState() as any
+        const state = getState() as RootState
         const currentUserId = state.user?.userData?.id
 
         if (!currentUserId) return
@@ -333,6 +350,15 @@ export const chatApi = createApi({
         { type: "Chat", id: "LIST" },
       ],
     }),
+
+    // Endpoint для создания или получения чата с самим собой (Saved Messages)
+    createSavedChat: builder.mutation<{ chatId: string }, void>({
+      query: () => ({
+        url: `/chat/saved`,
+        method: "POST",
+      }),
+      invalidatesTags: [{ type: "Chat", id: "LIST" }],
+    }),
   }),
 })
 
@@ -343,6 +369,7 @@ export const {
   useToggleFavoriteMutation,
   useMarkReadMutation,
   useJoinAsAdminMutation,
+  useCreateSavedChatMutation,
 } = chatApi
 
 export const chatApiEndpoints = {

@@ -13,8 +13,8 @@ export type TaskType = Omit<RequestBackend, "latitude" | "longitude" | "attachme
   // Преобразование attachments в простые строки для UI
   attachments: string[]
   // ID вместо объектов для совместимости со старым кодом
-  customer_id: number
-  performer_id: number | null
+  customer_id: number | string
+  performer_id: number | string | null
   // Дополнительные поля для UI
   mode: "base" | "pro" // Вычисляется из metadata.verifProof
   tags: {
@@ -55,8 +55,8 @@ export function adaptRequestToTask(request: RequestBackend): TaskType {
     ...request,
     position: { lat: request.latitude, lng: request.longitude },
     attachments: request.attachments.map((att) => att.url),
-    customer_id: parseInt(request.customer.id),
-    performer_id: request.performer ? parseInt(request.performer.id) : null,
+    customer_id: request.customer.id,
+    performer_id: request.performer ? request.performer.id : null,
     mode, // Вычисляется из metadata.verifProof
     tags,
     arbitrationApproved: false, // По умолчанию false, так как это поле из DealBackend
@@ -68,7 +68,7 @@ export function adaptRequestToTask(request: RequestBackend): TaskType {
  * Используется только там, где нужна совместимость со старым кодом
  */
 export type ChatType = {
-  chat_id: number
+  chat_id: number | string
   avatar: string | null
   first_name: string
   last_name: string | null
@@ -91,7 +91,7 @@ export type ChatOrderType = {
  */
 export function adaptChatListItemToChat(chat: ChatListItem, orders?: ChatOrderType[]): ChatType {
   return {
-    chat_id: parseInt(chat.chatId),
+    chat_id: chat.chatId,
     avatar: chat.avatar,
     first_name: chat.firstName,
     last_name: chat.lastName,
@@ -110,11 +110,11 @@ export function adaptChatListItemToChat(chat: ChatListItem, orders?: ChatOrderTy
  * Используется только там, где нужна совместимость со старым кодом
  */
 export type Message = {
-  id: number
+  id: number | string
   type: "notification" | "message"
   variant?: "upload" | "permissionToCancel" | "newOffer"
-  sender_id: number
-  receiver_id: number
+  sender_id: number | string
+  receiver_id: number | string
   text: string | null
   attachments: string[]
   created_at: number // timestamp в миллисекундах
@@ -137,11 +137,11 @@ export function adaptMessageBackendToMessage(message: MessageBackend, order?: Ta
   // "taskCompleted" и "taskCancelled" игнорируются, так как не поддерживаются в старом типе Message
 
   return {
-    id: parseInt(message.id),
+    id: message.id,
     type: message.type,
     variant,
-    sender_id: parseInt(message.sender.id),
-    receiver_id: parseInt(message.receiver.id),
+    sender_id: message.sender.id,
+    receiver_id: message.receiver.id,
     text: message.text,
     attachments: message.attachments,
     created_at: new Date(message.createdAt).getTime(),

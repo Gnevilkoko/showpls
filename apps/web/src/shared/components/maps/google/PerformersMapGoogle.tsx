@@ -4,9 +4,14 @@ import { useGoogleMapLoaded } from "../../../providers/GoogleMapContext"
 import { GOOGLE_MAP_ID } from "../../../../constants"
 import type { PerformerType } from "../../../types"
 import { createRoot } from "react-dom/client"
-import { performersData } from "../../../../pages/Tasks/performersData"
 import statsStarWhiteIcon from "../../../../assets/icons/status/stats-star-white.svg"
 import PerformerItem from "../../../../pages/Tasks/PerformerItem"
+import { useGetNearbyPerformersQuery } from "../../../../store/api/requestApi"
+import type { PerformerNearby } from "../../../../shared/types/backend"
+
+interface PerformersMapGoogleProps {
+  taskId?: string
+}
 
 interface MarkerContentProps {
   count: number
@@ -33,12 +38,20 @@ const mapOptions: google.maps.MapOptions = {
   gestureHandling: "greedy",
 }
 
-const PerformersMapGoogle = memo(() => {
+const PerformersMapGoogle = memo(({ taskId }: PerformersMapGoogleProps) => {
   const [map, setMap] = useState<google.maps.Map | null>(null)
   const isLoaded = useGoogleMapLoaded()
   const mapPerformerRefs = useRef<Record<string, HTMLDivElement | null>>({})
   const performersContainerRef = useRef<HTMLDivElement | null>(null)
   const isMarkersInitializedRef = useRef(false)
+
+  // Получаем исполнителей с бэкенда
+  const { data: nearbyPerformersData } = useGetNearbyPerformersQuery(
+    { requestId: taskId! },
+    { skip: !taskId }
+  )
+
+  const performersList = nearbyPerformersData?.items || []
 
   const handleLoad = (mapInstance: google.maps.Map) => {
     setMap(mapInstance)
@@ -46,7 +59,7 @@ const PerformersMapGoogle = memo(() => {
 
   // Плавный скролл к выбранному исполнителю в списке
   const scrollToSelectedPerformer = useCallback(
-    (performer: PerformerType) => {
+    (performer: PerformerType | PerformerNearby) => {
       if (!map || !performersContainerRef.current) return
 
       const itemRef = mapPerformerRefs.current[performer.id.toString()]
@@ -71,15 +84,19 @@ const PerformersMapGoogle = memo(() => {
         if (progress < 1) requestAnimationFrame(animateScroll)
       }
 
-      map.panTo(performer.position)
+      // Используем latitude/longitude напрямую из PerformerNearby или position из PerformerType
+      const lat = "position" in performer ? performer.position.lat : performer.latitude
+      const lng = "position" in performer ? performer.position.lng : performer.longitude
+
+      map.panTo({ lat, lng })
       requestAnimationFrame(animateScroll)
     },
     [map]
   )
 
-  // Инициализация маркеров: создание маркеров на карте только один раз
+  // Инициализация маркеров: создание маркеров на карте
   useEffect(() => {
-    if (!map || isMarkersInitializedRef.current) return
+    if (!map || !performersList.length || isMarkersInitializedRef.current) return
 
     const initMarkers = async () => {
       const markerLib = (await google.maps.importLibrary("marker")) as unknown as {
@@ -87,7 +104,7 @@ const PerformersMapGoogle = memo(() => {
       }
       const { AdvancedMarkerElement } = markerLib
 
-      performersData.forEach((performer) => {
+      performersList.forEach((performer) => {
         const content = document.createElement("div")
         content.className = `custom-marker ${performer.rating >= 4.5 ? "accent" : ""}`
 
@@ -96,7 +113,7 @@ const PerformersMapGoogle = memo(() => {
 
         const marker = new AdvancedMarkerElement({
           map,
-          position: performer.position,
+          position: { lat: performer.latitude, lng: performer.longitude },
           content,
         })
 
@@ -119,16 +136,25 @@ const PerformersMapGoogle = memo(() => {
 
       <div className="map-performers-wrapper">
         <div className="map-performers-container" ref={performersContainerRef}>
-          {performersData.map((performer) => (
-            <PerformerItem
-              key={performer.id}
-              performer={performer}
-              ref={(el: HTMLDivElement | null) => {
-                mapPerformerRefs.current[performer.id.toString()] = el
-              }}
-              handleSelectPerformer={() => scrollToSelectedPerformer(performer)}
-            />
-          ))}
+          {performersList.map((performer) => {
+            // Адаптируем PerformerNearby к PerformerType для совместимости с PerformerItem
+            const adaptedPerformer = {
+              ...performer,
+              position: { lat: performer.latitude, lng: performer.longitude },
+              lastSeenAt: new Date() // Fallback так как бекенд пока не возвращает lastSeenAt
+            }
+
+            return (
+              <PerformerItem
+                key={performer.id}
+                performer={adaptedPerformer}
+                ref={(el: HTMLDivElement | null) => {
+                  mapPerformerRefs.current[performer.id.toString()] = el
+                }}
+                handleSelectPerformer={() => scrollToSelectedPerformer(performer)}
+              />
+            )
+          })}
         </div>
       </div>
     </>

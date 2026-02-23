@@ -5,6 +5,7 @@ import { useEffect, useRef, useState, type ChangeEvent } from "react"
 import { useTranslation } from "react-i18next"
 import type { UploadedImageType } from "../types"
 import plusIcon from "../../assets/icons/ui/plus.svg"
+import { toast } from "react-toastify"
 
 type MessageInputProps = {
   value: string
@@ -12,9 +13,11 @@ type MessageInputProps = {
   images: UploadedImageType[]
   onImagesChange: (images: UploadedImageType[]) => void
   onImageClick: (index: number) => void
+  onSend: () => void
+  isSending?: boolean
 }
 
-const MessageInput = ({ value, onChange, images, onImagesChange, onImageClick }: MessageInputProps) => {
+const MessageInput = ({ value, onChange, images, onImagesChange, onImageClick, onSend, isSending }: MessageInputProps) => {
   const { t } = useTranslation()
   const textareaRef = useRef<HTMLTextAreaElement | null>(null)
 
@@ -29,12 +32,25 @@ const MessageInput = ({ value, onChange, images, onImagesChange, onImageClick }:
     const files = e.target.files
     if (!files) return
 
-    const newImages: UploadedImageType[] = Array.from(files).map((file) => ({
-      file,
-      url: URL.createObjectURL(file),
-    }))
+    const validFiles: File[] = []
 
-    onImagesChange([...images, ...newImages])
+    Array.from(files).forEach((file) => {
+      // 10 MB limit
+      if (file.size > 10 * 1024 * 1024) {
+        toast.error(`File ${file.name} is too large. Maximum size is 10MB.`)
+      } else {
+        validFiles.push(file)
+      }
+    })
+
+    if (validFiles.length > 0) {
+      const newImages: UploadedImageType[] = validFiles.map((file) => ({
+        file,
+        url: URL.createObjectURL(file),
+      }))
+      onImagesChange([...images, ...newImages])
+    }
+
     setIsDropdownOpen(false)
     // Сброс input, чтобы можно было выбрать те же файлы снова
     e.target.value = ""
@@ -113,8 +129,15 @@ const MessageInput = ({ value, onChange, images, onImagesChange, onImageClick }:
             rows={1}
             value={value}
             onChange={(e) => onChange(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === "Enter" && !e.shiftKey) {
+                e.preventDefault()
+                if (!isSending) onSend()
+              }
+            }}
             ref={textareaRef}
             placeholder={t("message")}
+            disabled={isSending}
           />
 
           <button className="message-input__emoji-btn">
@@ -122,7 +145,7 @@ const MessageInput = ({ value, onChange, images, onImagesChange, onImageClick }:
           </button>
         </div>
 
-        <button className="send-message-btn">
+        <button className="send-message-btn" onClick={onSend} disabled={isSending}>
           <img src={sendIcon} alt="Send Icon" />
         </button>
       </div>

@@ -1,6 +1,5 @@
 import { createApi } from "@reduxjs/toolkit/query/react"
 import type { UserDataType } from "../../shared/types"
-import { NotificationHandler } from "../../shared/utils/notificationHandler"
 import { publicBaseQuery } from "./baseQuery"
 
 export interface AuthRequest {
@@ -25,14 +24,6 @@ export const authApi = createApi({
         body,
       }),
       invalidatesTags: ["Auth"],
-      // Обработка ошибок на уровне мутации
-      async onQueryStarted(_, { queryFulfilled }) {
-        try {
-          await queryFulfilled
-        } catch (error) {
-          NotificationHandler.handleError(error)
-        }
-      },
     }),
   }),
 })

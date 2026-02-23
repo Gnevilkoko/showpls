@@ -119,19 +119,17 @@ const CustomerTaskForm = ({ callback }: { callback: () => void }) => {
   // TODO: проверить загрузку файлов на сервер когда добавим S3 переменные в .env
   const uploadAttachments = useCallback(
     async (attachments: UploadedImageType[]): Promise<string[]> => {
-      const urls: string[] = []
-
-      for (const img of attachments) {
+      const uploadPromises = attachments.map(async (img) => {
         // Если это локальный файл (blob URL), загружаем на сервер
         if (img.url.startsWith("blob:") || img.url.startsWith("http://localhost")) {
           if (!img.file) {
             console.warn("File object not found for image:", img.url)
-            continue
+            return null
           }
 
           try {
             const uploadResult = await uploadFile(img.file).unwrap()
-            urls.push(uploadResult.url)
+            return uploadResult.url
           } catch (uploadError: unknown) {
             const error = uploadError as {
               data?: unknown
@@ -157,11 +155,12 @@ const CustomerTaskForm = ({ callback }: { callback: () => void }) => {
           }
         } else {
           // Если это уже URL с сервера - используем его
-          urls.push(img.url)
+          return img.url
         }
-      }
+      })
 
-      return urls
+      const results = await Promise.all(uploadPromises)
+      return results.filter((url): url is string => url !== null)
     },
     [uploadFile]
   )

@@ -23,9 +23,14 @@ const userSlice = createSlice({
       state.accessToken = null
       state.userData = null
     },
+    updateUserPartial: (state, action: PayloadAction<Partial<UserDataType>>) => {
+      if (state.userData) {
+        state.userData = { ...state.userData, ...action.payload }
+      }
+    },
   },
 })
 
-export const { setAuthData, clearAuthData } = userSlice.actions
+export const { setAuthData, clearAuthData, updateUserPartial } = userSlice.actions
 const userReducer = userSlice.reducer
 export default userReducer

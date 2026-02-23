@@ -1,12 +1,11 @@
-import { useState, useMemo, useCallback, useEffect } from "react"
+import { useState, useMemo, useCallback, useEffect, useRef } from "react"
 import { useTranslation } from "react-i18next"
-import type { ChatOrderType, ChatType, Message, TaskType } from "../../shared/types"
+import type { APIError, Message } from "../../shared/types"
 import ChatHeader from "./components/ChatHeader"
 import EscrowStatus from "./components/EscrowStatus"
 import TaskActions from "./components/TaskActions"
 import AcceptOrderModal from "./components/AcceptOrderModal"
-import { chatData } from "./data/chatData"
-import acceptCheckIcon from "../../assets/icons/status/accept-check.svg"
+
 import cancelCrossIcon from "../../assets/icons/status/cancel-cross.svg"
 import checkWhiteIcon from "../../assets/icons/status/check-white.svg"
 import cameraWhiteIcon from "../../assets/icons/actions/camera-white.svg"
@@ -21,16 +20,24 @@ import TaskPrimaryButton from "../../shared/components/TaskPrimaryButton"
 import ImageViewer from "../../shared/components/ImageViewer"
 import type { UploadedImageType } from "../../shared/types"
 import { useNotification } from "../../shared/hooks/useNotification"
-import ChatArbitration from "./ChatArbitration"
+import { NotificationHandler } from "../../shared/utils/notificationHandler"
+import CreateArbitrationModal from "./components/CreateArbitrationModal"
 import { useNavigate, useParams } from "react-router-dom"
-import { chatsData } from "../Chats/data/chatsData"
+import { useGetChatQuery, useSendMessageMutation } from "../../store/api/chatApi"
+import { useGetRequestQuery } from "../../store/api/requestApi"
+import { useUploadFileMutation } from "../../store/api/uploadApi"
+import { useCreateSubmissionMutation } from "../../store/api/submissionApi"
+import { useCreateArbitrationMutation } from "../../store/api/arbitrationApi"
+import UploadWorkModal from "./components/UploadWorkModal"
+import { adaptMessageBackendToMessage, adaptRequestToTask, type ChatType, type ChatOrderType, type TaskType } from "../../shared/types/adapters"
+import { useAppSelector, type RootState } from "../../store"
 
 const Chat = () => {
   const { id } = useParams<{ id: string }>()
-  const chat = chatsData.chat_list?.find((chat: ChatType) => chat.chat_id === Number(id))
   const navigate = useNavigate()
-  // здесь нужно брать свой айдишник из user
-  const userId = 100
+
+  // Берем реальный ID пользователя из Redux
+  const userId = useAppSelector((state: RootState) => Number(state.user.userData?.id))
 
   const { t } = useTranslation()
   const notification = useNotification()
@@ -47,9 +54,170 @@ const Chat = () => {
   const [selectedStarRating, setSelectedStarRating] = useState<number>(0)
   const [images, setImages] = useState<UploadedImageType[]>([])
   const [selectedImageIndex, setSelectedImageIndex] = useState<number | null>(null)
-  const selectedOrder = useMemo(() => chat?.orders?.[selectedOrderIndex], [chat?.orders, selectedOrderIndex])
 
-  const [isOpenChatArbitration, setIsOpenChatArbitration] = useState<boolean>(false)
+  const [isOpenModalArbitration, setIsOpenModalArbitration] = useState<boolean>(false)
+
+  // Получаем данные чата
+  const { data: chatData, isLoading, isError } = useGetChatQuery(
+    { id: id!, params: { search: searchValue || undefined } },
+    { skip: !id }
+  )
+
+  const [isUploadingLocalFiles, setIsUploadingLocalFiles] = useState(false)
+
+  const [sendMessage, { isLoading: isSending }] = useSendMessageMutation()
+  const [uploadFile] = useUploadFileMutation()
+  const [createSubmission, { isLoading: isUploadingSubmission }] = useCreateSubmissionMutation()
+  const [createArbitration, { isLoading: isCreatingArbitration }] = useCreateArbitrationMutation()
+
+  const handleUploadSubmission = async (
+    imagesToUpload: UploadedImageType[],
+    geo: { latitude: number; longitude: number } | null
+  ) => {
+    if (!currentRequestId) return
+    if (imagesToUpload.length === 0) {
+      notification.showWarning("invalidFields")
+      return
+    }
+
+    try {
+      // 1. Upload images concurrently
+      const uploadPromises = imagesToUpload.map(async (img) => {
+        if ((img.url.startsWith("blob:") || img.url.startsWith("http://localhost")) && img.file) {
+          const result = await uploadFile(img.file).unwrap()
+          return result.url
+        }
+        return img.url
+      })
+      const attachmentUrls = await Promise.all(uploadPromises)
+
+      // 2. Create Submission
+      await createSubmission({
+        requestId: currentRequestId,
+        attachments: attachmentUrls,
+        proofMeta: geo ? { clientGeo: geo } : undefined
+      }).unwrap()
+
+      notification.showSuccess("orderCompletedSuccessfully")
+      setIsOpenModalCompleteOrder(false)
+    } catch (error) {
+      NotificationHandler.showError(error as APIError, "Failed to submit work")
+    }
+  }
+
+  const handleSendMessage = async () => {
+    if (!value.trim() && images.length === 0) return
+    if (isUploadingLocalFiles || isSending) return
+
+    try {
+      setIsUploadingLocalFiles(true)
+      // Upload images first concurrently if necessary
+      const uploadPromises = images.map(async (img) => {
+        if ((img.url.startsWith("blob:") || img.url.startsWith("http://localhost")) && img.file) {
+          const result = await uploadFile(img.file).unwrap()
+          return result.url
+        }
+        return img.url
+      })
+      const attachmentUrls = await Promise.all(uploadPromises)
+
+      // Send the actual message
+      await sendMessage({
+        chatId: id!,
+        body: {
+          text: value.trim() || undefined,
+          attachments: attachmentUrls.length > 0 ? attachmentUrls : undefined,
+          type: "message",
+        },
+      }).unwrap()
+
+      // Reset state on success
+      setValue("")
+      setImages([])
+    } catch (error) {
+      NotificationHandler.showError(error as APIError, "Failed to send message")
+    } finally {
+      setIsUploadingLocalFiles(false)
+    }
+  }
+
+  const handleCreateArbitration = async (reason: string) => {
+    if (!currentRequestId || !reason.trim()) return
+
+    try {
+      const result = await createArbitration({
+        requestId: currentRequestId,
+        reason: reason.trim()
+      }).unwrap()
+
+      setIsOpenModalArbitration(false)
+      // Navigate to the new arbitration chat
+      navigate(`/chat/${result.chatId}`)
+    } catch (error) {
+      NotificationHandler.showError(error as APIError, "Failed to create arbitration")
+    }
+  }
+
+  // Собираем все уникальные ID задач, связанных с этим чатом
+  const requestIds = useMemo(() => {
+    if (!chatData) return []
+    const ids = [
+      ...(chatData.deals?.map((d) => d.requestId) || []),
+      ...(chatData.responses?.map((r) => r.requestId) || [])
+    ]
+    return [...new Set(ids)]
+  }, [chatData])
+
+  const currentRequestId = requestIds[selectedOrderIndex]
+
+  const { data: requestData } = useGetRequestQuery(currentRequestId || "", {
+    skip: !currentRequestId,
+  })
+
+  // Адаптируем запрос к TaskType
+  const selectedOrderTask: TaskType | null = useMemo(() => {
+    if (!requestData) return null
+    return adaptRequestToTask(requestData)
+  }, [requestData])
+
+  // Ищем связанную с задачей сделку для статуса Escrow
+  const selectedDeal = useMemo(() => {
+    if (!chatData || !currentRequestId) return null
+    return chatData.deals.find((d) => d.requestId === currentRequestId) || null
+  }, [chatData, currentRequestId])
+
+  const selectedChatOrderType: ChatOrderType | null = useMemo(() => {
+    if (!selectedOrderTask) return null
+    return {
+      order: selectedOrderTask,
+      escrowStatus: selectedDeal?.escrowStatus || null,
+    }
+  }, [selectedOrderTask, selectedDeal])
+
+  const adaptedMessages: Message[] = useMemo(() => {
+    if (!chatData?.messages) return []
+    return chatData.messages.map((m) => adaptMessageBackendToMessage(m, selectedOrderTask || undefined))
+  }, [chatData?.messages, selectedOrderTask])
+
+  // Адаптируем ChatBackend для ChatHeader
+  const adaptedChatHeader: ChatType | null = useMemo(() => {
+    if (!chatData) return null
+    // Определяем кто из юзеров собеседник
+    const otherUser = chatData.chat.user1.id === String(userId) ? chatData.chat.user2 : chatData.chat.user1
+    return {
+      chat_id: Number(chatData.chat.id),
+      avatar: otherUser.avatar,
+      first_name: otherUser.firstName,
+      last_name: otherUser.lastName,
+      last_message: chatData.chat.lastMessage || "",
+      last_update: chatData.chat.lastUpdate ? new Date(chatData.chat.lastUpdate).getTime() : 0,
+      is_favorite: chatData.chat.isFavorite,
+      is_active_order: chatData.chat.isActiveOrder,
+      is_read: chatData.chat.isRead,
+      count_unread: chatData.chat.countUnread,
+      orders: selectedChatOrderType ? [selectedChatOrderType] : null,
+    }
+  }, [chatData, userId, selectedChatOrderType])
 
   const handleImageClick = (index: number) => {
     setSelectedImageIndex(index)
@@ -65,88 +233,84 @@ const Chat = () => {
 
   const handleChangeSelectedOrderIndex = useCallback(
     (id: number) => {
-      if (!chat?.orders) {
-        return
-      }
+      if (requestIds.length === 0) return
 
-      if (id > chat.orders?.length - 1) {
+      if (id > requestIds.length - 1) {
         setSelectedOrderIndex(0)
       } else if (id < 0) {
-        setSelectedOrderIndex(chat.orders?.length - 1)
+        setSelectedOrderIndex(requestIds.length - 1)
       } else {
         setSelectedOrderIndex(id)
       }
     },
-    [chat?.orders]
+    [requestIds.length]
   )
 
-  const chatDataItem = chatData.find((i) => i.chat_id === chat?.chat_id)
-
   useEffect(() => {
-    if (!chat) {
+    if (isError) {
       navigate("/chats")
       notification.showError("somethingWentWrong")
     }
-  }, [chat, navigate, notification])
+  }, [isError, navigate, notification])
 
-  if (!chat) {
-    return null
+  const messagesEndRef = useRef<HTMLDivElement | null>(null)
+
+  const scrollToBottom = () => {
+    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" })
   }
 
-  if (isOpenChatArbitration) {
-    return (
-      <ChatArbitration
-        selectedOrder={selectedOrder as ChatOrderType}
-        handleCloseArbitration={() => setIsOpenChatArbitration(false)}
-      />
-    )
+  useEffect(() => {
+    scrollToBottom()
+  }, [adaptedMessages.length])
+
+  if (isLoading || !chatData) {
+    return <div className="chat loading-chats-paragraph visible">{t("loading")}</div>
   }
 
   return (
     <div className="chat">
       <div className="chats__header-wrapper">
         <ChatHeader
-          // selectedOrder={selectedOrder as ChatOrderType}
-          chat={chat}
+          chat={adaptedChatHeader!}
           searchValue={searchValue}
           onSearchChange={setSearchValue}
           onBack={handleBack}
         />
 
-        {chat.orders?.[selectedOrderIndex] && (
+        {selectedOrderTask && requestIds.length > 0 && (
           <div className="chat__task-wrapper">
             <TaskHeader
               isOpen={isOpenTask}
               onToggle={() => setIsOpenTask((prev) => !prev)}
-              ordersLength={chat.orders.length}
+              ordersLength={requestIds.length}
             />
 
             {isOpenTask && (
               <div className="chat__task-container">
                 <TaskSwitcher
-                  ordersLength={chat.orders.length}
+                  ordersLength={requestIds.length}
                   selectedIndex={selectedOrderIndex}
                   onChangeIndex={handleChangeSelectedOrderIndex}
                 />
 
-                <TaskInfo selectedOrder={selectedOrder?.order as TaskType} />
+                <TaskInfo selectedOrder={selectedOrderTask} />
 
                 <div className="chat__task__actions">
                   <TaskPrimaryButton
                     color="green"
                     onClick={() =>
-                      selectedOrder?.order.customer_id === userId
+                      selectedOrderTask.customer_id === userId
                         ? setIsOpenModalAcceptOrder(true)
                         : setIsOpenModalCompleteOrder(true)
                     }
-                    icon={selectedOrder?.order.customer_id === userId ? checkWhiteIcon : cameraWhiteIcon}
-                    text={selectedOrder?.order.customer_id === userId ? t("acceptJob") : t("upload")}
+                    icon={selectedOrderTask.customer_id === userId ? checkWhiteIcon : cameraWhiteIcon}
+                    text={selectedOrderTask.customer_id === userId ? t("acceptJob") : t("upload")}
                   />
 
                   <TaskActions
-                    selectedOrder={selectedOrder}
+                    selectedOrder={selectedChatOrderType ?? undefined}
                     onRejectOrder={() => setIsOpenModalRejectOrder(true)}
-                    onWriteArbitration={() => setIsOpenChatArbitration(true)}
+                    onWriteArbitration={() => setIsOpenModalArbitration(true)}
                   />
                 </div>
               </div>
@@ -154,13 +318,14 @@ const Chat = () => {
           </div>
         )}
 
-        <EscrowStatus selectedOrder={selectedOrder} />
+        <EscrowStatus selectedOrder={selectedChatOrderType ?? undefined} />
       </div>
 
       <div className="chat__container">
-        {chatDataItem?.messages.map((msg: Message) => (
+        {adaptedMessages.map((msg: Message) => (
           <MessageItem key={msg.id} message={msg} userId={userId} />
         ))}
+        <div ref={messagesEndRef} />
       </div>
 
       <MessageInput
@@ -169,6 +334,8 @@ const Chat = () => {
         images={images}
         onImagesChange={setImages}
         onImageClick={handleImageClick}
+        onSend={handleSendMessage}
+        isSending={isSending || isUploadingLocalFiles}
       />
 
       {/* Image Viewer Modal */}
@@ -209,17 +376,18 @@ const Chat = () => {
       </Modal>
 
       <Modal isOpen={isOpenModalCompleteOrder} onClose={() => setIsOpenModalCompleteOrder(false)}>
-        <ModalContent
-          icon={acceptCheckIcon}
-          title={t("confirmCompletion")}
-          description={t("confirmCompletionDescription")}
-          confirmText={t("yes")}
-          cancelText={t("no")}
-          onConfirm={() => {
-            notification.showSuccess("orderCompletedSuccessfully")
-            setIsOpenModalCompleteOrder(false)
-          }}
+        <UploadWorkModal
+          isUploading={isUploadingSubmission}
+          onConfirm={handleUploadSubmission}
           onCancel={() => setIsOpenModalCompleteOrder(false)}
+        />
+      </Modal>
+
+      <Modal isOpen={isOpenModalArbitration} onClose={() => setIsOpenModalArbitration(false)}>
+        <CreateArbitrationModal
+          isCreating={isCreatingArbitration}
+          onConfirm={handleCreateArbitration}
+          onCancel={() => setIsOpenModalArbitration(false)}
         />
       </Modal>
     </div>

@@ -139,6 +139,7 @@ const resources = {
         somethingWentWrong: "Something went wrong, please try again later",
         errorCancellingTask: "Error cancelling task, please try again later",
         errorRespondingToTask: "Error responding to task, please try again later",
+        locationError: "Failed to get location. Please allow access in your browser settings",
       },
       success: {
         dataSaved: "Data saved successfully!",
@@ -376,6 +377,7 @@ const resources = {
         somethingWentWrong: "Что-то пошло не так, попробуйте позже",
         errorCancellingTask: "Ошибка при отмене задачи, попробуйте позже",
         errorRespondingToTask: "Ошибка при отклике на задачу, попробуйте позже",
+        locationError: "Не удалось получить геоданные. Разрешите доступ в настройках браузера",
       },
       success: {
         dataSaved: "Данные сохранены успешно!",

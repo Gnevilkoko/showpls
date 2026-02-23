@@ -9,10 +9,11 @@ type ChatsHeaderProps = {
   searchValue: string
   onToggleFavorite: () => void
   onSearchChange: (value: string) => void
+  onOpenSavedMessages: () => void
   count: number
 }
 
-const ChatsHeader = ({ isFavoriteList, searchValue, onToggleFavorite, onSearchChange, count }: ChatsHeaderProps) => {
+const ChatsHeader = ({ isFavoriteList, searchValue, onToggleFavorite, onSearchChange, onOpenSavedMessages, count }: ChatsHeaderProps) => {
   const { t } = useTranslation()
   const searchInputRef = useRef<HTMLInputElement>(null)
 
@@ -43,7 +44,11 @@ const ChatsHeader = ({ isFavoriteList, searchValue, onToggleFavorite, onSearchCh
           />
         </div>
 
-        <button className="chats__favorites-btn" onClick={onToggleFavorite}>
+        <button className="chats__favorites-btn" onClick={onOpenSavedMessages} title={t("savedMessages")}>
+          <img src={starFilledIcon} alt="Saved Messages" style={{ filter: "hue-rotate(240deg)" }} />
+        </button>
+
+        <button className="chats__favorites-btn" onClick={onToggleFavorite} title={t("favorites")}>
           <img src={isFavoriteList ? starFilledIcon : starOutlineIcon} alt="Star Icon" />
         </button>
       </div>

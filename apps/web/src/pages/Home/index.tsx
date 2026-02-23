@@ -1,9 +1,7 @@
 import plusActionBannerIcon from "../../assets/icons/actions/plus-action-banner.svg"
 import searchActionBannerIcon from "../../assets/icons/actions/search-action-banner.svg"
-import starsIcon from "../../assets/icons/status/stars.svg"
 // import logoSpecials from "../../assets/images/logo-specials.png"
 import newLogoSpecials from "../../assets/images/new-logo-specials.svg"
-import partnerNikeLogo from "../../assets/images/partnerNikeLogo.png"
 import { useNavigate } from "react-router-dom"
 import { useState } from "react"
 import Header from "../../shared/components/Header"
@@ -83,39 +81,9 @@ const Home = () => {
             </button>
           </div>
 
-          <div className="option__content-list">
-            <div className="option__wrapper">
-              <img src={partnerNikeLogo} alt="Chat Line Icon" className="partner-logo" />
-
-              <div className="option__content">
-                <span>Take photo with Nike shoes</span>
-
-                <span className="option__price">
-                  {t("homePage.options.earn", { stars: 50 })}
-                  <img src={starsIcon} alt="Telegram Stars Icon" />
-                </span>
-              </div>
-
-              <button className="option__task-button">{t("homePage.options.btnDetails")}</button>
-            </div>
-
-            <div className="option__wrapper">
-              <img src={partnerNikeLogo} alt="Chat Line Icon" className="partner-logo" />
-
-              <div className="option__content">
-                <span>Film short video drinking Coca-Cola</span>
-
-                <span className="option__price">
-                  {t("homePage.options.earn", { stars: 100 })}
-                  <img src={starsIcon} alt="Telegram Stars Icon" />
-                </span>
-              </div>
-
-              <button className="option__task-button">{t("homePage.options.btnDetails")}</button>
-            </div>
+          <div className="option__content-list" style={{ textAlign: "center", padding: "20px 0", color: "gray" }}>
+            <p>{t("noSpecials", "В данный момент спецпредложений нет. Загляните позже!")}</p>
           </div>
-
-          <button className="specials_button">{t("homePage.loadMore")}</button>
         </div>
       </div>
 

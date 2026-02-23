@@ -1,5 +1,6 @@
 import { createApi } from "@reduxjs/toolkit/query/react"
 import { authenticatedBaseQuery } from "./baseQuery"
+import { chatApi } from "./chatApi"
 import type {
   RequestBackend,
   RequestStatus,
@@ -114,7 +115,13 @@ export const requestApi = createApi({
         method: "POST",
         body,
       }),
-      invalidatesTags: ["Request", "Chat"], // Создается чат
+      async onQueryStarted(_arg, { dispatch, queryFulfilled }) {
+        try {
+          await queryFulfilled
+          dispatch(chatApi.util.invalidateTags(["Chat"]))
+        } catch { }
+      },
+      invalidatesTags: ["Request"], // Создается чат, кеш обновляется через onQueryStarted
     }),
 
     // Endpoint для получения списка задач
@@ -151,9 +158,9 @@ export const requestApi = createApi({
       providesTags: (result) =>
         result
           ? [
-              ...result.items.map(({ id }) => ({ type: "Request" as const, id })),
-              { type: "Request" as const, id: "LIST" },
-            ]
+            ...result.items.map(({ id }) => ({ type: "Request" as const, id })),
+            { type: "Request" as const, id: "LIST" },
+          ]
           : [{ type: "Request" as const, id: "LIST" }],
     }),
 
@@ -213,7 +220,13 @@ export const requestApi = createApi({
         method: "POST",
         body,
       }),
-      invalidatesTags: ["Request", "Response", "Chat"], // Создается чат
+      async onQueryStarted(_arg, { dispatch, queryFulfilled }) {
+        try {
+          await queryFulfilled
+          dispatch(chatApi.util.invalidateTags(["Chat"]))
+        } catch { }
+      },
+      invalidatesTags: ["Request", "Response"], // Создается чат, кеш обновляется через onQueryStarted
     }),
 
     // Endpoint для редактирования задачи
@@ -242,10 +255,13 @@ export const requestApi = createApi({
         method: "POST",
         body,
       }),
-      invalidatesTags: (_result, _error, { id }) => [
-        { type: "Request", id },
-        "Deal", // Deal меняет статус
-      ],
+      async onQueryStarted(_arg, { dispatch, queryFulfilled }) {
+        try {
+          await queryFulfilled
+          dispatch(chatApi.util.invalidateTags(["Chat"]))
+        } catch { }
+      },
+      invalidatesTags: (_result, _error, { id }) => [{ type: "Request", id }],
     }),
 
     // Endpoint для отмены задачи
@@ -254,10 +270,13 @@ export const requestApi = createApi({
         url: `/request/${id}/cancel`,
         method: "POST",
       }),
-      invalidatesTags: (_result, _error, id) => [
-        { type: "Request", id },
-        "Deal", // Deal меняет статус
-      ],
+      async onQueryStarted(_arg, { dispatch, queryFulfilled }) {
+        try {
+          await queryFulfilled
+          dispatch(chatApi.util.invalidateTags(["Chat"]))
+        } catch { }
+      },
+      invalidatesTags: (_result, _error, id) => [{ type: "Request", id }],
     }),
   }),
 })

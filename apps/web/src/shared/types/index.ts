@@ -54,39 +54,10 @@ export * from "./backend.ts"
 
 // Реэкспорт адаптеров
 export * from "./adapters.ts"
+import type { Message, ChatType } from "./adapters.ts"
 
 // Устаревшие типы (будут удалены после миграции на типы бекенда)
-export type ChatOrderType = {
-  order: TaskType
-  escrowStatus: "locked" | "released" | "rejected" | null
-}
-
-export type ChatType = {
-  chat_id: number
-  avatar: string | null
-  first_name: string
-  last_name: string | null
-  last_message: string
-  last_update: number
-  is_favorite: boolean
-  is_active_order: boolean
-  orders: ChatOrderType[] | null
-  is_read: boolean
-  count_unread: number | null
-}
-
-export type Message = {
-  id: number
-  type: "notification" | "message"
-  variant?: "upload" | "permissionToCancel" | "newOffer"
-  sender_id: number
-  receiver_id: number
-  text: string | null
-  attachments: string[]
-  created_at: number
-  is_read: boolean
-  order?: TaskType
-}
+// ... перенесены в adapters.ts
 
 export type DataMessages = {
   chat_id: number
@@ -110,25 +81,7 @@ export type TransactionType = {
 }
 
 // ⚠️ УСТАРЕЛО: Используйте RequestBackend из backend.ts напрямую!
-// TaskType оставлен только для совместимости со старым кодом
-// Для новых компонентов используйте RequestBackend + адаптеры из adapters.ts
-export type TaskType = {
-  id: string
-  title: string
-  description: string
-  attachments: string[]
-  price: number
-  mode: "base" | "pro"
-  position: google.maps.LatLngLiteral
-  isUrgent: boolean
-  tags: {
-    type: "hLeft" | "km"
-    count: number
-  }[]
-  customer_id: number
-  performer_id: number | null
-  arbitrationApproved: boolean // Флаг: арбитраж согласен закрыть задачу
-}
+// TaskType оставлен только для совместимости со старым кодом и перенесен в adapters.ts
 
 // API Error types
 export type APIErrorCode =
@@ -152,7 +105,7 @@ export type APIError = {
 }
 
 export type PerformerType = {
-  id: number
+  id: number | string
   firstName: string
   lastName: string | null
   avatar: string | null

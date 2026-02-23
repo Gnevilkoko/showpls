@@ -110,18 +110,18 @@ const PerformerDiscover = () => {
   } = useGetRequestMapQuery(
     mapBounds
       ? {
-          north: mapBounds.north,
-          south: mapBounds.south,
-          east: mapBounds.east,
-          west: mapBounds.west,
-        }
+        north: mapBounds.north,
+        south: mapBounds.south,
+        east: mapBounds.east,
+        west: mapBounds.west,
+      }
       : // Дефолтные bounds (не будут использованы из-за skip)
-        {
-          north: 90,
-          south: -90,
-          east: 180,
-          west: -180,
-        },
+      {
+        north: 90,
+        south: -90,
+        east: 180,
+        west: -180,
+      },
     {
       skip: activeSection !== "map" || !mapBounds,
     }
@@ -379,7 +379,7 @@ const PerformerDiscover = () => {
 
       {/* Модалка поиска исполнителей */}
       <Modal isOpen={isOpenPerformerDiscover} onClose={handleClosePerformerDiscover}>
-        <PerformersMapComponent />
+        <PerformersMapComponent taskId={selectedTask?.id} />
       </Modal>
     </div>
   )

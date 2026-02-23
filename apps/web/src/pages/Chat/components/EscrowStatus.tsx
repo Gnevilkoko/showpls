@@ -1,4 +1,4 @@
-import type { ChatOrderType } from "../../../shared/types"
+import type { ChatOrderType } from "../../../shared/types/adapters"
 import lockBlueIcon from "../../../assets/icons/status/lock-blue.svg"
 import starsIcon from "../../../assets/icons/status/stars.svg"
 import verifiedCheckIcon from "../../../assets/icons/status/verified-check.svg"

@@ -180,5 +180,8 @@
     "vite": "^7.1.7",
     "vitest": "^3.0.0",
     "webpack-cli": "^5.1.4"
+  },
+  "optionalDependencies": {
+    "@rollup/rollup-win32-x64-msvc": "^4.59.0"
   }
 }

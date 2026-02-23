@@ -63,9 +63,10 @@ class SocketService {
 
   constructor() {
     // Определяем URL для WebSocket
-    // В development: localhost:8080, в production: текущий домен
+    // Используем относительный URL (проксируется через Vite) для development
+    // В production бэкенд и фронтенд находятся на одном домене
     const isDev = import.meta.env.DEV
-    this.socketUrl = isDev ? "http://localhost:8080" : window.location.origin
+    this.socketUrl = isDev ? "" : window.location.origin
   }
 
   /**
