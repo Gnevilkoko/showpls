@@ -7,10 +7,11 @@ import { ChatController } from "./chat.controller"
 import { ChatService } from "./chat.service"
 import { User } from "@share/entities/user.entity"
 import { Response } from "@share/entities/response.entity"
+import { Request } from "@share/entities/request.entity"
 import { ChatGateway } from "./chat.gateway"
 
 @Module({
-  imports: [TypeOrmModule.forFeature([Chat, ChatMessage, Deal, User, Response]), TypeOrmModule],
+  imports: [TypeOrmModule.forFeature([Chat, ChatMessage, Deal, User, Response, Request]), TypeOrmModule],
   controllers: [ChatController],
   providers: [ChatService, ChatGateway],
   exports: [ChatService, ChatGateway],

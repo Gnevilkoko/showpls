@@ -136,9 +136,9 @@ export const chatApi = createApi({
       providesTags: (result) =>
         result && result.items
           ? [
-            ...result.items.map(({ chatId }) => ({ type: "Chat" as const, id: chatId })),
-            { type: "Chat" as const, id: "LIST" },
-          ]
+              ...result.items.map(({ chatId }) => ({ type: "Chat" as const, id: chatId })),
+              { type: "Chat" as const, id: "LIST" },
+            ]
           : [{ type: "Chat" as const, id: "LIST" }],
     }),
 
@@ -182,8 +182,8 @@ export const chatApi = createApi({
           chat && chat.user1.id === currentUser.id
             ? chat.user2
             : chat && chat.user2.id === currentUser.id
-              ? chat.user1
-              : { id: "", firstName: "", lastName: null as string | null, avatar: null as string | null }
+            ? chat.user1
+            : { id: "", firstName: "", lastName: null as string | null, avatar: null as string | null }
 
         // Создаем временное сообщение для оптимистичного обновления
         const tempMessage: MessageBackend = {
@@ -408,23 +408,10 @@ export const chatApiHelpers = {
    */
   addMessageToCache: (dispatch: AppDispatch, chatId: string, message: MessageBackend) => {
     dispatch(
-      chatApi.util.updateQueryData("getChat", { id: chatId }, (draft) => {
-        // Защитная проверка: если кэш не существует, выходим
-        if (!draft?.messages) return
-
-        // Проверяем, нет ли уже такого сообщения (избегаем дубликатов)
-        const exists = draft.messages.some((m) => m.id === message.id)
-        if (!exists) {
-          draft.messages.push(message)
-          // Сортируем по дате
-          draft.messages.sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime())
-        }
-        // Обновляем lastMessage и lastUpdate
-        if (draft.chat) {
-          draft.chat.lastMessage = getLastMessageText(message)
-          draft.chat.lastUpdate = message.createdAt
-        }
-      })
+      chatApi.util.invalidateTags([
+        { type: "Chat", id: chatId },
+        { type: "Message", id: `LIST-${chatId}` },
+      ])
     )
   },
 

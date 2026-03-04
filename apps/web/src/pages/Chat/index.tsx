@@ -24,12 +24,18 @@ import { NotificationHandler } from "../../shared/utils/notificationHandler"
 import CreateArbitrationModal from "./components/CreateArbitrationModal"
 import { useNavigate, useParams } from "react-router-dom"
 import { useGetChatQuery, useSendMessageMutation } from "../../store/api/chatApi"
-import { useGetRequestQuery } from "../../store/api/requestApi"
+import { useGetRequestQuery, useCompleteRequestMutation, useCancelRequestMutation } from "../../store/api/requestApi"
 import { useUploadFileMutation } from "../../store/api/uploadApi"
 import { useCreateSubmissionMutation } from "../../store/api/submissionApi"
 import { useCreateArbitrationMutation } from "../../store/api/arbitrationApi"
 import UploadWorkModal from "./components/UploadWorkModal"
-import { adaptMessageBackendToMessage, adaptRequestToTask, type ChatType, type ChatOrderType, type TaskType } from "../../shared/types/adapters"
+import {
+  adaptMessageBackendToMessage,
+  adaptRequestToTask,
+  type ChatType,
+  type ChatOrderType,
+  type TaskType,
+} from "../../shared/types/adapters"
 import { useAppSelector, type RootState } from "../../store"
 
 const Chat = () => {
@@ -37,7 +43,7 @@ const Chat = () => {
   const navigate = useNavigate()
 
   // Берем реальный ID пользователя из Redux
-  const userId = useAppSelector((state: RootState) => Number(state.user.userData?.id))
+  const userId = useAppSelector((state: RootState) => state.user.userData?.id)
 
   const { t } = useTranslation()
   const notification = useNotification()
@@ -58,10 +64,11 @@ const Chat = () => {
   const [isOpenModalArbitration, setIsOpenModalArbitration] = useState<boolean>(false)
 
   // Получаем данные чата
-  const { data: chatData, isLoading, isError } = useGetChatQuery(
-    { id: id!, params: { search: searchValue || undefined } },
-    { skip: !id }
-  )
+  const {
+    data: chatData,
+    isLoading,
+    isError,
+  } = useGetChatQuery({ id: id!, params: { search: searchValue || undefined } }, { skip: !id })
 
   const [isUploadingLocalFiles, setIsUploadingLocalFiles] = useState(false)
 
@@ -69,6 +76,31 @@ const Chat = () => {
   const [uploadFile] = useUploadFileMutation()
   const [createSubmission, { isLoading: isUploadingSubmission }] = useCreateSubmissionMutation()
   const [createArbitration, { isLoading: isCreatingArbitration }] = useCreateArbitrationMutation()
+  const [completeRequest, { isLoading: isCompleting }] = useCompleteRequestMutation()
+  const [cancelRequest, { isLoading: isCancelling }] = useCancelRequestMutation()
+
+  const handleCompleteRequest = async () => {
+    if (!currentRequestId) return
+    try {
+      await completeRequest({ id: currentRequestId, body: { rating: selectedStarRating } }).unwrap()
+      setIsOpenModalAcceptOrder(false)
+      setSelectedStarRating(0)
+      notification.showSuccess("orderAcceptedSuccessfully")
+    } catch (error) {
+      NotificationHandler.showError(error as APIError, "Failed to complete request")
+    }
+  }
+
+  const handleCancelRequest = async () => {
+    if (!currentRequestId) return
+    try {
+      await cancelRequest(currentRequestId).unwrap()
+      setIsOpenModalRejectOrder(false)
+      notification.showSuccess("orderCancelledSuccessfully")
+    } catch (error) {
+      NotificationHandler.showError(error as APIError, "Failed to cancel request")
+    }
+  }
 
   const handleUploadSubmission = async (
     imagesToUpload: UploadedImageType[],
@@ -81,7 +113,6 @@ const Chat = () => {
     }
 
     try {
-      // 1. Upload images concurrently
       const uploadPromises = imagesToUpload.map(async (img) => {
         if ((img.url.startsWith("blob:") || img.url.startsWith("http://localhost")) && img.file) {
           const result = await uploadFile(img.file).unwrap()
@@ -91,11 +122,10 @@ const Chat = () => {
       })
       const attachmentUrls = await Promise.all(uploadPromises)
 
-      // 2. Create Submission
       await createSubmission({
         requestId: currentRequestId,
         attachments: attachmentUrls,
-        proofMeta: geo ? { clientGeo: geo } : undefined
+        proofMeta: geo ? { clientGeo: geo } : undefined,
       }).unwrap()
 
       notification.showSuccess("orderCompletedSuccessfully")
@@ -111,7 +141,6 @@ const Chat = () => {
 
     try {
       setIsUploadingLocalFiles(true)
-      // Upload images first concurrently if necessary
       const uploadPromises = images.map(async (img) => {
         if ((img.url.startsWith("blob:") || img.url.startsWith("http://localhost")) && img.file) {
           const result = await uploadFile(img.file).unwrap()
@@ -121,7 +150,6 @@ const Chat = () => {
       })
       const attachmentUrls = await Promise.all(uploadPromises)
 
-      // Send the actual message
       await sendMessage({
         chatId: id!,
         body: {
@@ -131,7 +159,6 @@ const Chat = () => {
         },
       }).unwrap()
 
-      // Reset state on success
       setValue("")
       setImages([])
     } catch (error) {
@@ -147,11 +174,10 @@ const Chat = () => {
     try {
       const result = await createArbitration({
         requestId: currentRequestId,
-        reason: reason.trim()
+        reason: reason.trim(),
       }).unwrap()
 
       setIsOpenModalArbitration(false)
-      // Navigate to the new arbitration chat
       navigate(`/chat/${result.chatId}`)
     } catch (error) {
       NotificationHandler.showError(error as APIError, "Failed to create arbitration")
@@ -161,10 +187,11 @@ const Chat = () => {
   // Собираем все уникальные ID задач, связанных с этим чатом
   const requestIds = useMemo(() => {
     if (!chatData) return []
-    const ids = [
-      ...(chatData.deals?.map((d) => d.requestId) || []),
-      ...(chatData.responses?.map((r) => r.requestId) || [])
-    ]
+
+    const dealRequestIds = chatData.deals?.map((d: any) => d.requestId || d.request?.id).filter(Boolean) || []
+    const responseRequestIds = chatData.responses?.map((r: any) => r.requestId || r.request?.id).filter(Boolean) || []
+
+    const ids = [...dealRequestIds, ...responseRequestIds]
     return [...new Set(ids)]
   }, [chatData])
 
@@ -183,7 +210,7 @@ const Chat = () => {
   // Ищем связанную с задачей сделку для статуса Escrow
   const selectedDeal = useMemo(() => {
     if (!chatData || !currentRequestId) return null
-    return chatData.deals.find((d) => d.requestId === currentRequestId) || null
+    return chatData.deals.find((d: any) => (d.requestId || d.request?.id) === currentRequestId) || null
   }, [chatData, currentRequestId])
 
   const selectedChatOrderType: ChatOrderType | null = useMemo(() => {
@@ -196,14 +223,13 @@ const Chat = () => {
 
   const adaptedMessages: Message[] = useMemo(() => {
     if (!chatData?.messages) return []
-    return chatData.messages.map((m) => adaptMessageBackendToMessage(m, selectedOrderTask || undefined))
-  }, [chatData?.messages, selectedOrderTask])
+    return chatData.messages.map((m) => adaptMessageBackendToMessage(m, undefined))
+  }, [chatData?.messages])
 
   // Адаптируем ChatBackend для ChatHeader
   const adaptedChatHeader: ChatType | null = useMemo(() => {
     if (!chatData) return null
-    // Определяем кто из юзеров собеседник
-    const otherUser = chatData.chat.user1.id === String(userId) ? chatData.chat.user2 : chatData.chat.user1
+    const otherUser = chatData.chat.user1.id === userId ? chatData.chat.user2 : chatData.chat.user1
     return {
       chat_id: Number(chatData.chat.id),
       avatar: otherUser.avatar,
@@ -216,8 +242,11 @@ const Chat = () => {
       is_read: chatData.chat.isRead,
       count_unread: chatData.chat.countUnread,
       orders: selectedChatOrderType ? [selectedChatOrderType] : null,
+      active_request_title: selectedOrderTask?.title || null,
+      active_request_price: selectedOrderTask?.price || null,
+      deals_count: chatData.deals?.length || 0,
     }
-  }, [chatData, userId, selectedChatOrderType])
+  }, [chatData, userId, selectedChatOrderType, selectedOrderTask])
 
   const handleImageClick = (index: number) => {
     setSelectedImageIndex(index)
@@ -232,15 +261,15 @@ const Chat = () => {
   }
 
   const handleChangeSelectedOrderIndex = useCallback(
-    (id: number) => {
+    (newIndex: number) => {
       if (requestIds.length === 0) return
 
-      if (id > requestIds.length - 1) {
+      if (newIndex > requestIds.length - 1) {
         setSelectedOrderIndex(0)
-      } else if (id < 0) {
+      } else if (newIndex < 0) {
         setSelectedOrderIndex(requestIds.length - 1)
       } else {
-        setSelectedOrderIndex(id)
+        setSelectedOrderIndex(newIndex)
       }
     },
     [requestIds.length]
@@ -323,7 +352,17 @@ const Chat = () => {
 
       <div className="chat__container">
         {adaptedMessages.map((msg: Message) => (
-          <MessageItem key={msg.id} message={msg} userId={userId} />
+          <MessageItem
+            key={msg.id}
+            message={msg}
+            userId={userId}
+            chatResponses={chatData?.responses?.map((r) => ({
+              id: r.id,
+              requestId: (r as any).request?.id || r.requestId,
+              performer: r.performer,
+              status: r.status,
+            }))}
+          />
         ))}
         <div ref={messagesEndRef} />
       </div>
@@ -338,7 +377,6 @@ const Chat = () => {
         isSending={isSending || isUploadingLocalFiles}
       />
 
-      {/* Image Viewer Modal */}
       {selectedImageIndex !== null && images.length > 0 && (
         <ImageViewer
           images={images.map((img) => img.url)}
@@ -351,11 +389,9 @@ const Chat = () => {
         <AcceptOrderModal
           selectedStarRating={selectedStarRating}
           onRatingChange={setSelectedStarRating}
-          onConfirm={() => {
-            setIsOpenModalAcceptOrder(false)
-            notification.showSuccess("orderAcceptedSuccessfully")
-          }}
+          onConfirm={handleCompleteRequest}
           onCancel={() => setIsOpenModalAcceptOrder(false)}
+          isLoading={isCompleting}
         />
       </Modal>
 
@@ -366,12 +402,9 @@ const Chat = () => {
           description={t("sureCancelTheOrder")}
           confirmText={t("yes")}
           cancelText={t("no")}
-          onConfirm={() => {
-            notification.showSuccess("orderCancelledSuccessfully")
-            setIsOpenModalRejectOrder(false)
-            handleBack()
-          }}
+          onConfirm={handleCancelRequest}
           onCancel={() => setIsOpenModalRejectOrder(false)}
+          isLoading={isCancelling}
         />
       </Modal>
 

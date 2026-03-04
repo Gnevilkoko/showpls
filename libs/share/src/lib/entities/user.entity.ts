@@ -65,6 +65,18 @@ export class User {
   @Column("boolean")
   banned: boolean
 
+  @ApiProperty({ type: "string", nullable: true })
+  @Column("text", { nullable: true })
+  about: string | null
+
+  @ApiProperty({ type: "string", nullable: true })
+  @Column("varchar", { length: 255, nullable: true })
+  city: string | null
+
+  @ApiProperty({ type: "boolean" })
+  @Column("boolean", { default: false })
+  isAvailable: boolean
+
   @OneToMany(() => StarsTopUp, (topUp) => topUp.user)
   starsTopUps: Relation<StarsTopUp>[]
 

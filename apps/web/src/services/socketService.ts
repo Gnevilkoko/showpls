@@ -155,6 +155,11 @@ class SocketService {
       console.log("[SocketService] Server confirmed connection:", data)
     })
 
+    // логирование всех входящих событий для отладки
+    this.socket.onAny((event, ...args) => {
+      console.log(`[SocketService] Received event: ${event}`, args)
+    })
+
     // Обработка отключения
     this.socket.on("disconnect", (reason: string) => {
       console.log("[SocketService] Disconnected, reason:", reason)

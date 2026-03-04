@@ -2,6 +2,8 @@ import { useEffect, useRef } from "react"
 import { useAppDispatch, useAppSelector, store } from "../../store"
 import { socketService } from "../../services/socketService"
 import { chatApi, chatApiHelpers } from "../../store/api/chatApi"
+import { requestApi } from "../../store/api/requestApi"
+import { responseApi } from "../../store/api/responseApi"
 import type { MessageBackend, ChatListItem } from "../../shared/types/backend"
 
 /**
@@ -85,14 +87,38 @@ const SocketManager = () => {
       chatApiHelpers.updateCountersInCache(dispatch, counters)
     }
 
+    const handleOrderStatusChanged = (data: {
+      orderId: string
+      chatId?: string
+      status: string
+      escrowStatus?: string
+    }) => {
+      dispatch(requestApi.util.invalidateTags([{ type: "Request", id: data.orderId }]))
+      if (data.chatId) {
+        dispatch(chatApi.util.invalidateTags([{ type: "Chat", id: data.chatId }]))
+      }
+    }
+
+    const handleProposalStatusChanged = (data: { proposalId: string; status: string; chatId?: string }) => {
+      dispatch(responseApi.util.invalidateTags([{ type: "Response", id: data.proposalId }]))
+
+      if (data.chatId) {
+        dispatch(chatApi.util.invalidateTags([{ type: "Chat", id: data.chatId }]))
+      }
+    }
+
     socketService.on("message:new", handleNewMessage)
     socketService.on("chat:update", handleChatUpdate)
     socketService.on("counters:update", handleCountersUpdate)
+    socketService.on("order:status_changed", handleOrderStatusChanged)
+    socketService.on("proposal:status_changed", handleProposalStatusChanged)
 
     return () => {
       socketService.off("message:new", handleNewMessage)
       socketService.off("chat:update", handleChatUpdate)
       socketService.off("counters:update", handleCountersUpdate)
+      socketService.off("order:status_changed", handleOrderStatusChanged)
+      socketService.off("proposal:status_changed", handleProposalStatusChanged)
     }
   }, [isConnected, dispatch])
 

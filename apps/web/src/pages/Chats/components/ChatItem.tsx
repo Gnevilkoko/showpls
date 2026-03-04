@@ -48,11 +48,11 @@ const ChatItem = memo(({ chat }: ChatPrevItemProps) => {
         <div className="prev-chat__content">
           <span className="prev-chat__message">{chat.last_message}</span>
 
-          {chat.count_unread && (
+          {chat.count_unread ? (
             <div className="chats__count blue">
               <span>{chat.count_unread}</span>
             </div>
-          )}
+          ) : null}
         </div>
       </div>
     </div>

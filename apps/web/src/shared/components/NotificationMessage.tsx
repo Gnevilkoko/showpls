@@ -7,7 +7,6 @@ import closeIcon from "../../assets/icons/ui/close-icon.svg"
 import closeRedIcon from "../../assets/icons/ui/close-icon-red.svg"
 import verifiedCheckIcon from "../../assets/icons/status/verified-check.svg"
 import cancelCrossIcon from "../../assets/icons/status/cancel-cross.svg"
-// import Camera from "./Camera"
 import type { Message, TaskType } from "../types"
 import TaskPrimaryButton from "./TaskPrimaryButton"
 import { useNotification } from "../hooks/useNotification"
@@ -34,19 +33,6 @@ const NotificationMessage = ({ message, userId, onCancelOrder }: NotificationMes
   const [isOpenModalTaskDetails, setIsOpenModalTaskDetails] = useState(false)
 
   const [customerResponse, setCustomerResponse] = useState<"accept" | "reject" | null>(null)
-  // const [timeLeft, setTimeLeft] = useState({ minutes: 5, seconds: 0 })
-  // const [photoFile, setPhotoFile] = useState<File | null>(null)
-  // const [isCameraOpen, setIsCameraOpen] = useState(false)
-
-  // useEffect(() => {
-  //   if (message.variant === "challenge" && message.receiver_id === userId) {
-  //     setTimeLeft({ minutes: 5, seconds: 0 })
-
-  //     const interval = setInterval(() => {
-  //       setTimeLeft((prev) => {
-  //         if (prev.minutes === 0 && prev.seconds === 0) {
-  //           return { minutes: 0, seconds: 0 }
-  //         }
 
   //         if (prev.seconds === 0) {
   //           return { minutes: prev.minutes - 1, seconds: 59 }
@@ -85,7 +71,7 @@ const NotificationMessage = ({ message, userId, onCancelOrder }: NotificationMes
   //   setIsCameraOpen(false)
   // }
 
-  const isCustomerMessage = message.sender_id !== userId
+  const isCustomerMessage = String(message.sender_id) !== String(userId)
 
   return (
     <div className="message__wrapper-notification">

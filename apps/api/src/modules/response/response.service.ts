@@ -73,7 +73,12 @@ export class ResponseService {
     // 5. Ensure Chat exists
     const chat = await this.chatService.getOrCreateChat(request.customer.id, user.id)
 
-    // 6-8. Messages, notifications - ignore for now
+    // 6. Send notification message to chat about new offer
+    await this.chatService.sendMessage(user, chat.id, {
+      text: "New offer on your request",
+      type: "notification",
+      variant: "newOffer",
+    })
 
     return {
       id: savedResponse.id,

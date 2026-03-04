@@ -23,11 +23,11 @@ export class ChatMessage {
   type: "message" | "notification"
 
   @ApiProperty({
-    enum: ["upload", "newTask", "permissionToCancel", "taskCompleted", "taskCancelled"],
+    enum: ["upload", "newTask", "newOffer", "permissionToCancel", "taskCompleted", "taskCancelled"],
     nullable: true
   })
   @Column("varchar", { nullable: true })
-  variant: "upload" | "newTask" | "permissionToCancel" | "taskCompleted" | "taskCancelled" | null
+  variant: "upload" | "newTask" | "newOffer" | "permissionToCancel" | "taskCompleted" | "taskCancelled" | null
 
   @ApiProperty({ type: "string", nullable: true })
   @Column("text", { nullable: true })

@@ -126,10 +126,9 @@ export type Message = {
  * Адаптер для преобразования MessageBackend в Message
  */
 export function adaptMessageBackendToMessage(message: MessageBackend, order?: TaskType): Message {
-  // Преобразование variant: бекенд использует "newTask", фронтенд использует "newOffer"
-  // Также игнорируем "taskCompleted" и "taskCancelled" которые не поддерживаются в старом типе Message
+  // Преобразование variant
   let variant: Message["variant"] = undefined
-  if (message.variant === "newTask") {
+  if (message.variant === "newTask" || message.variant === "newOffer") {
     variant = "newOffer"
   } else if (message.variant === "upload" || message.variant === "permissionToCancel") {
     variant = message.variant

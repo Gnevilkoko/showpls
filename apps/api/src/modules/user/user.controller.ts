@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Post, Query, UseGuards } from "@nestjs/common"
+import { Body, Controller, Get, Patch, Post, Query, UseGuards } from "@nestjs/common"
 import { ApiBearerAuth, ApiExtraModels, ApiOkResponse, ApiOperation, ApiSecurity, ApiTags, getSchemaPath } from "@nestjs/swagger"
 import { User } from "@share/entities"
 import { SwaggerUtilities } from "../../common/swagger.utilities"
@@ -15,6 +15,8 @@ import { APIException } from "@server/api"
 import UserExceptions from "./user.exceptions"
 import { SetLanguageCodeDto } from "./dto/set-language-code.dto"
 import { GetBalancesDto } from "./dto/get-balances.dto"
+import { UpdateProfileDto } from "./dto/update-profile.dto"
+import { UserTransactionsDto } from "./dto/user-transactions.dto"
 import { plainToInstance } from "class-transformer"
 import { GeoService } from "../geo/geo.service"
 import { ListPerformersDto } from "./dto/list-performers.dto"
@@ -140,6 +142,30 @@ export class UserController {
   @Get("list-performers")
   async listPerformers(@Query() dto: ListPerformersDto) {
     return await this.geoService.getPerformersNearby(dto.latitude, dto.longitude, dto.radiusKm)
+  }
+
+  @ApiSecurity("jwt-auth")
+  @ApiOperation({ summary: "Get user transaction history" })
+  @UseGuards(AuthGuard)
+  @Get("transactions")
+  async getTransactions(@GetUser() user: User, @Query() query: UserTransactionsDto) {
+    return this.service.getTransactions(user.id, query)
+  }
+
+  @ApiSecurity("jwt-auth")
+  @ApiOperation({ summary: "Update user profile" })
+  @UseGuards(AuthGuard)
+  @Patch("profile")
+  async updateProfile(@GetUser() user: User, @Body() dto: UpdateProfileDto) {
+    return this.service.updateProfile(user.id, dto)
+  }
+
+  @ApiSecurity("jwt-auth")
+  @ApiOperation({ summary: "Toggle performer availability" })
+  @UseGuards(AuthGuard)
+  @Patch("toggle-available")
+  async toggleAvailable(@GetUser() user: User) {
+    return this.service.toggleAvailable(user.id)
   }
 
   @ApiSecurity("jwt-auth")

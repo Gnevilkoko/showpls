@@ -1,9 +1,4 @@
-import {
-  OnGatewayConnection,
-  OnGatewayDisconnect,
-  WebSocketGateway,
-  WebSocketServer,
-} from "@nestjs/websockets"
+import { OnGatewayConnection, OnGatewayDisconnect, WebSocketGateway, WebSocketServer } from "@nestjs/websockets"
 import { Server, Socket } from "socket.io"
 import { Logger } from "@nestjs/common"
 import AuthService from "../auth/auth.service"
@@ -12,10 +7,10 @@ import { allowedOrigins } from "../../config/cors.config"
 
 @WebSocketGateway({
   cors: {
-    origin: allowedOrigins,     // Единый список доверенных источников
-    credentials: true
+    origin: allowedOrigins, // Единый список доверенных источников
+    credentials: true,
   },
-  path: "/chat/ws"
+  path: "/chat/ws",
 })
 export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
   @WebSocketServer()
@@ -26,8 +21,7 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
 
   async handleConnection(client: Socket) {
     try {
-      const token =
-        client.handshake.query.token || client.handshake.headers.authorization?.split(" ")[1]
+      const token = client.handshake.query.token || client.handshake.headers.authorization?.split(" ")[1]
 
       if (!token || typeof token !== "string") {
         this.logger.warn(`Connection attempt without token: ${client.id}`)
@@ -69,24 +63,30 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
 
   notifyReceiver(receiverId: string, message: any, chatId: string) {
     const sockets = this.userSockets.get(receiverId)
+
+    const payload = {
+      type: "message:new",
+      chatId,
+      message: {
+        id: message.id,
+        type: message.type,
+        variant: message.variant,
+        sender: message.sender,
+        receiver: message.receiver,
+        text: message.text,
+        attachments: message.attachments,
+        createdAt: message.createdAt,
+        isRead: message.isRead,
+      },
+    }
+
     if (sockets) {
       sockets.forEach((socketId) => {
-        this.server.to(socketId).emit("message:new", {
-          type: "message:new",
-          chatId,
-          message: {
-            id: message.id,
-            type: message.type,
-            variant: message.variant,
-            sender: message.sender,
-            receiver: message.receiver,
-            text: message.text,
-            attachments: message.attachments,
-            createdAt: message.createdAt,
-            isRead: message.isRead,
-          },
-        })
+        this.logger.debug(`[notifyReceiver] Emitting to socket ${socketId}:`, payload)
+        this.server.to(socketId).emit("message:new", payload)
       })
+    } else {
+      this.logger.warn(`[notifyReceiver] No sockets found for receiverId=${receiverId}`)
     }
   }
 
@@ -148,7 +148,13 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
   /**
    * Notify users about order status changes
    */
-  notifyOrderStatusChanged(userId: string, orderId: string, status: string, chatId?: string, escrowStatus?: string | null) {
+  notifyOrderStatusChanged(
+    userId: string,
+    orderId: string,
+    status: string,
+    chatId?: string,
+    escrowStatus?: string | null
+  ) {
     const sockets = this.userSockets.get(userId)
     if (sockets) {
       sockets.forEach((socketId) => {
@@ -167,7 +173,7 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
   /**
    * Notify users about proposal status changes
    */
-  notifyProposalStatusChanged(userId: string, proposalId: string, status: string) {
+  notifyProposalStatusChanged(userId: string, proposalId: string, status: string, chatId?: string) {
     const sockets = this.userSockets.get(userId)
     if (sockets) {
       sockets.forEach((socketId) => {
@@ -175,6 +181,7 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
           type: "proposal:status_changed",
           proposalId,
           status,
+          chatId,
           timestamp: new Date().toISOString(),
         })
       })

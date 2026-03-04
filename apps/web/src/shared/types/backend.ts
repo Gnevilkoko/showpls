@@ -20,7 +20,7 @@ export type SubmissionStatus = "pending" | "submitted" | "accepted" | "rejected"
 
 export type MessageType = "message" | "notification"
 
-export type MessageVariant = "upload" | "newTask" | "permissionToCancel" | "taskCompleted" | "taskCancelled"
+export type MessageVariant = "upload" | "newTask" | "newOffer" | "permissionToCancel" | "taskCompleted" | "taskCancelled"
 
 export interface UserInfo {
   id: string
@@ -110,6 +110,9 @@ export interface ChatListItem {
   countUnread: number
   isActiveOrder: boolean
   isArbitration: boolean
+  activeRequestTitle: string | null
+  activeRequestPrice: number | null
+  dealsCount: number
 }
 
 export interface MessageBackend {
@@ -170,4 +173,37 @@ export interface CompleteRequestResponse {
     status: DealStatus
     escrowStatus: EscrowStatus
   }
+}
+
+// Тип для транзакции из GET /user/transactions
+export type TransactionTypeBackend =
+  | "create-deposit"
+  | "revert-deposit"
+  | "escrow-hold"
+  | "escrow-release"
+  | "escrow-refund"
+
+export interface TransactionBackend {
+  id: string
+  type: TransactionTypeBackend
+  status: string
+  amount: string
+  currency: {
+    code: string
+    blockchain: string | null
+  }
+  externalType: string | null
+  externalId: string | null
+  createdAt: string
+}
+
+// Тип для уведомления из GET /notification/list
+export interface NotificationBackend {
+  id: string
+  text: string
+  type: string
+  variant: string | null
+  payload: Record<string, unknown> | null
+  isRead: boolean
+  createdAt: string
 }

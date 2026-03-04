@@ -6,6 +6,7 @@ import { ChatMessage } from "@share/entities/chat-message.entity"
 import { Deal } from "@share/entities/deal.entity"
 import { User } from "@share/entities/user.entity"
 import { Response } from "@share/entities/response.entity"
+import { Request } from "@share/entities/request.entity"
 import { ChatListDto } from "./dto/chat-list.dto"
 import { SendMessageDto } from "./dto/send-message.dto"
 import { PaginationDto } from "../../common/dto/pagination.dto"
@@ -25,6 +26,8 @@ export class ChatService {
     private readonly userRepository: Repository<User>,
     @InjectRepository(Response)
     private readonly responseRepository: Repository<Response>,
+    @InjectRepository(Request)
+    private readonly requestRepository: Repository<Request>,
     @InjectDataSource()
     private readonly dataSource: DataSource,
     private readonly chatGateway: ChatGateway
@@ -120,11 +123,30 @@ export class ChatService {
     const countUnread = await this.calculateTotalUnread(user.id)
     const countUnreadFavorite = await this.calculateTotalUnreadFavorite(user.id)
 
+    const chatIds = items.map((c) => c.id)
+    const activeDeals =
+      chatIds.length > 0
+        ? await this.dealRepository.find({
+            where: { chat: { id: In(chatIds) } },
+            relations: ["request", "chat"],
+            order: { createdAt: "DESC" },
+          })
+        : []
+
+    const dealsByChat = new Map<string, typeof activeDeals>()
+    for (const deal of activeDeals) {
+      const chatId = typeof deal.chat === "object" ? (deal.chat as any).id : deal.chat
+      if (!dealsByChat.has(chatId)) dealsByChat.set(chatId, [])
+      dealsByChat.get(chatId)!.push(deal)
+    }
+
     const mappedItems = items.map((chat) => {
       const isUser1 = chat.user1.id === user.id
       const otherUser = isUser1 ? chat.user2 : chat.user1
       const myCountUnread = isUser1 ? chat.countUnread : chat.countUnread2
       const myIsFavorite = isUser1 ? chat.isFavorite : chat.isFavorite2
+      const chatDeals = dealsByChat.get(chat.id) || []
+      const latestDeal = chatDeals[0] || null
 
       return {
         chatId: chat.id,
@@ -138,6 +160,9 @@ export class ChatService {
         countUnread: myCountUnread,
         isActiveOrder: chat.isActiveOrder,
         isArbitration: chat.isArbitration,
+        activeRequestTitle: latestDeal?.request?.title || null,
+        activeRequestPrice: latestDeal?.request?.price || null,
+        dealsCount: chatDeals.length,
       }
     })
 
@@ -189,36 +214,29 @@ export class ChatService {
 
     const [messages, totalMessages] = await messageQb.take(limit).skip(offset).getManyAndCount()
 
-    // Deals
     const deals = await this.dealRepository.find({
-      where: [
-        { customer: { id: chat.user1.id }, performer: { id: chat.user2.id } },
-        { customer: { id: chat.user2.id }, performer: { id: chat.user1.id } },
-      ],
-      relations: ["request", "response"],
+      where: { chat: { id: chat.id } },
+      relations: ["request", "response", "request.customer", "response.performer"],
       order: { createdAt: "DESC" },
     })
 
-    // Responses (for context)
-    // "Все Response для задач в этом чате" - Assuming responses related to requests between these users?
-    // Or maybe just responses where one is performer and other is customer?
-    // The spec says "Все Response для задач в этом чате".
-    // Let's fetch responses where (performer=user1 AND request.customer=user2) OR (performer=user2 AND request.customer=user1)
-    const responses = await this.responseRepository
-      .createQueryBuilder("response")
-      .leftJoinAndSelect("response.request", "request")
-      .leftJoinAndSelect("response.performer", "performer")
-      .leftJoinAndSelect("request.customer", "customer")
-      .where(
-        new Brackets((qb) => {
-          qb.where("performer.id = :u1 AND customer.id = :u2", { u1: chat.user1.id, u2: chat.user2.id }).orWhere(
-            "performer.id = :u2 AND customer.id = :u1",
-            { u2: chat.user1.id, u1: chat.user2.id }
-          )
-        })
-      )
-      .orderBy("response.createdAt", "DESC")
-      .getMany()
+    const dealRequestIds = deals.map((d) => d.request?.id).filter(Boolean)
+
+    const allRequestsInChat = await this.requestRepository.find({
+      where: [{ customer: { id: chat.user1.id } }, { customer: { id: chat.user2.id } }],
+      relations: ["customer"],
+    })
+
+    const allRequestIds = [...new Set([...dealRequestIds, ...allRequestsInChat.map((r) => r.id)])]
+
+    const responses =
+      allRequestIds.length > 0
+        ? await this.responseRepository.find({
+            where: { request: { id: In(allRequestIds) } },
+            relations: ["request", "performer", "request.customer", "performer"],
+            order: { createdAt: "DESC" },
+          })
+        : []
 
     return {
       chat: {
@@ -340,10 +358,12 @@ export class ChatService {
     await chatRepo.save(chat)
 
     // Fetch the complete message with relations (sender and receiver)
-    return await messageRepo.findOne({
+    const completeMessage = await messageRepo.findOne({
       where: { id: savedMessage.id },
       relations: ["sender", "receiver"],
     })
+
+    return completeMessage
   }
 
   async toggleFavorite(user: User, chatId: string, isFavorite: boolean) {
