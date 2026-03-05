@@ -232,6 +232,7 @@ const resources = {
       youMadeNewOffer: "You have made a new offer",
       cancelOffer: "Cancel the offer",
       respondToTheTask: "Respond to the task",
+      alreadyResponded: "Already responded",
       retry: "Retry",
       noTasksFound: "No tasks found, please try again later",
       errorLoadingTasks: "Error loading tasks, please try again later",
@@ -239,6 +240,7 @@ const resources = {
       placeholderResponseTask:
         "You can share how you will perform the task, increasing your chances of being selected as a performer",
       openMiniApp: "Open Telegram Mini App",
+      waitCustomerDecision: "You have responded to the task. Please wait for the customer's decision.",
     },
   },
   ru: {
@@ -471,6 +473,7 @@ const resources = {
       youMadeNewOffer: "Вы сделали новое предложение",
       cancelOffer: "Отменить предложение",
       respondToTheTask: "Откликнуться на задачу",
+      alreadyResponded: "Вы уже откликнулись",
       retry: "Повторить",
       noTasksFound: "Задач не найдено, попробуйте позже",
       errorLoadingTasks: "Ошибка загрузки задач, попробуйте позже",
@@ -478,6 +481,7 @@ const resources = {
       placeholderResponseTask:
         "Вы можете поделится тем, как будете выполнять задачу, повысив шанс быть выбранным исполнителем",
       openMiniApp: "Открыть Telegram Mini App",
+      waitCustomerDecision: "Вы откликнулись на задачу. Пожалуйста, дождитесь решения заказчика.",
     },
   },
 }

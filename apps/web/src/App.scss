@@ -2794,6 +2794,13 @@ $border-color-active-order: var(--border-color-active-order);
     border: 1px solid $border-color;
     box-shadow: 2px 2px 6px 0px #00000026 inset;
   }
+
+  &:disabled {
+    background: #b0b0b0;
+    box-shadow: none;
+    cursor: not-allowed;
+    opacity: 0.65;
+  }
 }
 
 .chat__task__actions {

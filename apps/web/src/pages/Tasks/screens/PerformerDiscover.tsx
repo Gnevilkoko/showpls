@@ -7,6 +7,7 @@ import {
   useCancelRequestMutation,
   useGetRequestListQuery,
   useGetRequestMapQuery,
+  useGetRequestResponsesQuery,
   useRespondToRequestMutation,
 } from "../../../store/api/requestApi"
 import type { RequestListParams } from "../../../store/api/requestApi"
@@ -74,6 +75,7 @@ const PerformerDiscover = () => {
   const [isOpenModal, setIsOpenModal] = useState(false)
   const [isOpenResponseTask, setIsOpenResponseTask] = useState(false)
   const [isOpenPerformerDiscover, setIsOpenPerformerDiscover] = useState(false)
+  const [respondedTaskIds, setRespondedTaskIds] = useState<Set<string>>(new Set())
 
   // Состояния для карты (bounds)
   const [mapBounds, setMapBounds] = useState<{
@@ -110,22 +112,26 @@ const PerformerDiscover = () => {
   } = useGetRequestMapQuery(
     mapBounds
       ? {
-        north: mapBounds.north,
-        south: mapBounds.south,
-        east: mapBounds.east,
-        west: mapBounds.west,
-      }
+          north: mapBounds.north,
+          south: mapBounds.south,
+          east: mapBounds.east,
+          west: mapBounds.west,
+        }
       : // Дефолтные bounds (не будут использованы из-за skip)
-      {
-        north: 90,
-        south: -90,
-        east: 180,
-        west: -180,
-      },
+        {
+          north: 90,
+          south: -90,
+          east: 180,
+          west: -180,
+        },
     {
       skip: activeSection !== "map" || !mapBounds,
     }
   )
+
+  const { data: requestResponses } = useGetRequestResponsesQuery(selectedTask?.id || "", {
+    skip: !isOpenModal || !selectedTask?.id,
+  })
 
   const [cancelRequest] = useCancelRequestMutation()
   const [respondToRequest] = useRespondToRequestMutation()
@@ -233,13 +239,16 @@ const PerformerDiscover = () => {
         body: { message: responseTaskMessage },
       }).unwrap()
 
+      setRespondedTaskIds((prev) => new Set(prev).add(taskId))
+
       NotificationHandler.showSuccessTranslated("taskResponded")
       if (activeSection === "list") {
         refetchList()
       }
       handleCloseResponseModal()
       navigate(`/chat/${response.chatId}`)
-    } catch {
+    } catch (err) {
+      console.error("[DEBUG] respondToRequest error:", err)
       NotificationHandler.showErrorTranslated("errorRespondingToTask")
     }
   }
@@ -257,6 +266,17 @@ const PerformerDiscover = () => {
 
   // Проверка владельца задачи
   const isTaskOwner = selectedTask?.customer_id === userId
+
+  const hasAlreadyResponded = selectedTask
+    ? respondedTaskIds.has(selectedTask.id) ||
+      (requestResponses?.some(
+        (response) =>
+          String(response.performer?.id) === String(userId) &&
+          response.status !== "cancelled" &&
+          response.status !== "rejected"
+      ) ??
+        false)
+    : false
 
   // Условный рендеринг карты
   const MapComponent = isRussian ? MainMap2Gis : MainMapGoogle
@@ -359,7 +379,8 @@ const PerformerDiscover = () => {
               color="green"
               onClick={handleOpenResponseModal}
               icon={penWhiteIcon}
-              text={t("respondToTheTask")}
+              text={hasAlreadyResponded ? t("alreadyResponded") : t("respondToTheTask")}
+              disabled={hasAlreadyResponded}
             />
           )}
         </Modal>

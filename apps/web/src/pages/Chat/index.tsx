@@ -248,6 +248,16 @@ const Chat = () => {
     }
   }, [chatData, userId, selectedChatOrderType, selectedOrderTask])
 
+  const isBlockedByPendingResponse = useMemo(() => {
+    if (!chatData || !userId) return false
+    const myResponses = chatData.responses?.filter((r: any) => r.performer?.id === userId) || []
+    if (myResponses.length === 0) return false
+    const myDeals = chatData.deals?.filter((d: any) => d.performer?.id === userId || d.customer?.id === userId) || []
+    if (myDeals.length > 0) return false
+
+    return myResponses.some((r: any) => r.status === "pending")
+  }, [chatData, userId])
+
   const handleImageClick = (index: number) => {
     setSelectedImageIndex(index)
   }
@@ -367,15 +377,24 @@ const Chat = () => {
         <div ref={messagesEndRef} />
       </div>
 
-      <MessageInput
-        value={value}
-        onChange={setValue}
-        images={images}
-        onImagesChange={setImages}
-        onImageClick={handleImageClick}
-        onSend={handleSendMessage}
-        isSending={isSending || isUploadingLocalFiles}
-      />
+      {isBlockedByPendingResponse ? (
+        <div
+          className="message-input-wrapper chat__blocked-message"
+          style={{ justifyContent: "center", padding: "20px", color: "var(--text-secondary)" }}
+        >
+          <span>{t("waitCustomerDecision")}</span>
+        </div>
+      ) : (
+        <MessageInput
+          value={value}
+          onChange={setValue}
+          images={images}
+          onImagesChange={setImages}
+          onImageClick={handleImageClick}
+          onSend={handleSendMessage}
+          isSending={isSending || isUploadingLocalFiles}
+        />
+      )}
 
       {selectedImageIndex !== null && images.length > 0 && (
         <ImageViewer
