@@ -3,6 +3,7 @@ import { ApiTags, ApiOperation, ApiQuery, ApiBearerAuth, ApiSecurity } from "@ne
 import { ResponseService } from "./response.service"
 import { CreateResponseDto } from "./dto/create-response.dto"
 import { AcceptResponseDto } from "./dto/accept-response.dto"
+import { RejectResponseDto } from "./dto/reject-response.dto"
 import { AuthGuard } from "../auth/guards/auth.guard"
 import { GetUser } from "../user/decorators/get-user.decorator"
 import { User } from "@share/entities"
@@ -39,5 +40,15 @@ export class ResponseController {
   @ApiOperation({ summary: "Accept a response and create a deal" })
   async accept(@GetUser() user: User, @Param("id") id: string, @Body() dto: AcceptResponseDto) {
     return this.responseService.acceptResponse(user, id, dto)
+  }
+
+  @ApiSecurity("jwt-auth")
+  @UseGuards(AuthGuard)
+  @IpRateLimit({ ttl: 60, limit: 10 })
+  @RateLimit({ ttl: 60, limit: 5 })
+  @Post(":id/reject")
+  @ApiOperation({ summary: "Reject a response" })
+  async reject(@GetUser() user: User, @Param("id") id: string, @Body() dto: RejectResponseDto) {
+    return this.responseService.rejectResponse(user, id, dto)
   }
 }

@@ -1,9 +1,16 @@
-import { Injectable, NotFoundException, BadRequestException, ForbiddenException, ConflictException } from "@nestjs/common"
+import {
+  Injectable,
+  NotFoundException,
+  BadRequestException,
+  ForbiddenException,
+  ConflictException,
+} from "@nestjs/common"
 import { InjectRepository } from "@nestjs/typeorm"
 import { Repository, DataSource } from "typeorm"
 import { Response, Request, User, Deal } from "@share/entities"
 import { CreateResponseDto } from "./dto/create-response.dto"
 import { AcceptResponseDto } from "./dto/accept-response.dto"
+import { RejectResponseDto } from "./dto/reject-response.dto"
 import { ResponseStatus } from "@share/response-status.enum"
 import { RequestStatus } from "@share/request-status.enum"
 import { DealStatus } from "@share/deal-status.enum"
@@ -24,7 +31,7 @@ export class ResponseService {
     private readonly dataSource: DataSource,
     private readonly chatService: ChatService,
     private readonly chatGateway: ChatGateway,
-    private readonly notificationService: NotificationService,
+    private readonly notificationService: NotificationService
   ) {}
 
   async create(user: User, dto: CreateResponseDto): Promise<Response> {
@@ -78,6 +85,8 @@ export class ResponseService {
       text: "New offer on your request",
       type: "notification",
       variant: "newOffer",
+      requestId: savedResponse.request.id,
+      responseId: savedResponse.id,
     })
 
     return {
@@ -199,7 +208,11 @@ export class ResponseService {
       this.chatGateway.notifyProposalStatusChanged(response.performer.id, response.id, ResponseStatus.Accepted)
 
       // 8.1. Notify about order status change via WebSocket
-      this.chatGateway.notifyOrderStatusChanged(response.request.customer.id, response.request.id, RequestStatus.Accepted)
+      this.chatGateway.notifyOrderStatusChanged(
+        response.request.customer.id,
+        response.request.id,
+        RequestStatus.Accepted
+      )
       this.chatGateway.notifyOrderStatusChanged(response.performer.id, response.request.id, RequestStatus.Accepted)
 
       // 9. Update all other responses for this request to rejected
@@ -214,7 +227,12 @@ export class ResponseService {
         .execute()
 
       // 10. Send system message about acceptance
-      await this.chatService.sendMessage(user, chat.id, { text: "Response accepted", type: "notification" })
+      await this.chatService.sendMessage(user, chat.id, {
+        text: "Response accepted",
+        type: "message",
+        requestId: savedDeal.request.id,
+        responseId: response.id,
+      })
 
       // 11. If message provided, send it
       if (dto.message) {
@@ -245,6 +263,59 @@ export class ResponseService {
           status: response.request.status,
           acceptedAt: response.request.acceptedAt,
         },
+      }
+    })
+  }
+
+  async rejectResponse(user: User, responseId: string, dto: RejectResponseDto) {
+    return this.dataSource.transaction(async (manager) => {
+      const response = await manager.findOne(Response, {
+        where: { id: responseId },
+        relations: ["request", "request.customer", "performer"],
+      })
+
+      if (!response) {
+        throw new NotFoundException("Response not found")
+      }
+
+      if (response.status !== ResponseStatus.Pending) {
+        throw new BadRequestException("Response is not pending")
+      }
+
+      if (response.request.customer.id !== user.id) {
+        throw new ForbiddenException("Only the customer can reject responses")
+      }
+
+      response.status = ResponseStatus.Rejected
+      await manager.save(Response, response)
+
+      this.chatGateway.notifyProposalStatusChanged(response.performer.id, response.id, ResponseStatus.Rejected)
+
+      const chat = await this.chatService.getOrCreateChat(response.request.customer.id, response.performer.id)
+
+      await this.chatService.sendMessage(user, chat.id, {
+        text: "Response declined",
+        type: "message",
+        requestId: response.request.id,
+        responseId: response.id,
+      })
+
+      if (dto.message) {
+        await this.chatService.sendMessage(user, chat.id, {
+          text: dto.message,
+          type: "message",
+          requestId: response.request.id,
+          responseId: response.id,
+        })
+      }
+
+      await this.notificationService.send(String(response.performer.id), "response_rejected", {
+        requestId: response.request.id,
+        text: `Your response to request "${response.request.title || "Request"}" has been declined.`,
+      })
+
+      return {
+        response: { id: response.id, status: response.status },
       }
     })
   }

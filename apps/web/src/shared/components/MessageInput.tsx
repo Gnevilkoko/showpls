@@ -44,10 +44,17 @@ const MessageInput = ({ value, onChange, images, onImagesChange, onImageClick, o
     })
 
     if (validFiles.length > 0) {
-      const newImages: UploadedImageType[] = validFiles.map((file) => ({
-        file,
-        url: URL.createObjectURL(file),
-      }))
+      const newImages: UploadedImageType[] = validFiles.map((file) => {
+        const url = URL.createObjectURL(file)
+        const mediaType: UploadedImageType["mediaType"] =
+          file.type.startsWith("video/") ? "video" : file.type.startsWith("image/") ? "image" : "file"
+
+        return {
+          file,
+          url,
+          mediaType,
+        }
+      })
       onImagesChange([...images, ...newImages])
     }
 
@@ -89,15 +96,29 @@ const MessageInput = ({ value, onChange, images, onImagesChange, onImageClick, o
     <div className="message-input-wrapper">
       {images.length !== 0 && (
         <div className="message-input-attachments">
-          {images.map((img, idx) => (
-            <div key={idx} className="preview-attachments">
-              <img src={img.url} alt={`preview-${idx}`} onClick={() => onImageClick(idx)} />
+          {images.map((img, idx) => {
+            const isVideo = img.mediaType === "video" || img.file?.type.startsWith("video/")
 
-              <button className="btn-remove-img" onClick={() => handleRemove(img.url)}>
-                x
-              </button>
-            </div>
-          ))}
+            return (
+              <div key={idx} className="preview-attachments">
+                {isVideo ? (
+                  <video
+                    src={img.url}
+                    onClick={() => onImageClick(idx)}
+                    style={{ cursor: "pointer" }}
+                    muted
+                    playsInline
+                  />
+                ) : (
+                  <img src={img.url} alt={`preview-${idx}`} onClick={() => onImageClick(idx)} />
+                )}
+
+                <button className="btn-remove-img" onClick={() => handleRemove(img.url)}>
+                  x
+                </button>
+              </div>
+            )
+          })}
         </div>
       )}
 
@@ -112,7 +133,13 @@ const MessageInput = ({ value, onChange, images, onImagesChange, onImageClick, o
               <label className="message-input-dropdown-item">
                 <img src={plusIcon} alt="plus Icon" />
                 <span>{t("addFiles")}</span>
-                <input type="file" accept="image/*" multiple onChange={handleUpload} style={{ display: "none" }} />
+                <input
+                  type="file"
+                  accept="image/*,video/*"
+                  multiple
+                  onChange={handleUpload}
+                  style={{ display: "none" }}
+                />
               </label>
 
               <button className="message-input-dropdown-item" type="button">

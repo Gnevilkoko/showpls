@@ -33,6 +33,14 @@ export class ChatMessage {
   @Column("text", { nullable: true })
   text: string | null
 
+  @ApiProperty({ type: "string", nullable: true, description: "Связанный requestId (для системных уведомлений по задачам)" })
+  @Column("uuid", { nullable: true })
+  requestId: string | null
+
+  @ApiProperty({ type: "string", nullable: true, description: "Связанный responseId (для уведомлений об откликах)" })
+  @Column("uuid", { nullable: true })
+  responseId: string | null
+
   @ApiProperty({ type: "array", items: { type: "string" } })
   @Column("text", { array: true, default: [] })
   attachments: string[]

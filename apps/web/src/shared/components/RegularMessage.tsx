@@ -32,6 +32,8 @@ const RegularMessage = ({ message, userId }: RegularMessageProps) => {
     return () => window.removeEventListener("resize", checkTextWrap)
   }, [message.text])
 
+  const isVideo = (url: string) => /\.(mp4|webm|ogg)$/i.test(url)
+
   const handleImageClick = useCallback((index: number) => {
     setSelectedImageIndex(index)
   }, [])
@@ -45,15 +47,19 @@ const RegularMessage = ({ message, userId }: RegularMessageProps) => {
       <div className={`message__wrapper ${isOwnMessage ? "right" : "left"}`}>
         <div className={`message ${isOwnMessage ? "green" : ""} ${!message.text ? "image" : ""}`}>
           {message.attachments &&
-            message.attachments.map((url, idx) => (
-              <img
-                key={url}
-                src={url}
-                alt="Attachments Image"
-                onClick={() => handleImageClick(idx)}
-                style={{ cursor: "pointer" }}
-              />
-            ))}
+            message.attachments.map((url, idx) =>
+              isVideo(url) ? (
+                <video key={url} src={url} controls style={{ maxWidth: "100%", borderRadius: "8px" }} />
+              ) : (
+                <img
+                  key={url}
+                  src={url}
+                  alt="Attachments Image"
+                  onClick={() => handleImageClick(idx)}
+                  style={{ cursor: "pointer" }}
+                />
+              )
+            )}
 
           {message.text ? (
             <div className="message__content">
@@ -76,7 +82,7 @@ const RegularMessage = ({ message, userId }: RegularMessageProps) => {
 
       {selectedImageIndex !== null && message.attachments && (
         <ImageViewer
-          images={message.attachments}
+          images={message.attachments.filter((url) => !isVideo(url))}
           currentImageIndex={selectedImageIndex}
           onClose={handleCloseImageViewer}
         />

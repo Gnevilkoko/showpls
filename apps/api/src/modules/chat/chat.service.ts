@@ -310,6 +310,7 @@ export class ChatService {
 
     // Use the complete message with relations for notifications
     this.chatGateway.notifyReceiver(receiver.id, completeMessage, chat.id)
+    this.chatGateway.notifyReceiver(user.id, completeMessage, chat.id)
     this.chatGateway.notifyChatUpdate(receiver.id, chat.id, {
       lastMessage: chat.lastMessage,
       lastUpdate: chat.lastUpdate,
@@ -339,6 +340,8 @@ export class ChatService {
       attachments: dto.attachments,
       type: dto.type,
       variant: dto.variant,
+      requestId: dto.requestId || null,
+      responseId: dto.responseId || null,
       isRead: false,
     })
 

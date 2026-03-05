@@ -1,6 +1,7 @@
 export type UploadedImageType = {
   file?: File // Опционально: для новых файлов есть file, для существующих (с сервера) - нет
   url: string
+  mediaType?: "image" | "video" | "file"
 }
 
 export type TelegramAuthDataType = {

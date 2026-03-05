@@ -30,6 +30,17 @@ export interface AcceptResponseResult {
   }
 }
 
+export interface RejectResponseResult {
+  response: {
+    id: string
+    status: string
+  }
+}
+
+export interface RejectResponseInput {
+  message?: string
+}
+
 /**
  * Response API - работа с откликами на задачи
  *
@@ -50,6 +61,20 @@ export const responseApi = createApi({
     acceptResponse: builder.mutation<AcceptResponseResult, { responseId: string; body?: AcceptResponseInput }>({
       query: ({ responseId, body }) => ({
         url: `/responses/${responseId}/accept`,
+        method: "POST",
+        body: body || {},
+      }),
+      invalidatesTags: (_result, _error, { responseId }) => [
+        { type: "Response", id: responseId },
+        "Deal",
+        "Chat",
+        "Request",
+      ],
+    }),
+
+    rejectResponse: builder.mutation<RejectResponseResult, { responseId: string; body?: RejectResponseInput }>({
+      query: ({ responseId, body }) => ({
+        url: `/responses/${responseId}/reject`,
         method: "POST",
         body: body || {},
       }),
@@ -91,10 +116,12 @@ export const responseApi = createApi({
   }),
 })
 
-export const { useAcceptResponseMutation, useGetResponseQuery, useGetResponsesQuery } = responseApi
+export const { useAcceptResponseMutation, useRejectResponseMutation, useGetResponseQuery, useGetResponsesQuery } =
+  responseApi
 
 export const responseApiEndpoints = {
   acceptResponse: responseApi.endpoints.acceptResponse,
+  rejectResponse: responseApi.endpoints.rejectResponse,
   getResponse: responseApi.endpoints.getResponse,
   getResponses: responseApi.endpoints.getResponses,
 }

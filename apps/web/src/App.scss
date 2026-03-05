@@ -1985,6 +1985,14 @@ $border-color-active-order: var(--border-color-active-order);
   scrollbar-width: none;
 }
 
+.notification-task-details {
+  width: 100%;
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
 .review-item__title {
   display: flex;
   align-items: center;

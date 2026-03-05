@@ -148,6 +148,8 @@ const resources = {
         operationCompleted: "Operation completed!",
         orderAcceptedSuccessfully: "The order was successfully completed!",
         requestNewPhotoSuccessfully: "The new photo was successfully requested again!",
+        offerAcceptedSuccessfully: "Offer accepted successfully!",
+        offerDeclinedSuccessfully: "Offer declined successfully!",
         orderCancelledSuccessfully:
           "The order was successfully cancelled! All funds will be returned to your wallet soon.",
         orderCompletedSuccessfully: "The order has been successfully sent for confirmation!",
@@ -386,6 +388,8 @@ const resources = {
         operationCompleted: "Операция выполнена!",
         orderAcceptedSuccessfully: "Заказ был успешно выполнен!",
         requestNewPhotoSuccessfully: "Новое фото было успешно запрошено повторно!",
+        offerAcceptedSuccessfully: "Отклик успешно принят!",
+        offerDeclinedSuccessfully: "Отклик отклонён!",
         orderCancelledSuccessfully:
           "Заказ был успешно отменен! Все средства будут возвращены на ваш кошелек в ближайшее время.",
         orderCompletedSuccessfully: "Заказ был успешно отправлен на проверку!",

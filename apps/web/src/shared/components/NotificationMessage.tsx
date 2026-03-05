@@ -7,23 +7,30 @@ import closeIcon from "../../assets/icons/ui/close-icon.svg"
 import closeRedIcon from "../../assets/icons/ui/close-icon-red.svg"
 import verifiedCheckIcon from "../../assets/icons/status/verified-check.svg"
 import cancelCrossIcon from "../../assets/icons/status/cancel-cross.svg"
-import type { Message, TaskType } from "../types"
+import type { Message } from "../types"
 import TaskPrimaryButton from "./TaskPrimaryButton"
 import { useNotification } from "../hooks/useNotification"
 import Modal from "./Modal"
 import AcceptOrderModal from "../../pages/Chat/components/AcceptOrderModal"
 import ModalContent from "./ModalContent"
 import TaskInfo from "./TaskInfo"
+import { useAcceptResponseMutation, useRejectResponseMutation } from "../../store/api/responseApi"
+import { useGetRequestQuery } from "../../store/api/requestApi"
+import { adaptRequestToTask, type TaskType } from "../types"
 
 interface NotificationMessageProps {
   message: Message
   userId: number
+  chatResponses?: { id: string; requestId: string; status: string }[]
   onCancelOrder?: () => void
 }
 
-const NotificationMessage = ({ message, userId, onCancelOrder }: NotificationMessageProps) => {
+const NotificationMessage = ({ message, userId, chatResponses, onCancelOrder }: NotificationMessageProps) => {
   const { t } = useTranslation()
   const notification = useNotification()
+
+  const [acceptResponse, { isLoading: isAccepting }] = useAcceptResponseMutation()
+  const [rejectResponse, { isLoading: isRejecting }] = useRejectResponseMutation()
 
   const [isOpenModalAcceptOrder, setIsOpenModalAcceptOrder] = useState(false)
   const [selectedStarRating, setSelectedStarRating] = useState<number>(0)
@@ -33,6 +40,9 @@ const NotificationMessage = ({ message, userId, onCancelOrder }: NotificationMes
   const [isOpenModalTaskDetails, setIsOpenModalTaskDetails] = useState(false)
 
   const [customerResponse, setCustomerResponse] = useState<"accept" | "reject" | null>(null)
+
+  // Локальный флаг: это уведомление уже обработали (accept/decline) в этой сессии
+  const [isHandledLocally, setIsHandledLocally] = useState(false)
 
   //         if (prev.seconds === 0) {
   //           return { minutes: prev.minutes - 1, seconds: 59 }
@@ -72,6 +82,45 @@ const NotificationMessage = ({ message, userId, onCancelOrder }: NotificationMes
   // }
 
   const isCustomerMessage = String(message.sender_id) !== String(userId)
+
+  const linkedResponse =
+    message.variant === "newOffer" &&
+    message.responseId &&
+    chatResponses &&
+    chatResponses.find((r) => String(r.id) === String(message.responseId))
+
+  const requestIdForDetails = message.requestId || linkedResponse?.requestId || null
+  const { data: requestData } = useGetRequestQuery(requestIdForDetails || "", {
+    skip: !requestIdForDetails,
+  })
+
+  const taskForDetails: TaskType | null = requestData ? adaptRequestToTask(requestData) : null
+
+  if (message.variant === "newOffer" && (isHandledLocally || (linkedResponse && linkedResponse.status !== "pending"))) {
+    return null
+  }
+
+  const handleAcceptOffer = async () => {
+    if (!message.responseId) return
+    try {
+      await acceptResponse({ responseId: String(message.responseId) }).unwrap()
+      notification.showSuccess("offerAcceptedSuccessfully")
+      setIsHandledLocally(true)
+    } catch (e) {
+      notification.showError("somethingWentWrong")
+    }
+  }
+
+  const handleDeclineOffer = async () => {
+    if (!message.responseId) return
+    try {
+      await rejectResponse({ responseId: String(message.responseId) }).unwrap()
+      notification.showSuccess("offerDeclinedSuccessfully")
+      setIsHandledLocally(true)
+    } catch (e) {
+      notification.showError("somethingWentWrong")
+    }
+  }
 
   return (
     <div className="message__wrapper-notification">
@@ -113,9 +162,21 @@ const NotificationMessage = ({ message, userId, onCancelOrder }: NotificationMes
               text={t("tasksPage.viewDetails")}
             />
 
-            <TaskPrimaryButton color="blue" onClick={() => {}} icon={checkWhiteIcon} text={t("acceptAnOffer")} />
+            <TaskPrimaryButton
+              color="blue"
+              onClick={handleAcceptOffer}
+              icon={checkWhiteIcon}
+              text={t("acceptAnOffer")}
+              disabled={isAccepting || isRejecting || !message.responseId}
+            />
 
-            <TaskPrimaryButton color="none" onClick={() => {}} icon={closeIcon} text={t("declineAnOffer")} />
+            <TaskPrimaryButton
+              color="none"
+              onClick={handleDeclineOffer}
+              icon={closeIcon}
+              text={t("declineAnOffer")}
+              disabled={isAccepting || isRejecting || !message.responseId}
+            />
           </div>
         </div>
       )}
@@ -217,7 +278,11 @@ const NotificationMessage = ({ message, userId, onCancelOrder }: NotificationMes
       </Modal>
 
       <Modal isOpen={isOpenModalTaskDetails} onClose={() => setIsOpenModalTaskDetails(false)}>
-        <TaskInfo selectedOrder={message.order as TaskType} />
+        {taskForDetails && (
+          <div className="notification-task-details">
+            <TaskInfo selectedOrder={taskForDetails} />
+          </div>
+        )}
       </Modal>
     </div>
   )

@@ -5,7 +5,8 @@ import starOutlineIcon from "../../../assets/icons/status/star-outline.svg"
 import starFilledIcon from "../../../assets/icons/status/star-filled.svg"
 import { formatTimeFromEpochMs } from "../../../shared/format"
 import { useNavigate } from "react-router-dom"
-import { memo } from "react"
+import { memo, MouseEvent } from "react"
+import { useToggleFavoriteMutation } from "../../../store/api/chatApi"
 
 interface ChatPrevItemProps {
   chat: ChatType
@@ -14,9 +15,19 @@ interface ChatPrevItemProps {
 const ChatItem = memo(({ chat }: ChatPrevItemProps) => {
   const time = formatTimeFromEpochMs(chat.last_update)
   const navigate = useNavigate()
+  const [toggleFavorite, { isLoading: isToggling }] = useToggleFavoriteMutation()
 
   const handleClickChat = () => {
     navigate(`/chat/${chat.chat_id}`)
+  }
+
+  const handleToggleFavorite = (e: MouseEvent<HTMLButtonElement>) => {
+    e.stopPropagation()
+    if (isToggling) return
+    toggleFavorite({
+      chatId: String(chat.chat_id),
+      body: { isFavorite: !chat.is_favorite },
+    })
   }
 
   return (
@@ -39,7 +50,7 @@ const ChatItem = memo(({ chat }: ChatPrevItemProps) => {
 
             <span>{time}</span>
 
-            <button className="prev-chat__favorite-btn">
+            <button className="prev-chat__favorite-btn" onClick={handleToggleFavorite} disabled={isToggling}>
               <img src={chat.is_favorite ? starFilledIcon : starOutlineIcon} alt="Favorite Icon" />
             </button>
           </div>

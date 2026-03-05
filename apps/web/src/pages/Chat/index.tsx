@@ -379,7 +379,7 @@ const Chat = () => {
 
       {selectedImageIndex !== null && images.length > 0 && (
         <ImageViewer
-          images={images.map((img) => img.url)}
+          images={images.filter((img) => img.mediaType !== "video").map((img) => img.url)}
           currentImageIndex={selectedImageIndex}
           onClose={handleCloseImageViewer}
         />

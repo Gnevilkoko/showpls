@@ -116,6 +116,8 @@ export type Message = {
   sender_id: number | string
   receiver_id: number | string
   text: string | null
+  requestId?: string | null
+  responseId?: string | null
   attachments: string[]
   created_at: number // timestamp в миллисекундах
   is_read: boolean
@@ -142,6 +144,8 @@ export function adaptMessageBackendToMessage(message: MessageBackend, order?: Ta
     sender_id: message.sender.id,
     receiver_id: message.receiver.id,
     text: message.text,
+    requestId: message.requestId ?? null,
+    responseId: message.responseId ?? null,
     attachments: message.attachments,
     created_at: new Date(message.createdAt).getTime(),
     is_read: message.isRead,

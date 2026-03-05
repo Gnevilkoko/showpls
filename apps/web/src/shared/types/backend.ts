@@ -20,7 +20,13 @@ export type SubmissionStatus = "pending" | "submitted" | "accepted" | "rejected"
 
 export type MessageType = "message" | "notification"
 
-export type MessageVariant = "upload" | "newTask" | "newOffer" | "permissionToCancel" | "taskCompleted" | "taskCancelled"
+export type MessageVariant =
+  | "upload"
+  | "newTask"
+  | "newOffer"
+  | "permissionToCancel"
+  | "taskCompleted"
+  | "taskCancelled"
 
 export interface UserInfo {
   id: string
@@ -123,6 +129,8 @@ export interface MessageBackend {
   sender: UserInfo
   receiver: UserInfo
   text: string | null
+  requestId?: string | null
+  responseId?: string | null
   attachments: string[]
   createdAt: string
   isRead: boolean
