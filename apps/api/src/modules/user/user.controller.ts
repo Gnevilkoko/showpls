@@ -59,7 +59,7 @@ export class UserController {
   })
   @Get(`retrieve`)
   async retrieve(@Query() { id }: IdDto) {
-    return await this.service.retrieve(id)
+    return await this.service.retrieveProfile(id)
   }
 
   @ApiSecurity("jwt-auth")
@@ -82,7 +82,14 @@ export class UserController {
   @UseGuards(AuthGuard)
   @Get("get-me")
   async getMe(@GetUser() user: User) {
-    return this.service.retrieve(user.id)
+    return this.service.retrieveProfile(user.id)
+  }
+
+  @ApiSecurity("jwt-auth")
+  @UseGuards(AuthGuard)
+  @Get("reviews")
+  async getReviews(@GetUser() user: User, @Query("id") id?: string) {
+    return this.service.getReviews(id || user.id)
   }
 
   @UseGuards(AuthGuard)

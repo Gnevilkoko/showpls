@@ -23,7 +23,7 @@ import { useNotification } from "../../shared/hooks/useNotification"
 import { NotificationHandler } from "../../shared/utils/notificationHandler"
 import CreateArbitrationModal from "./components/CreateArbitrationModal"
 import { useNavigate, useParams } from "react-router-dom"
-import { useGetChatQuery, useSendMessageMutation } from "../../store/api/chatApi"
+import { useGetChatQuery, useSendMessageMutation, useToggleFavoriteMutation } from "../../store/api/chatApi"
 import { useGetRequestQuery, useCompleteRequestMutation, useCancelRequestMutation } from "../../store/api/requestApi"
 import { useUploadFileMutation } from "../../store/api/uploadApi"
 import { useCreateSubmissionMutation } from "../../store/api/submissionApi"
@@ -58,6 +58,7 @@ const Chat = () => {
   const [isOpenTask, setIsOpenTask] = useState<boolean>(false)
   const [selectedOrderIndex, setSelectedOrderIndex] = useState<number>(0)
   const [selectedStarRating, setSelectedStarRating] = useState<number>(0)
+  const [feedback, setFeedback] = useState("")
   const [images, setImages] = useState<UploadedImageType[]>([])
   const [selectedImageIndex, setSelectedImageIndex] = useState<number | null>(null)
 
@@ -73,6 +74,7 @@ const Chat = () => {
   const [isUploadingLocalFiles, setIsUploadingLocalFiles] = useState(false)
 
   const [sendMessage, { isLoading: isSending }] = useSendMessageMutation()
+  const [toggleFavorite, { isLoading: isTogglingFavorite }] = useToggleFavoriteMutation()
   const [uploadFile] = useUploadFileMutation()
   const [createSubmission, { isLoading: isUploadingSubmission }] = useCreateSubmissionMutation()
   const [createArbitration, { isLoading: isCreatingArbitration }] = useCreateArbitrationMutation()
@@ -82,9 +84,16 @@ const Chat = () => {
   const handleCompleteRequest = async () => {
     if (!currentRequestId) return
     try {
-      await completeRequest({ id: currentRequestId, body: { rating: selectedStarRating } }).unwrap()
+      await completeRequest({
+        id: currentRequestId,
+        body: {
+          rating: selectedStarRating > 0 ? selectedStarRating : undefined,
+          feedback: feedback.trim() ? feedback.trim() : undefined,
+        },
+      }).unwrap()
       setIsOpenModalAcceptOrder(false)
       setSelectedStarRating(0)
+      setFeedback("")
       notification.showSuccess("orderAcceptedSuccessfully")
     } catch (error) {
       NotificationHandler.showError(error as APIError, "Failed to complete request")
@@ -183,6 +192,14 @@ const Chat = () => {
       NotificationHandler.showError(error as APIError, "Failed to create arbitration")
     }
   }
+
+  const handleToggleFavorite = useCallback(() => {
+    if (!id || !chatData || isTogglingFavorite) return
+    toggleFavorite({
+      chatId: id,
+      body: { isFavorite: !chatData.chat.isFavorite },
+    })
+  }, [id, chatData, isTogglingFavorite, toggleFavorite])
 
   // Собираем все уникальные ID задач, связанных с этим чатом
   const requestIds = useMemo(() => {
@@ -311,9 +328,11 @@ const Chat = () => {
       <div className="chats__header-wrapper">
         <ChatHeader
           chat={adaptedChatHeader!}
+          isFavorite={chatData.chat.isFavorite}
           searchValue={searchValue}
           onSearchChange={setSearchValue}
           onBack={handleBack}
+          onToggleFavorite={handleToggleFavorite}
         />
 
         {selectedOrderTask && requestIds.length > 0 && (
@@ -370,6 +389,7 @@ const Chat = () => {
               id: r.id,
               requestId: (r as any).request?.id || r.requestId,
               performer: r.performer,
+              message: r.message,
               status: r.status,
             }))}
           />
@@ -404,12 +424,25 @@ const Chat = () => {
         />
       )}
 
-      <Modal isOpen={isOpenModalAcceptOrder} onClose={() => setIsOpenModalAcceptOrder(false)}>
+      <Modal
+        isOpen={isOpenModalAcceptOrder}
+        onClose={() => {
+          setIsOpenModalAcceptOrder(false)
+          setSelectedStarRating(0)
+          setFeedback("")
+        }}
+      >
         <AcceptOrderModal
           selectedStarRating={selectedStarRating}
+          feedback={feedback}
           onRatingChange={setSelectedStarRating}
+          onFeedbackChange={setFeedback}
           onConfirm={handleCompleteRequest}
-          onCancel={() => setIsOpenModalAcceptOrder(false)}
+          onCancel={() => {
+            setIsOpenModalAcceptOrder(false)
+            setSelectedStarRating(0)
+            setFeedback("")
+          }}
           isLoading={isCompleting}
         />
       </Modal>

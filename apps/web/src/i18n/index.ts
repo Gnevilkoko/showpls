@@ -29,6 +29,14 @@ const resources = {
           earn: "Earn {{stars}}",
           btnDetails: "Details",
         },
+        specials: {
+          empty: "There are no specials right now. Check back a bit later.",
+          summary: "What you will do",
+          steps: "How it works",
+          claim: "Get",
+          claimed: "Already received",
+          unavailable: "Unavailable",
+        },
         loadMore: "Load more",
       },
       miniWallet: {
@@ -159,6 +167,7 @@ const resources = {
         taskCreated: "Task created successfully!",
         taskCancelled: "Task cancelled successfully!",
         taskResponded: "You have successfully responded to the task!",
+        specialClaimed: "Special reward received successfully!",
       },
       info: {
         newUpdate: "New update available",
@@ -239,6 +248,8 @@ const resources = {
       responseTask: "Response to the task",
       placeholderResponseTask:
         "You can share how you will perform the task, increasing your chances of being selected as a performer",
+      noReviews: "You have no reviews yet.",
+      noReviewText: "No text review was left.",
       openMiniApp: "Open Telegram Mini App",
       waitCustomerDecision: "You have responded to the task. Please wait for the customer's decision.",
     },
@@ -269,6 +280,14 @@ const resources = {
           second: "Горящие",
           earn: "Получи {{stars}}",
           btnDetails: "Детали",
+        },
+        specials: {
+          empty: "Сейчас спецпредложений нет. Загляни чуть позже.",
+          summary: "Что нужно сделать",
+          steps: "Как это работает",
+          claim: "Получить",
+          claimed: "Уже получено",
+          unavailable: "Недоступно",
         },
         loadMore: "Загрузить ещё",
       },
@@ -401,6 +420,7 @@ const resources = {
         taskCreated: "Задача успешно создана!",
         taskCancelled: "Задача была успешно отменена!",
         taskResponded: "Вы успешно откликнулись на задачу!",
+        specialClaimed: "Награда по спецпредложению успешно начислена!",
       },
       info: {
         newUpdate: "Доступно новое обновление",
@@ -480,6 +500,8 @@ const resources = {
       responseTask: "Отклик на задачу",
       placeholderResponseTask:
         "Вы можете поделится тем, как будете выполнять задачу, повысив шанс быть выбранным исполнителем",
+      noReviews: "У вас пока нет отзывов.",
+      noReviewText: "Текстовый отзыв не был оставлен.",
       openMiniApp: "Открыть Telegram Mini App",
       waitCustomerDecision: "Вы откликнулись на задачу. Пожалуйста, дождитесь решения заказчика.",
     },

@@ -16,7 +16,8 @@
     "migration:run": "npm run typeorm -- -d apps/api/src/typeorm-datasource.ts migration:run",
     "migration:revert": "npm run typeorm -- -d apps/api/src/typeorm-datasource.ts migration:revert",
     "test:api": "nx test api --runInBand --silent",
-    "test:ledger": "nx test ledger --runInBand --silent"
+    "test:ledger": "nx test ledger --runInBand --silent",
+    "postinstall": "node -e \"const fs=require('fs');const path=require('path');const r=path.join(process.cwd(),'node_modules');const t=path.join(r,'p-try');const p=path.join(r,'p-locate','node_modules','p-limit','node_modules');if(fs.existsSync(t)){fs.mkdirSync(p,{recursive:true});const dest=path.join(p,'p-try');if(!fs.existsSync(dest))fs.cpSync(t,dest,{recursive:true});}\""
   },
   "private": true,
   "dependencies": {
@@ -167,6 +168,7 @@
     "jiti": "2.4.2",
     "jsdom": "~22.1.0",
     "nx": "21.6.5",
+    "p-try": "^2.2.0",
     "prettier": "^2.6.2",
     "sass": "^1.55.0",
     "sass-embedded": "^1.93.2",
@@ -183,5 +185,12 @@
   },
   "optionalDependencies": {
     "@rollup/rollup-win32-x64-msvc": "^4.59.0"
+  },
+  "overrides": {
+    "p-locate": {
+      "p-limit": {
+        "p-try": "^2.2.0"
+      }
+    }
   }
 }

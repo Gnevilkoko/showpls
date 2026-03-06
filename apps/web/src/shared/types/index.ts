@@ -42,6 +42,8 @@ export type UserDataType = {
   banned: boolean
   lastSeenAt: string
   createdAt: string
+  rating?: number
+  reviewsCount?: number
 }
 
 // ⚠️ ВНИМАНИЕ: Эти типы устарели и используются только для совместимости со старым кодом

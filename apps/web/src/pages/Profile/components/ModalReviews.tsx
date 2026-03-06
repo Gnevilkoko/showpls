@@ -3,24 +3,15 @@ import userIcon from "../../../assets/icons/navigation/user.svg"
 import { useFormatDate } from "../../../shared/hooks/useFormatDate"
 import starFilledIcon from "../../../assets/icons/status/star-filled.svg"
 import { useTranslation } from "react-i18next"
-
-type Review = {
-  id: number
-  name: string
-  review: string
-  grade: number
-  date: string
-  avatar: string
-}
+import type { UserReviewBackend } from "../../../shared/types/backend"
 
 interface ModalReviewsProps {
   isOpenReviews: boolean
   setIsOpenReviews: (isOpenReviews: boolean) => void
+  reviews: UserReviewBackend[]
 }
 
-const reviews: Review[] = []
-
-const ModalReviews = ({ isOpenReviews, setIsOpenReviews }: ModalReviewsProps) => {
+const ModalReviews = ({ isOpenReviews, setIsOpenReviews, reviews }: ModalReviewsProps) => {
   const { formatDate } = useFormatDate()
   const { t } = useTranslation()
 
@@ -34,11 +25,11 @@ const ModalReviews = ({ isOpenReviews, setIsOpenReviews }: ModalReviewsProps) =>
     <Modal isOpen={isOpenReviews} onClose={() => setIsOpenReviews(false)}>
       {reviews.length === 0 ? (
         <div className="empty-state">
-          <p>{t("noReviews", "У вас пока нет отзывов.")}</p>
+          <p>{t("noReviews")}</p>
         </div>
       ) : (
-        reviews.map((review: Review) => {
-          const formattedDate = formatDate(review.date)
+        reviews.map((review) => {
+          const formattedDate = formatDate(review.createdAt)
           const time = formattedDate.split(" ")[0]
           const date = formattedDate.split(" ")[1]
 
@@ -46,12 +37,14 @@ const ModalReviews = ({ isOpenReviews, setIsOpenReviews }: ModalReviewsProps) =>
             <div className="review-item__wrapper" key={review.id}>
               <div className="review-item__header">
                 <div className="review-item__title">
-                  <img src={review.avatar || userIcon} alt="Review Avatar" className="review-item__avatar" />
+                  <img src={review.reviewer.avatar || userIcon} alt="Review Avatar" className="review-item__avatar" />
 
                   <div className="review-item__user-info">
-                    <span className="review-item__name-user">{review.name}</span>
+                    <span className="review-item__name-user">
+                      {review.reviewer.firstName} {review.reviewer.lastName || ""}
+                    </span>
 
-                    <div className="review-item__grade">{renderStars(review.grade)}</div>
+                    <div className="review-item__grade">{renderStars(review.rating || 0)}</div>
                   </div>
                 </div>
 
@@ -62,7 +55,7 @@ const ModalReviews = ({ isOpenReviews, setIsOpenReviews }: ModalReviewsProps) =>
               </div>
 
               <div className="review-item__content">
-                <span>{review.review}</span>
+                <span>{review.feedback || t("noReviewText")}</span>
               </div>
             </div>
           )

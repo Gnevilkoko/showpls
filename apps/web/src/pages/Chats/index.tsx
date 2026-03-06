@@ -3,32 +3,19 @@ import { useTranslation } from "react-i18next"
 import Navigation from "../../shared/components/Navigation"
 import ChatsHeader from "./components/ChatsHeader"
 import ChatsList from "./screens/ChatsList"
-import { useGetChatListQuery, useCreateSavedChatMutation } from "../../store/api/chatApi"
+import { useGetChatListQuery } from "../../store/api/chatApi"
 import { adaptChatListItemToChat, type ChatType } from "../../shared/types/adapters"
-import { useNavigate } from "react-router-dom"
-import { NotificationHandler } from "../../shared/utils/notificationHandler"
 
 const Chats = () => {
   const { t } = useTranslation()
-  const navigate = useNavigate()
   const [searchValue, setSearchValue] = useState<string>("")
   const [isFavoriteList, setIsFavoriteList] = useState<boolean>(false)
   const [page, setPage] = useState<number>(1)
-  const [createSavedChat] = useCreateSavedChatMutation()
 
   const handleSwitchFavorite = useCallback(() => {
     setIsFavoriteList((prev) => !prev)
     setPage(1)
   }, [])
-
-  const handleOpenSavedMessages = useCallback(async () => {
-    try {
-      const { chatId } = await createSavedChat().unwrap()
-      navigate(`/chat/${chatId}`)
-    } catch {
-      NotificationHandler.showErrorTranslated("errorOpeningSavedMessages")
-    }
-  }, [createSavedChat, navigate])
 
   // Получаем данные с сервера
   const { data: chatListData, isLoading, isFetching } = useGetChatListQuery({
@@ -72,7 +59,6 @@ const Chats = () => {
         searchValue={searchValue}
         onToggleFavorite={handleSwitchFavorite}
         onSearchChange={setSearchValue}
-        onOpenSavedMessages={handleOpenSavedMessages}
         count={isFavoriteList ? counters.favorites : counters.total}
       />
 

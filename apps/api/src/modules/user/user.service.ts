@@ -1,8 +1,9 @@
 import { Injectable, Logger, NotFoundException } from "@nestjs/common"
 import { InjectRepository, InjectDataSource } from "@nestjs/typeorm"
 import { EntityManager, Repository, DataSource } from "typeorm"
-import { User } from "@share/entities"
+import { Deal, User } from "@share/entities"
 import { Blockchain, LanguageCode, Role, Token } from "@share"
+import { DealStatus } from "@share/deal-status.enum"
 import { DbHelpers } from "../../db"
 import UserExceptions from "./user.exceptions"
 import { NotImplemented } from "@share/errors"
@@ -53,6 +54,67 @@ export class UserService {
         id,
       },
     })
+  }
+
+  async getRatingSummary(userId: string): Promise<{ rating: number; reviewsCount: number }> {
+    const summary = await this.dataSource
+      .getRepository(Deal)
+      .createQueryBuilder("deal")
+      .select('AVG(deal."customerRating")', "avgRating")
+      .addSelect('COUNT(deal."customerRating")', "reviewsCount")
+      .where('deal."performerId" = :userId', { userId })
+      .andWhere("deal.status = :status", { status: "completed" })
+      .andWhere('deal."customerRating" IS NOT NULL')
+      .getRawOne<{ avgRating: string | null; reviewsCount: string }>()
+
+    const rawRating = summary?.avgRating ? Number(summary.avgRating) : 5
+    const reviewsCount = summary?.reviewsCount ? Number(summary.reviewsCount) : 0
+
+    return {
+      rating: reviewsCount === 0 ? 5 : Math.round(rawRating * 10) / 10,
+      reviewsCount,
+    }
+  }
+
+  async retrieveProfile(id: string) {
+    const user = await this.retrieve(id)
+    const { rating, reviewsCount } = await this.getRatingSummary(id)
+
+    return {
+      ...user,
+      rating,
+      reviewsCount,
+    }
+  }
+
+  async getReviews(userId: string) {
+    const deals = await this.dataSource.getRepository(Deal).find({
+      where: {
+        performer: { id: userId },
+        status: DealStatus.Completed,
+      },
+      relations: ["customer", "request"],
+      order: { reviewedAt: "DESC", updatedAt: "DESC", createdAt: "DESC" },
+    })
+
+    return deals
+      .filter((deal) => deal.customerRating !== null || deal.customerFeedback)
+      .map((deal) => ({
+        id: deal.id,
+        rating: deal.customerRating,
+        feedback: deal.customerFeedback,
+        createdAt: (deal.reviewedAt || deal.updatedAt || deal.createdAt).toISOString(),
+        reviewer: {
+          id: deal.customer.id,
+          firstName: deal.customer.firstName,
+          lastName: deal.customer.lastName,
+          avatar: deal.customer.avatar,
+        },
+        request: {
+          id: deal.request.id,
+          title: deal.request.title,
+        },
+      }))
   }
 
   async updateProfile(userId: string, dto: UpdateProfileDto): Promise<User> {

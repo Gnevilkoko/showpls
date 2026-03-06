@@ -4,12 +4,23 @@ import StarRating from "./StarRating"
 
 interface AcceptOrderModalProps {
   selectedStarRating: number
+  feedback: string
   onRatingChange: (rating: number) => void
+  onFeedbackChange: (value: string) => void
   onConfirm: () => void
   onCancel: () => void
+  isLoading?: boolean
 }
 
-const AcceptOrderModal = ({ selectedStarRating, onRatingChange, onConfirm, onCancel }: AcceptOrderModalProps) => {
+const AcceptOrderModal = ({
+  selectedStarRating,
+  feedback,
+  onRatingChange,
+  onFeedbackChange,
+  onConfirm,
+  onCancel,
+  isLoading = false,
+}: AcceptOrderModalProps) => {
   const { t } = useTranslation()
 
   return (
@@ -25,7 +36,7 @@ const AcceptOrderModal = ({ selectedStarRating, onRatingChange, onConfirm, onCan
 
       <div className="feedback_container">
         <span>{t("yourFeedback")}</span>
-        <textarea placeholder={t("enterFeedbackHere")} />
+        <textarea value={feedback} onChange={(e) => onFeedbackChange(e.target.value)} placeholder={t("enterFeedbackHere")} />
       </div>
 
       <div className="modal-actions">
@@ -33,7 +44,7 @@ const AcceptOrderModal = ({ selectedStarRating, onRatingChange, onConfirm, onCan
           {t("close")}
         </button>
 
-        <button className="modal-action-btn green" onClick={onConfirm} type="button">
+        <button className="modal-action-btn green" onClick={onConfirm} type="button" disabled={isLoading}>
           {t("accept")}
         </button>
       </div>

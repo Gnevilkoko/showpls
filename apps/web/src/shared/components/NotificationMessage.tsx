@@ -21,7 +21,7 @@ import { adaptRequestToTask, type TaskType } from "../types"
 interface NotificationMessageProps {
   message: Message
   userId: number
-  chatResponses?: { id: string; requestId: string; status: string }[]
+  chatResponses?: { id: string; requestId: string; status: string; message?: string | null }[]
   onCancelOrder?: () => void
 }
 
@@ -95,6 +95,7 @@ const NotificationMessage = ({ message, userId, chatResponses, onCancelOrder }: 
   })
 
   const taskForDetails: TaskType | null = requestData ? adaptRequestToTask(requestData) : null
+  const offerMessage = linkedResponse?.message?.trim() || null
 
   if (message.variant === "newOffer" && (isHandledLocally || (linkedResponse && linkedResponse.status !== "pending"))) {
     return null
@@ -281,6 +282,12 @@ const NotificationMessage = ({ message, userId, chatResponses, onCancelOrder }: 
         {taskForDetails && (
           <div className="notification-task-details">
             <TaskInfo selectedOrder={taskForDetails} />
+            {offerMessage && (
+              <div className="notification-task-details__offer-message">
+                <span className="notification-task-details__offer-message-title">{t("responseTask")}</span>
+                <span className="notification-task-details__offer-message-text">{offerMessage}</span>
+              </div>
+            )}
           </div>
         )}
       </Modal>

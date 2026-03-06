@@ -1,4 +1,4 @@
-import { Role } from "@share"
+import { Role } from "./role.enum"
 
 
 export class UserPayload {

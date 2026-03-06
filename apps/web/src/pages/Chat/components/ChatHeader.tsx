@@ -1,6 +1,7 @@
 import arrowLeftIcon from "../../../assets/icons/ui/arrow-left.svg"
-import starOutlineIcon from "../../../assets/icons/status/star-outline.svg"
 import searchChatsBlueIcon from "../../../assets/icons/actions/search-chats-blue.svg"
+import starOutlineIcon from "../../../assets/icons/status/star-outline.svg"
+import starFilledIcon from "../../../assets/icons/status/star-filled.svg"
 import userIcon from "../../../assets/icons/navigation/user.svg"
 import { useRef } from "react"
 import { useTranslation } from "react-i18next"
@@ -10,12 +11,14 @@ import { formatTimeFromEpochMs } from "../../../shared/format"
 type ChatHeaderProps = {
   // selectedOrder: ChatOrderType | null
   chat: ChatType
+  isFavorite: boolean
   searchValue: string
   onSearchChange: (value: string) => void
   onBack: () => void
+  onToggleFavorite: () => void
 }
 
-const ChatHeader = ({ chat, searchValue, onSearchChange, onBack }: ChatHeaderProps) => {
+const ChatHeader = ({ chat, isFavorite, searchValue, onSearchChange, onBack, onToggleFavorite }: ChatHeaderProps) => {
   const { t } = useTranslation()
   const searchInputRef = useRef<HTMLInputElement>(null)
   // const [isClickStartWorkBtn, setIsClickStartWorkBtn] = useState(false)
@@ -43,11 +46,6 @@ const ChatHeader = ({ chat, searchValue, onSearchChange, onBack }: ChatHeaderPro
       </div>
 
       <div className="chats__actions">
-        {/* {selectedOrder?.order?.verifProof === "pro" && !isClickStartWorkBtn ? (
-          <button className="start-work-btn" onClick={() => setIsClickStartWorkBtn(true)}>
-            <span>{t("startWork")}</span>
-          </button>
-        ) : ( */}
         <div className="chats__search-wrapper blue">
           <img src={searchChatsBlueIcon} alt="Search Chat Icon" />
           <input
@@ -59,10 +57,9 @@ const ChatHeader = ({ chat, searchValue, onSearchChange, onBack }: ChatHeaderPro
             className="chats__search-input"
           />
         </div>
-        {/* )} */}
 
-        <button className="chats__favorites-btn">
-          <img src={starOutlineIcon} alt="Star Outline Icon" />
+        <button className="chats__favorites-btn" onClick={onToggleFavorite} title={t("favorites")}>
+          <img src={isFavorite ? starFilledIcon : starOutlineIcon} alt="Favorite Icon" />
         </button>
       </div>
     </div>

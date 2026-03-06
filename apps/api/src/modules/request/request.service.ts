@@ -1148,12 +1148,17 @@ export class RequestService {
       )
 
       // Update Deal
+      const trimmedFeedback = dto.feedback?.trim() || null
+      const hasReview = dto.rating !== undefined || trimmedFeedback !== null
       await manager.update(
         Deal,
         { id: activeDeal.id },
         {
           status: DealStatus.Completed,
           escrowStatus: "released",
+          customerRating: dto.rating ?? null,
+          customerFeedback: trimmedFeedback,
+          reviewedAt: hasReview ? new Date() : null,
         }
       )
 

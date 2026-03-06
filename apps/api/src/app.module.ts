@@ -28,6 +28,7 @@ import { ArbitrationModule } from "./modules/arbitration/arbitration.module"
 import { LedgerModule } from "@ledger"
 import { CacheModule } from "@nestjs/cache-manager"
 import KeyvRedis from "@keyv/redis"
+import { SpecialsModule } from "./modules/specials/specials.module"
 
 @Module({
   imports: [
@@ -161,6 +162,7 @@ import KeyvRedis from "@keyv/redis"
     TopUpModule,
     SubmissionModule,
     ArbitrationModule,
+    SpecialsModule,
   ],
   providers: [BotHandler],
   controllers: [],

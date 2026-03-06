@@ -9,7 +9,7 @@ import {
   type Relation,
 } from "typeorm"
 import { ApiProperty } from "@nestjs/swagger"
-import { Token } from "@share"
+import { Token } from "../token.enum"
 import { User } from "./user.entity"
 
 @Entity()

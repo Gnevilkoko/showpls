@@ -14,7 +14,7 @@ import ToggleProfileMode from "../../shared/components/ToggleProfileMode"
 import { useAppDispatch, useAppSelector } from "../../store"
 import { useTranslation } from "react-i18next"
 import { AVAILABLE_LANGUAGES } from "../../store/languageSlice"
-import { useUpdateLanguageMutation } from "../../store/api/userApi"
+import { useGetMeQuery, useGetReviewsQuery, useUpdateLanguageMutation } from "../../store/api/userApi"
 import Navigation from "../../shared/components/Navigation"
 import ProfileBtnItem from "./components/ProfileBtnItem"
 import { AVAILABLE_THEMES } from "../../constants"
@@ -41,6 +41,8 @@ const Profile = () => {
   const selectedTheme = useAppSelector((state) => state.theme)
 
   const userData = useAppSelector((state) => state.user.userData)
+  const { data: profileData } = useGetMeQuery(undefined, { skip: !userData })
+  const { data: reviews = [] } = useGetReviewsQuery(undefined, { skip: !userData })
 
   const [isReady, setIsReady] = useState(false)
   const [isOpenLang, setIsOpenLang] = useState<boolean>(false)
@@ -75,16 +77,19 @@ const Profile = () => {
     return <div>{t("notAuthorized")}</div>
   }
 
+  const profile = profileData || userData
+  const displayRating = (profileData?.rating ?? userData.rating ?? 5).toFixed(1)
+
   return (
     <div className="page profile">
       <img src={theme === "dark" ? profileBgDark : profileBg} alt="Background Profile" className="profile-bg" />
 
       <div className="profile-data_container">
         <div className="profile__avatar-container">
-          <img src={userData.avatar || userIcon} alt="Profile Avatar" className="profile__avatar" />
+          <img src={profile.avatar || userIcon} alt="Profile Avatar" className="profile__avatar" />
 
           <div className="stats-star">
-            <span>{(userData as any).rating ?? 5}</span>
+            <span>{displayRating}</span>
 
             <img src={statsStarWhiteIcon} alt="Stats Star Icon" />
           </div>
@@ -92,17 +97,17 @@ const Profile = () => {
 
         <div className="profile__info-container">
           <span className="profile__name">
-            {userData.firstName} {userData.lastName ? userData.lastName : ""}
+            {profile.firstName} {profile.lastName ? profile.lastName : ""}
           </span>
 
           <div className="profile__location">
             <img src={locationGreenIcon} alt="Location Icon" />
 
-            <span>{userData.city || "Istanbul, Turkey"}</span>
+            <span>{profile.city || "Istanbul, Turkey"}</span>
           </div>
 
           <span className="profile__status-profession">
-            {userData.about || `${t("freelancer")} ${t("photographer")}`}
+            {profile.about || `${t("freelancer")} ${t("photographer")}`}
           </span>
         </div>
       </div>
@@ -208,7 +213,7 @@ const Profile = () => {
 
       <ModalEditProfile isOpenEditProfile={isOpenEditProfile} setIsOpenEditProfile={setIsOpenEditProfile} />
 
-      <ModalReviews isOpenReviews={isOpenReviews} setIsOpenReviews={setIsOpenReviews} />
+      <ModalReviews isOpenReviews={isOpenReviews} setIsOpenReviews={setIsOpenReviews} reviews={reviews} />
 
       <Modal isOpen={isOpenNotifications} onClose={() => setIsOpenNotifications(false)}>
         <TransactionsList />

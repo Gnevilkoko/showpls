@@ -1,4 +1,5 @@
 import { Column, CreateDateColumn, Entity, ManyToOne, PrimaryGeneratedColumn, UpdateDateColumn, type Relation } from "typeorm"
+import { ApiProperty } from "@nestjs/swagger"
 import { Request } from "./request.entity"
 import { Response } from "./response.entity"
 import { User } from "./user.entity"
@@ -39,6 +40,18 @@ export class Deal {
 
    @Column("boolean", { default: false })
    arbitrationApproved: boolean // Разрешение на отмену от арбитража
+
+   @ApiProperty({ type: "number", nullable: true, minimum: 1, maximum: 5 })
+   @Column("int", { nullable: true })
+   customerRating: number | null
+
+   @ApiProperty({ type: "string", nullable: true })
+   @Column("text", { nullable: true })
+   customerFeedback: string | null
+
+   @ApiProperty({ type: "string", nullable: true, format: "date-time" })
+   @Column({ type: "timestamp", nullable: true })
+   reviewedAt: Date | null
 
    @CreateDateColumn()
    createdAt: Date

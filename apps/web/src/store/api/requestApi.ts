@@ -1,6 +1,7 @@
 import { createApi } from "@reduxjs/toolkit/query/react"
 import { authenticatedBaseQuery } from "./baseQuery"
 import { chatApi } from "./chatApi"
+import { userApi } from "./userApi"
 import type {
   RequestBackend,
   RequestStatus,
@@ -119,6 +120,7 @@ export const requestApi = createApi({
         try {
           await queryFulfilled
           dispatch(chatApi.util.invalidateTags(["Chat"]))
+          dispatch(userApi.util.invalidateTags(["User", "Reviews"]))
         } catch { }
       },
       invalidatesTags: ["Request"], // Создается чат, кеш обновляется через onQueryStarted

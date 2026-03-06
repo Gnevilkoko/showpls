@@ -248,6 +248,13 @@ export class GeoService {
         "firstName",
         "lastName",
         avatar,
+        COALESCE((
+          SELECT ROUND(AVG(d."customerRating")::numeric, 1)
+          FROM deal d
+          WHERE d."performerId" = "user".id
+            AND d.status = 'completed'
+            AND d."customerRating" IS NOT NULL
+        ), 5) as rating,
         ST_X("lastKnownLocation"::geometry) as lng,
         ST_Y("lastKnownLocation"::geometry) as lat,
         ST_Distance(
@@ -275,7 +282,7 @@ export class GeoService {
       firstName: r.firstName,
       lastName: r.lastName,
       avatar: r.avatar,
-      rating: 0, // TODO: Implement rating calculation
+      rating: Number(r.rating),
       latitude: Number(r.lat),
       longitude: Number(r.lng),
       distance: Number(r.distance),

@@ -7,6 +7,7 @@ type ChatResponseLite = {
   id: string
   requestId: string
   status: string
+  message?: string | null
   performer?: any
 }
 

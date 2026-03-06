@@ -28,11 +28,69 @@ export type MessageVariant =
   | "taskCompleted"
   | "taskCancelled"
 
+export type SpecialSection = "missions" | "hotspots"
+export type SpecialClaimStatus = "available" | "claimed" | "unavailable"
+export type LocalizedText = {
+  ru: string
+  en: string
+}
+export type SpecialActionType = "findTask" | "createTask" | "wallet" | "profile"
+
+export interface SpecialBackend {
+  id: string
+  section: SpecialSection
+  partnerName: string
+  partnerShort: string
+  partnerColor: string
+  title: LocalizedText
+  description: LocalizedText
+  steps: LocalizedText[]
+  badge: LocalizedText | null
+  actionType: SpecialActionType
+  actionPayload: Record<string, unknown> | null
+  actionLabel: LocalizedText
+  rewardAmount: number
+  rewardCurrencyCode: string
+  startsAt: string | null
+  endsAt: string | null
+  claimLimitPerUser: number
+  claimedCount: number
+  isClaimed: boolean
+  canClaim: boolean
+  claimStatus: SpecialClaimStatus
+  metadata: Record<string, unknown> | null
+}
+
+export interface SpecialsListResponse {
+  items: SpecialBackend[]
+  total: number
+  limit: number
+  offset: number
+}
+
+export interface ClaimSpecialResponse {
+  claimId: string
+  rewardTransactionId: string
+  special: SpecialBackend
+}
+
 export interface UserInfo {
   id: string
   firstName: string
   lastName: string | null
   avatar: string | null
+}
+
+export interface UserReviewBackend {
+  id: string
+  rating: number | null
+  feedback: string | null
+  createdAt: string
+  reviewer: UserInfo
+  request: {
+    id: string
+    title: string
+  }
 }
 
 export interface FileAttachment {
