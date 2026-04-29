@@ -19,6 +19,7 @@ const ChatMap2Gis = memo(({ coordinates }: ChatMap2GisProps) => {
   const isMapInitializedRef = useRef(false)
   const isMapReadyRef = useRef(false)
   const [mapIsFocused, setMapIsFocused] = useState(false)
+  const [mapLoadError, setMapLoadError] = useState(false)
   const timeoutRef = useRef<number | null>(null)
 
   const theme = useAppSelector((state: RootState) => state.theme)
@@ -69,37 +70,46 @@ const ChatMap2Gis = memo(({ coordinates }: ChatMap2GisProps) => {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     let mapInstance: any = null
 
-    load().then((mapglAPI) => {
-      if (isMapInitializedRef.current) return
+    load()
+      .then((mapglAPI) => {
+        if (isMapInitializedRef.current) return
 
-      mapglAPIRef.current = mapglAPI
+        mapglAPIRef.current = mapglAPI
 
-      // Для 2ГИС нужно инвертировать координаты: сначала lng, потом lat
-      const center = [coordinates.lng, coordinates.lat]
+        const center = [coordinates.lng, coordinates.lat]
 
-      mapInstance = new mapglAPI.Map("chatMap2Gis", {
-        center,
-        zoom: 16,
-        key: API_KEY_2GIS,
-        zoomControl: false,
-        loopWorld: true,
-        style: theme === "light" ? STYLE_LIGHT_2GIS : STYLE_DARK_2GIS,
-      })
-
-      mapRef.current = mapInstance
-      isMapInitializedRef.current = true
-
-      // Ждём готовности карты перед созданием маркера
-      mapInstance.once("idle", () => {
-        isMapReadyRef.current = true
-
-        // Создаем маркер после готовности карты
-        if (coordinates) {
-          const markers = createMarker(coordinates)
-          clustererRef.current = createClusterer(mapInstance, markers)
+        try {
+          mapInstance = new mapglAPI.Map("chatMap2Gis", {
+            center,
+            zoom: 16,
+            key: API_KEY_2GIS,
+            zoomControl: false,
+            loopWorld: true,
+            style: theme === "light" ? STYLE_LIGHT_2GIS : STYLE_DARK_2GIS,
+          })
+        } catch {
+          setMapLoadError(true)
+          return
         }
+
+        mapRef.current = mapInstance
+        isMapInitializedRef.current = true
+
+        mapInstance.once("idle", () => {
+          isMapReadyRef.current = true
+          if (coordinates) {
+            const markers = createMarker(coordinates)
+            clustererRef.current = createClusterer(mapInstance, markers)
+          }
+        })
+
+        mapInstance.once("error", () => {
+          setMapLoadError(true)
+        })
       })
-    })
+      .catch(() => {
+        setMapLoadError(true)
+      })
 
     return () => {
       if (clustererRef.current) {
@@ -161,6 +171,36 @@ const ChatMap2Gis = memo(({ coordinates }: ChatMap2GisProps) => {
       setMapIsFocused(false)
       timeoutRef.current = null
     }, 3000)
+  }
+
+  if (mapLoadError) {
+    const { lat, lng } = coordinates
+    const mapLink2GIS = `https://2gis.ru/geo/${lng}%2C${lat}`
+    return (
+      <div className="chat-map-wrapper chat-map-wrapper--unavailable">
+        <div className="chat-map-unavailable__icon" aria-hidden>
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path
+              d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5a2.5 2.5 0 110-5 2.5 2.5 0 010 5z"
+              stroke="currentColor"
+              strokeWidth="1.5"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              fill="none"
+            />
+          </svg>
+        </div>
+        <p className="chat-map-unavailable__text">Открыть локацию в картах</p>
+        <a
+          href={mapLink2GIS}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="chat-map-unavailable__btn"
+        >
+          2GIS
+        </a>
+      </div>
+    )
   }
 
   return (

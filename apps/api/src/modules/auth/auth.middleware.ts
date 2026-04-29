@@ -29,6 +29,10 @@ export class AuthMiddleware implements NestMiddleware {
     try {
       try {
         req.payload = AuthService.verifySignature(token) as any
+        const raw = req.payload as unknown as { acb?: number }
+        if (raw.acb === 1) {
+          throw new APIException(ErrorCode.UNAUTHORIZED, "Auth callback code cannot be used as access token")
+        }
         this.cls.set("userId", get(req, "payload.id"))
       } catch (e: any) {
         if (e instanceof TokenExpiredError) {

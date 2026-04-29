@@ -2,6 +2,7 @@ import { forwardRef } from "react"
 import { useTranslation } from "react-i18next"
 import type { TaskType } from "../../../shared/types"
 import TaskTags from "../../../shared/components/TaskTags"
+import ShareTaskButton from "./ShareTaskButton"
 
 interface TaskItemProps {
   task: TaskType
@@ -9,10 +10,14 @@ interface TaskItemProps {
   handleClickTask?: () => void
   showButton?: boolean
   showDescription?: boolean
+  showShareButton?: boolean
 }
 
 const TaskItem = forwardRef<HTMLDivElement, TaskItemProps>(
-  ({ task, handleSelectTask, handleClickTask, showButton = true, showDescription = true }, ref) => {
+  (
+    { task, handleSelectTask, handleClickTask, showButton = true, showDescription = true, showShareButton = true },
+    ref
+  ) => {
     const { t } = useTranslation()
 
     return (
@@ -21,7 +26,10 @@ const TaskItem = forwardRef<HTMLDivElement, TaskItemProps>(
 
         <div className="task__container">
           <div className="task__content">
-            <TaskTags task={task} />
+            <div className="task__tags-row">
+              <TaskTags task={task} />
+              {showShareButton && <ShareTaskButton task={task} />}
+            </div>
 
             {showDescription && <span>{task.description}</span>}
           </div>

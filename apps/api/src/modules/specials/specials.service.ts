@@ -6,6 +6,8 @@ import { Special, SpecialClaim, User, type LocalizedText, type SpecialActionType
 import { SpecialClaimStatus, SpecialSection, Token } from "@share"
 import { DataSource, In, IsNull, Repository } from "typeorm"
 import { ListSpecialsDto } from "./dto/list-specials.dto"
+import { CreateSpecialDto } from "./dto/create-special.dto"
+import { UpdateSpecialDto } from "./dto/update-special.dto"
 import { ConfigService } from "../../config"
 
 type ClaimStatusView = "available" | "claimed" | "unavailable"
@@ -84,6 +86,137 @@ export class SpecialsService implements OnModuleInit {
       limit,
       offset,
     }
+  }
+
+  /** Список всех спецпредложений для админки (включая неактивные) */
+  async listForAdmin(query: ListSpecialsDto) {
+    const limit = query.limit ?? 100
+    const offset = query.offset ?? 0
+
+    const where = {
+      ...(query.section ? { section: query.section } : {}),
+    }
+
+    const [specials, total] = await this.specialsRepository.findAndCount({
+      where,
+      relations: {
+        rewardCurrency: true,
+      },
+      order: {
+        sortOrder: "ASC",
+        createdAt: "DESC",
+      },
+      take: limit,
+      skip: offset,
+    })
+
+    return {
+      items: specials.map((special) => this.serializeSpecial(special, 0)),
+      total,
+      limit,
+      offset,
+    }
+  }
+
+  async create(dto: CreateSpecialDto): Promise<SpecialView> {
+    const rewardCurrencyId = await this.resolveRewardCurrencyId(dto.rewardCurrencyId)
+
+    const special = this.specialsRepository.create({
+      section: dto.section,
+      title: dto.title,
+      description: dto.description,
+      steps: dto.steps ?? [],
+      partnerName: dto.partnerName,
+      partnerShort: dto.partnerShort,
+      partnerColor: dto.partnerColor,
+      badge: dto.badge ?? null,
+      actionType: dto.actionType as SpecialActionType,
+      actionPayload: dto.actionPayload ?? null,
+      actionLabel: dto.actionLabel,
+      rewardAmount: dto.rewardAmount,
+      rewardCurrencyId,
+      isActive: dto.isActive ?? true,
+      startsAt: dto.startsAt ? new Date(dto.startsAt) : null,
+      endsAt: dto.endsAt ? new Date(dto.endsAt) : null,
+      sortOrder: dto.sortOrder ?? 0,
+      claimLimitPerUser: dto.claimLimitPerUser ?? 1,
+      metadata: dto.metadata ?? null,
+    })
+
+    const saved = await this.specialsRepository.save(special) as Special
+    const withRelations = await this.specialsRepository.findOne({
+      where: { id: saved.id },
+      relations: { rewardCurrency: true },
+    })
+    if (!withRelations) {
+      throw new BadRequestException("Failed to load created special")
+    }
+    return this.serializeSpecial(withRelations, 0)
+  }
+
+  async remove(id: string): Promise<{ deleted: true }> {
+    const special = await this.specialsRepository.findOne({ where: { id } })
+    if (!special) {
+      throw new NotFoundException("Special not found")
+    }
+    await this.specialsRepository.remove(special)
+    return { deleted: true }
+  }
+
+  async update(id: string, dto: UpdateSpecialDto): Promise<SpecialView> {
+    const special = await this.specialsRepository.findOne({
+      where: { id },
+      relations: { rewardCurrency: true },
+    })
+
+    if (!special) {
+      throw new NotFoundException("Special not found")
+    }
+
+    if (dto.rewardCurrencyId !== undefined) {
+      special.rewardCurrencyId = await this.resolveRewardCurrencyId(dto.rewardCurrencyId)
+    }
+    if (dto.section !== undefined) special.section = dto.section
+    if (dto.title !== undefined) special.title = dto.title
+    if (dto.description !== undefined) special.description = dto.description
+    if (dto.steps !== undefined) special.steps = dto.steps
+    if (dto.partnerName !== undefined) special.partnerName = dto.partnerName
+    if (dto.partnerShort !== undefined) special.partnerShort = dto.partnerShort
+    if (dto.partnerColor !== undefined) special.partnerColor = dto.partnerColor
+    if (dto.badge !== undefined) special.badge = dto.badge
+    if (dto.actionType !== undefined) special.actionType = dto.actionType as SpecialActionType
+    if (dto.actionPayload !== undefined) special.actionPayload = dto.actionPayload
+    if (dto.actionLabel !== undefined) special.actionLabel = dto.actionLabel
+    if (dto.rewardAmount !== undefined) special.rewardAmount = dto.rewardAmount
+    if (dto.isActive !== undefined) special.isActive = dto.isActive
+    if (dto.startsAt !== undefined) special.startsAt = dto.startsAt ? new Date(dto.startsAt) : null
+    if (dto.endsAt !== undefined) special.endsAt = dto.endsAt ? new Date(dto.endsAt) : null
+    if (dto.sortOrder !== undefined) special.sortOrder = dto.sortOrder
+    if (dto.claimLimitPerUser !== undefined) special.claimLimitPerUser = dto.claimLimitPerUser
+    if (dto.metadata !== undefined) special.metadata = dto.metadata
+
+    await this.specialsRepository.save(special)
+    const updated = await this.specialsRepository.findOne({
+      where: { id },
+      relations: { rewardCurrency: true },
+    })
+    if (!updated) {
+      throw new BadRequestException("Failed to load updated special")
+    }
+    return this.serializeSpecial(updated, 0)
+  }
+
+  private async resolveRewardCurrencyId(rewardCurrencyId?: string): Promise<string> {
+    if (rewardCurrencyId) {
+      return rewardCurrencyId
+    }
+    const stars = await this.dataSource.getRepository(Currency).findOne({
+      where: { code: Token.STARS, blockchain: IsNull() },
+    })
+    if (!stars) {
+      throw new BadRequestException("STARS currency not found. Specify rewardCurrencyId.")
+    }
+    return stars.id
   }
 
   async findOne(user: User, id: string) {

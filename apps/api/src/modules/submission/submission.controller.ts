@@ -5,6 +5,7 @@ import { GetUser } from "../user/decorators/get-user.decorator"
 import { User } from "@share/entities"
 import { SubmissionService } from "./submission.service"
 import { CreateSubmissionDto } from "./dto/create-submission.dto"
+import { RejectSubmissionDto } from "./dto/reject-submission.dto"
 
 @ApiTags("Submission")
 @Controller("submission")
@@ -33,6 +34,14 @@ export class SubmissionController {
     } catch (error) {
       throw error // Let the global exception filter handle it
     }
+  }
+
+  @ApiSecurity("jwt-auth")
+  @UseGuards(AuthGuard)
+  @Post("reject")
+  @ApiOperation({ summary: "Reject the latest submission (customer only). Notifies performer." })
+  async reject(@GetUser() user: User, @Body() dto: RejectSubmissionDto) {
+    return await this.submissionService.reject(user, dto)
   }
 
   @ApiSecurity("jwt-auth")

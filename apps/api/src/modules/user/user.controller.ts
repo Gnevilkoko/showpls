@@ -20,8 +20,12 @@ import { UserTransactionsDto } from "./dto/user-transactions.dto"
 import { plainToInstance } from "class-transformer"
 import { GeoService } from "../geo/geo.service"
 import { ListPerformersDto } from "./dto/list-performers.dto"
+import { ListPerformersMapDto } from "./dto/list-performers-map.dto"
 import { UpdateLocationDto } from "./dto/update-location.dto"
+import { SubmitPerformerVerificationDto } from "./dto/submit-performer-verification.dto"
+import { PatchPerformerVerificationGeoDto } from "./dto/patch-performer-verification-geo.dto"
 import { RateLimit, IpRateLimit } from "../../common/rate-limit"
+import ms from "ms"
 
 @ApiExtraModels(User)
 @ApiTags("User")
@@ -145,10 +149,38 @@ export class UserController {
     },
   })
   @UseGuards(AuthGuard)
-  @IpRateLimit({ ttl: 60, limit: 60 }) // 60 requests per minute per IP
+  @IpRateLimit({ ttl: ms("1m"), limit: 60 }) // 60 requests per minute per IP
   @Get("list-performers")
   async listPerformers(@Query() dto: ListPerformersDto) {
     return await this.geoService.getPerformersNearby(dto.latitude, dto.longitude, dto.radiusKm)
+  }
+
+  @ApiSecurity("jwt-auth")
+  @ApiOperation({ summary: "All ready-to-work performers with location (for map)" })
+  @ApiOkResponse({
+    schema: {
+      type: "array",
+      items: {
+        type: "object",
+        properties: {
+          id: { type: "string" },
+          username: { type: "string", nullable: true },
+          firstName: { type: "string" },
+          lastName: { type: "string", nullable: true },
+          avatar: { type: "string", nullable: true },
+          rating: { type: "number" },
+          distance: { type: "number" },
+          lng: { type: "number" },
+          lat: { type: "number" },
+        },
+      },
+    },
+  })
+  @UseGuards(AuthGuard)
+  @IpRateLimit({ ttl: ms("1m"), limit: 30 })
+  @Get("list-performers-map")
+  async listPerformersMap(@Query() dto: ListPerformersMapDto) {
+    return await this.geoService.getPerformersReadyForMap(dto.limit ?? 1500)
   }
 
   @ApiSecurity("jwt-auth")
@@ -176,6 +208,24 @@ export class UserController {
   }
 
   @ApiSecurity("jwt-auth")
+  @ApiOperation({ summary: "Submit performer verification (device + geolocation)" })
+  @UseGuards(AuthGuard)
+  @IpRateLimit({ ttl: ms("1m"), limit: 10 })
+  @Post("performer-verification")
+  async submitPerformerVerification(@GetUser() user: User, @Body() dto: SubmitPerformerVerificationDto) {
+    return this.service.submitPerformerVerification(user.id, dto)
+  }
+
+  @ApiSecurity("jwt-auth")
+  @ApiOperation({ summary: "Update performer map coordinates (after verification)" })
+  @UseGuards(AuthGuard)
+  @IpRateLimit({ ttl: ms("1m"), limit: 20 })
+  @Patch("performer-verification-geo")
+  async patchPerformerVerificationGeo(@GetUser() user: User, @Body() dto: PatchPerformerVerificationGeoDto) {
+    return this.service.updatePerformerVerificationGeo(user.id, dto)
+  }
+
+  @ApiSecurity("jwt-auth")
   @ApiOperation({ summary: "Update user's current location" })
   @ApiOkResponse({
     schema: {
@@ -186,8 +236,8 @@ export class UserController {
     },
   })
   @UseGuards(AuthGuard)
-  @IpRateLimit({ ttl: 60, limit: 10 }) // 10 requests per minute per IP
-  @RateLimit({ ttl: 60, limit: 5 }) // 5 requests per minute per account
+  @IpRateLimit({ ttl: ms("1m"), limit: 60 }) // per IP (фон + включение «готов»)
+  @RateLimit({ ttl: ms("1m"), limit: 90 }) // per аккаунт
   @Post("update-location")
   async updateLocation(@GetUser() user: User, @Body() dto: UpdateLocationDto) {
     await this.geoService.updateUserLocation(user.id, dto.latitude, dto.longitude)

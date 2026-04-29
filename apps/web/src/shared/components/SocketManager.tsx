@@ -1,9 +1,11 @@
 import { useEffect, useRef } from "react"
 import { useAppDispatch, useAppSelector, store } from "../../store"
 import { socketService } from "../../services/socketService"
+import { setChatTyping } from "../../store/chatTypingSlice"
 import { chatApi, chatApiHelpers } from "../../store/api/chatApi"
 import { requestApi } from "../../store/api/requestApi"
 import { responseApi } from "../../store/api/responseApi"
+import { submissionApi } from "../../store/api/submissionApi"
 import type { MessageBackend, ChatListItem } from "../../shared/types/backend"
 
 /**
@@ -76,7 +78,36 @@ const SocketManager = () => {
     if (!isConnected) return
 
     const handleNewMessage = (data: { chatId: string; message: MessageBackend }) => {
+      dispatch(setChatTyping({ chatId: data.chatId, typing: false }))
       chatApiHelpers.addMessageToCache(dispatch, data.chatId, data.message)
+      const { message } = data
+      const requestId = message.requestId
+      if (requestId) {
+        if (message.variant === "submissionRejected") {
+          const reqId = String(requestId)
+          // Сразу обновляем кэш, чтобы UI отреагировал без ожидания рефетча
+          dispatch(
+            requestApi.util.updateQueryData("getRequest", reqId, (draft) => {
+              if (draft?.submission) draft.submission = { ...draft.submission, status: "rejected" }
+            })
+          )
+          dispatch(
+            submissionApi.util.updateQueryData("getSubmissionByRequest", reqId, (draft) => {
+              if (draft) draft.status = "rejected"
+            })
+          )
+          // Инвалидация — подтягиваем актуальное состояние с сервера (на случай расхождения ключей кэша)
+          dispatch(requestApi.util.invalidateTags([{ type: "Request", id: reqId }]))
+          dispatch(submissionApi.util.invalidateTags([{ type: "Submission", id: `request-${reqId}` }]))
+        }
+        if (
+          message.variant === "newOffer" ||
+          message.variant === "responseAccepted" ||
+          message.variant === "offerWithdrawn"
+        ) {
+          dispatch(requestApi.util.invalidateTags([{ type: "Request", id: String(requestId) }]))
+        }
+      }
     }
 
     const handleChatUpdate = (data: { chatId: string; updates: Partial<ChatListItem> }) => {
@@ -94,8 +125,10 @@ const SocketManager = () => {
       escrowStatus?: string
     }) => {
       dispatch(requestApi.util.invalidateTags([{ type: "Request", id: data.orderId }]))
+      // Ensure chat UI updates immediately even when backend event has no chatId.
+      dispatch(chatApi.util.invalidateTags([{ type: "Chat", id: "LIST" }, { type: "Message", id: "LIST" }]))
       if (data.chatId) {
-        dispatch(chatApi.util.invalidateTags([{ type: "Chat", id: data.chatId }]))
+        dispatch(chatApi.util.invalidateTags([{ type: "Chat", id: data.chatId }, { type: "Message", id: `LIST-${data.chatId}` }]))
       }
     }
 
@@ -107,7 +140,25 @@ const SocketManager = () => {
       }
     }
 
+    const handleChatTyping = (data: { chatId: string; typing: boolean }) => {
+      dispatch(setChatTyping({ chatId: data.chatId, typing: data.typing }))
+    }
+
+    const handleMessageDeleted = (data: {
+      chatId: string
+      messageId: string
+      lastMessage?: string
+      lastUpdate?: string
+    }) => {
+      chatApiHelpers.removeMessageFromCache(dispatch, data.chatId, data.messageId, {
+        lastMessage: data.lastMessage,
+        lastUpdate: data.lastUpdate,
+      })
+    }
+
     socketService.on("message:new", handleNewMessage)
+    socketService.on("chat:typing", handleChatTyping)
+    socketService.on("message:deleted", handleMessageDeleted)
     socketService.on("chat:update", handleChatUpdate)
     socketService.on("counters:update", handleCountersUpdate)
     socketService.on("order:status_changed", handleOrderStatusChanged)
@@ -115,6 +166,8 @@ const SocketManager = () => {
 
     return () => {
       socketService.off("message:new", handleNewMessage)
+      socketService.off("chat:typing", handleChatTyping)
+      socketService.off("message:deleted", handleMessageDeleted)
       socketService.off("chat:update", handleChatUpdate)
       socketService.off("counters:update", handleCountersUpdate)
       socketService.off("order:status_changed", handleOrderStatusChanged)

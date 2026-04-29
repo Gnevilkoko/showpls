@@ -35,7 +35,7 @@ export class AppService {
     // @ts-ignore
     app.set("query parser", "extended")
 
-    app.use(cookieParser())
+    app.use(cookieParser(SessionConfig.secret))
     app.use(
       session({
         name: "sessionID",
@@ -49,7 +49,6 @@ export class AppService {
         // }),
         cookie: {
           path: "/",
-          signed: true,
           secure: ConfigService.isProduction(),
           // sameSite (any value even "none") requires secure: true
           sameSite: ConfigService.isProduction() ? "none" : undefined,

@@ -16,6 +16,7 @@ import { EscrowHoldService } from "@ledger/escrow/escrow-hold.service"
 import { EscrowReleaseService } from "@ledger/escrow/escrow-release.service"
 import { Ledger } from "@ledger"
 import { Token } from "@share/token.enum"
+import { Role } from "@share/role.enum"
 import { UserService } from "../user/user.service"
 import { ChatService } from "../chat/chat.service"
 import { NotificationService } from "../notification/notification.service"
@@ -55,10 +56,15 @@ export class RequestService {
   private async validateAttachments(attachments: string[]): Promise<{ url: string; hash: string }[]> {
     const results: { url: string; hash: string }[] = []
 
+    const attachmentTimeoutMs = 15_000 // 15s per URL to avoid gateway/proxy 503 on slow responses
+
     for (const url of attachments) {
       try {
-        // Download file
-        const response = await axios.get(url, { responseType: "arraybuffer" })
+        // Download file (with timeout to avoid hanging and proxy 503)
+        const response = await axios.get(url, {
+          responseType: "arraybuffer",
+          timeout: attachmentTimeoutMs,
+        })
         const buffer = Buffer.from(response.data)
 
         // Calculate SHA256 hash
@@ -541,7 +547,7 @@ export class RequestService {
   async findOne(id: string, user?: User): Promise<any> {
     const request = await this.requestRepository.findOne({
       where: { id },
-      relations: ["customer", "responses", "responses.performer", "attachments", "submissions"],
+      relations: ["customer", "responses", "responses.performer", "attachments", "submissions", "submissions.attachments", "submissions.performer"],
     })
 
     if (!request) {
@@ -602,9 +608,19 @@ export class RequestService {
 
       submission = {
         id: latestSubmission.id,
+        requestId: request.id,
         status: latestSubmission.status,
         serverTs: latestSubmission.serverTs,
         proofMeta: latestSubmission.proofMeta,
+        createdAt: latestSubmission.createdAt?.toISOString?.() ?? new Date().toISOString(),
+        performer: latestSubmission.performer
+          ? {
+              id: latestSubmission.performer.id,
+              firstName: latestSubmission.performer.firstName,
+              lastName: latestSubmission.performer.lastName,
+              avatar: latestSubmission.performer.avatar,
+            }
+          : null,
         attachments:
           latestSubmission.attachments?.map((att) => ({
             id: att.id,
@@ -846,33 +862,41 @@ export class RequestService {
       throw new NotFoundException("Request not found")
     }
 
-    // 2. Check if user is the customer
-    if (request.customer.id !== user.id) {
-      throw new ForbiddenException("Only the customer can cancel the request")
+    // 2. Check if user is the customer or admin (string-safe: JWT/DB bigint ids)
+    if (String(request.customer.id) !== String(user.id) && user.role !== Role.Admin) {
+      throw new ForbiddenException("Only the customer or an admin can cancel the request")
     }
 
-    // 3. Check if status allows cancellation
-    if (request.status === RequestStatus.Draft || request.status === RequestStatus.Published) {
-      // Allowed immediately for DRAFT or PUBLISHED
-    } else if (request.status === RequestStatus.InProgress) {
-      // For IN_PROGRESS, check if arbitrationApproved
-      const deal = await this.dealRepository.findOne({
-        where: { request: { id } },
-      })
-
-      if (!deal) {
-        throw new BadRequestException("No deal found for this request")
+    // 3. Already cancelled — idempotent success (fixes double-tap / duplicate POST on mobile)
+    if (request.status === RequestStatus.Cancelled) {
+      return {
+        id: request.id,
+        status: RequestStatus.Cancelled,
+        cancelledAt: (request.cancelledAt ?? new Date()).toISOString(),
       }
+    }
 
-      if (!deal.arbitrationApproved) {
-        throw new ForbiddenException("Cannot cancel in-progress request without arbitration approval")
-      }
-    } else {
+    // 4. Check if status allows cancellation
+    const cancellableStatuses = new Set<RequestStatus>([
+      RequestStatus.Draft,
+      RequestStatus.Published,
+      RequestStatus.Accepted,
+      RequestStatus.InProgress,
+      RequestStatus.Arbitration,
+    ])
+
+    if (!cancellableStatuses.has(request.status)) {
       throw new BadRequestException("Request cannot be cancelled in current status")
     }
 
-    // 4. Wrap in transaction
-    return this.dataSource.transaction(async (manager) => {
+    const acceptedResponseBeforeCancel =
+      request.responses?.find((r) => r.status === ResponseStatus.Accepted) ??
+      request.responses?.find((r) => r.status === ResponseStatus.Pending)
+    const performerToNotify = acceptedResponseBeforeCancel?.performer ?? null
+    const requestTitle = request.title
+
+    // 5. Critical state changes in transaction only.
+    const cancelledAt = await this.dataSource.transaction(async (manager) => {
       // 4.1 Return funds to customer through EscrowRefund
       await this.ledger.escrow.refund(
         {
@@ -883,12 +907,13 @@ export class RequestService {
       )
 
       // 4.2 Update Request status
+      const now = new Date()
       await manager.update(
         Request,
         { id },
         {
           status: RequestStatus.Cancelled,
-          cancelledAt: new Date(),
+          cancelledAt: now,
         }
       )
 
@@ -914,108 +939,58 @@ export class RequestService {
         )
       }
 
-      // 4.5 Cancel scheduled auto-cancellation
-      await this.requestExpirationQueue.getJobs(["waiting"]).then((jobs) => {
-        const job = jobs.find((job) => job.data.requestId === id)
-        if (job) {
-          job.remove()
+      return now
+    })
+
+    // 5. Side effects should not block API response.
+    void (async () => {
+      try {
+        const expirationJob = await this.requestExpirationQueue.getJob(`${id}_expire`)
+        if (expirationJob) {
+          await expirationJob.remove()
         }
-      })
+      } catch {
+        // Keep cancel API reliable even if queue cleanup fails.
+      }
+    })()
 
-      // 4.6 Notify performer if assigned
-      const acceptedResponse = request.responses.find((r) => r.status === ResponseStatus.Accepted)
-      if (acceptedResponse && acceptedResponse.performer) {
-        // Get or create chat
-        const chat = await this.chatService.getOrCreateChat(user.id, acceptedResponse.performer.id, manager as any)
+    const customerId = request.customer.id
 
-        // Send chat message with taskCancelled variant
-        await this.chatService.sendMessage(
-          user,
-          chat.id,
-          {
-            text: `Task cancelled: ${request.title}`,
+    if (performerToNotify) {
+      this.chatGateway.notifyOrderStatusChanged(customerId, id, RequestStatus.Cancelled)
+      this.chatGateway.notifyOrderStatusChanged(performerToNotify.id, id, RequestStatus.Cancelled)
+
+      void (async () => {
+        try {
+          const chat = await this.chatService.getOrCreateChat(customerId, performerToNotify.id)
+          await this.chatService.sendMessage(request.customer as User, chat.id, {
+            text: `Task cancelled: ${requestTitle}`,
             type: "notification",
             variant: "taskCancelled",
-          },
-          manager as any
-        )
+          })
+          await this.chatService.updateIsActiveOrder(chat.id, false)
+          this.chatGateway.notifyOrderStatusChanged(customerId, id, RequestStatus.Cancelled, chat.id, "rejected")
+          this.chatGateway.notifyOrderStatusChanged(performerToNotify.id, id, RequestStatus.Cancelled, chat.id, "rejected")
+        } catch {
+          // Keep cancel API reliable even if chat side effects fail.
+        }
+      })()
 
-        // Notify performer through notification service (queue)
-        await this.notificationService.send(String(acceptedResponse.performer.id), "taskCancelled", {
+      void this.notificationService
+        .send(String(performerToNotify.id), "taskCancelled", {
           requestId: id,
-          title: request.title,
+          title: requestTitle,
         })
+        .catch(() => {
+          // Keep cancel API reliable even if notification queue is unavailable.
+        })
+    }
 
-        // Send WebSocket order:status_changed events to both parties
-        this.chatGateway.notifyOrderStatusChanged(user.id, id, RequestStatus.Cancelled, chat.id, "rejected")
-        this.chatGateway.notifyOrderStatusChanged(
-          acceptedResponse.performer.id,
-          id,
-          RequestStatus.Cancelled,
-          chat.id,
-          "rejected"
-        )
-
-        // Update isActiveOrder = false in chat
-        await this.chatService.updateIsActiveOrder(chat.id, false)
-      }
-
-      // 4.7 Get the updated request with all relations
-      const updatedRequest = await manager.findOne(Request, {
-        where: { id },
-        relations: ["customer", "responses", "responses.performer", "attachments", "submissions"],
-      })
-
-      if (!updatedRequest) {
-        throw new NotFoundException("Request not found")
-      }
-
-      // Find performer (accepted one)
-      const acceptedResponseForPerformer = updatedRequest.responses.find((r) => r.status === "accepted")
-      const performer = acceptedResponseForPerformer
-        ? {
-            id: acceptedResponseForPerformer.performer.id,
-            firstName: acceptedResponseForPerformer.performer.firstName,
-            lastName: acceptedResponseForPerformer.performer.lastName,
-            avatar: acceptedResponseForPerformer.performer.avatar,
-          }
-        : null
-
-      // Return the updated request with the cancelled status
-      return {
-        id: updatedRequest.id,
-        title: updatedRequest.title,
-        description: updatedRequest.description,
-        price: updatedRequest.price,
-        status: RequestStatus.Cancelled, // Explicitly set the cancelled status
-        attachments:
-          updatedRequest.attachments?.map((att) => ({
-            id: att.id,
-            url: att.url,
-            hash: att.hash,
-          })) || [],
-        latitude: updatedRequest.location.coordinates[1],
-        longitude: updatedRequest.location.coordinates[0],
-        customer: {
-          id: updatedRequest.customer.id,
-          firstName: updatedRequest.customer.firstName,
-          lastName: updatedRequest.customer.lastName,
-          avatar: updatedRequest.customer.avatar,
-        },
-        performer,
-        createdAt: updatedRequest.createdAt.toISOString(),
-        updatedAt: updatedRequest.updatedAt.toISOString(),
-        acceptedAt: updatedRequest.acceptedAt?.toISOString() || null,
-        completedAt: updatedRequest.completedAt?.toISOString() || null,
-        cancelledAt: updatedRequest.cancelledAt?.toISOString() || new Date().toISOString(),
-        expiresAt: updatedRequest.expiresAt?.toISOString() || null,
-        deadlineAt: updatedRequest.deadlineAt?.toISOString() || null,
-        isUrgent: updatedRequest.isUrgent,
-        metadata: updatedRequest.metadata,
-        responses: [], // Empty responses for cancelled requests
-        submission: null,
-      }
-    })
+    return {
+      id: request.id,
+      status: RequestStatus.Cancelled,
+      cancelledAt: cancelledAt.toISOString(),
+    }
   }
 
   async complete(user: User, id: string, dto: CompleteRequestDto): Promise<any> {
@@ -1162,6 +1137,16 @@ export class RequestService {
         }
       )
 
+      await manager
+        .createQueryBuilder()
+        .update(Submission)
+        .set({ status: SubmissionStatus.ACCEPTED })
+        .where("requestId = :requestId AND status = :status", {
+          requestId: id,
+          status: SubmissionStatus.SUBMITTED,
+        })
+        .execute()
+
       // Get or verify chat
       const chat = activeDeal.chat || (await this.chatService.getOrCreateChat(user.id, performer.id))
 
@@ -1194,7 +1179,7 @@ export class RequestService {
       // Return updated request
       const updatedRequest = await manager.findOne(Request, {
         where: { id },
-        relations: ["customer", "responses", "responses.performer", "attachments", "submissions"],
+        relations: ["customer", "responses", "responses.performer", "attachments", "submissions", "submissions.attachments", "submissions.performer"],
       })
 
       if (!updatedRequest) {

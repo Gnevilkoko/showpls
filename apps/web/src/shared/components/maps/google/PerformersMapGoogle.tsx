@@ -1,53 +1,36 @@
 import { GoogleMap } from "@react-google-maps/api"
-import { memo, useCallback, useEffect, useRef, useState } from "react"
+import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { useGoogleMapLoaded } from "../../../providers/GoogleMapContext"
 import { GOOGLE_MAP_ID } from "../../../../constants"
+import { getGoogleMapBaseOptions } from "../../../utils/googleMapBaseOptions"
+import { MarkerUtils, type Marker as ClusterMarker } from "@googlemaps/markerclusterer"
 import type { PerformerType } from "../../../types"
-import { createRoot } from "react-dom/client"
-import statsStarWhiteIcon from "../../../../assets/icons/status/stats-star-white.svg"
+import { createRoot, type Root } from "react-dom/client"
 import PerformerItem from "../../../../pages/Tasks/PerformerItem"
 import { useGetNearbyPerformersQuery } from "../../../../store/api/requestApi"
 import type { PerformerNearby } from "../../../../shared/types/backend"
+import PerformerMapPin from "../PerformerMapPin"
+import { buildPerformerMapMarkerIcon } from "../../../utils/performerMapCanvasIcon"
+import { performerMapDisplayNick } from "../../../utils/performerMapLabel"
 
 interface PerformersMapGoogleProps {
   taskId?: string
 }
 
-interface MarkerContentProps {
-  count: number
-  image: string
-}
-
-const MarkerContent = ({ count, image }: MarkerContentProps) => {
-  return (
-    <div className="custom-marker__content">
-      {count}
-      {count % 1 === 0 && ".0"}
-      <span>
-        <img src={image} alt="Stars Icon" />
-      </span>
-    </div>
-  )
-}
-
 const centerMap = { lat: 55.74982, lng: 37.623965 }
 
-const mapOptions: google.maps.MapOptions = {
-  disableDefaultUI: true,
-  mapId: GOOGLE_MAP_ID,
-  gestureHandling: "greedy",
-}
+type MarkerCleanup = { marker: ClusterMarker; root?: Root }
 
 const PerformersMapGoogle = memo(({ taskId }: PerformersMapGoogleProps) => {
+  const mapOptions = useMemo(() => getGoogleMapBaseOptions(), [])
   const [map, setMap] = useState<google.maps.Map | null>(null)
   const isLoaded = useGoogleMapLoaded()
   const mapPerformerRefs = useRef<Record<string, HTMLDivElement | null>>({})
   const performersContainerRef = useRef<HTMLDivElement | null>(null)
-  const isMarkersInitializedRef = useRef(false)
+  const markerCleanupRef = useRef<MarkerCleanup[]>([])
 
-  // Получаем исполнителей с бэкенда
   const { data: nearbyPerformersData } = useGetNearbyPerformersQuery(
-    { requestId: taskId! },
+    { requestId: taskId!, radius: 50 },
     { skip: !taskId }
   )
 
@@ -57,7 +40,6 @@ const PerformersMapGoogle = memo(({ taskId }: PerformersMapGoogleProps) => {
     setMap(mapInstance)
   }
 
-  // Плавный скролл к выбранному исполнителю в списке
   const scrollToSelectedPerformer = useCallback(
     (performer: PerformerType | PerformerNearby) => {
       if (!map || !performersContainerRef.current) return
@@ -65,66 +47,119 @@ const PerformersMapGoogle = memo(({ taskId }: PerformersMapGoogleProps) => {
       const itemRef = mapPerformerRefs.current[performer.id.toString()]
       const container = performersContainerRef.current
 
-      if (!itemRef || !container) return
+      if (itemRef && container) {
+        const targetScrollLeft = itemRef.offsetLeft - container.clientWidth / 2 + itemRef.offsetWidth / 2
+        const startScrollLeft = container.scrollLeft
+        const distance = targetScrollLeft - startScrollLeft
+        const duration = 500
+        let startTime: number | null = null
 
-      const targetScrollLeft = itemRef.offsetLeft - container.clientWidth / 2 + itemRef.offsetWidth / 2
-      const startScrollLeft = container.scrollLeft
-      const distance = targetScrollLeft - startScrollLeft
-      const duration = 500
-      let startTime: number | null = null
+        const animateScroll = (currentTime: number) => {
+          if (startTime === null) startTime = currentTime
 
-      const animateScroll = (currentTime: number) => {
-        if (startTime === null) startTime = currentTime
+          const progress = Math.min((currentTime - startTime) / duration, 1)
+          const ease = (t: number) => (t < 0.5 ? 2 * t * t : -1 + (4 - 2 * t) * t)
 
-        const progress = Math.min((currentTime - startTime) / duration, 1)
-        const ease = (t: number) => (t < 0.5 ? 2 * t * t : -1 + (4 - 2 * t) * t)
+          container.scrollLeft = startScrollLeft + distance * ease(progress)
 
-        container.scrollLeft = startScrollLeft + distance * ease(progress)
+          if (progress < 1) requestAnimationFrame(animateScroll)
+        }
 
-        if (progress < 1) requestAnimationFrame(animateScroll)
+        requestAnimationFrame(animateScroll)
       }
 
-      // Используем latitude/longitude напрямую из PerformerNearby или position из PerformerType
       const lat = "position" in performer ? performer.position.lat : performer.latitude
       const lng = "position" in performer ? performer.position.lng : performer.longitude
 
       map.panTo({ lat, lng })
-      requestAnimationFrame(animateScroll)
     },
     [map]
   )
 
-  // Инициализация маркеров: создание маркеров на карте
   useEffect(() => {
-    if (!map || !performersList.length || isMarkersInitializedRef.current) return
+    if (!map) return
+    let cancelled = false
 
-    const initMarkers = async () => {
-      const markerLib = (await google.maps.importLibrary("marker")) as unknown as {
-        AdvancedMarkerElement: typeof google.maps.marker.AdvancedMarkerElement
+    const run = async () => {
+      for (const { marker, root } of markerCleanupRef.current) {
+        MarkerUtils.setMap(marker, null)
+        root?.unmount()
       }
-      const { AdvancedMarkerElement } = markerLib
+      markerCleanupRef.current = []
 
-      performersList.forEach((performer) => {
-        const content = document.createElement("div")
-        content.className = `custom-marker ${performer.rating >= 4.5 ? "accent" : ""}`
+      if (!performersList.length) return
 
-        const root = createRoot(content)
-        root.render(<MarkerContent count={performer.rating} image={statsStarWhiteIcon} />)
+      if (GOOGLE_MAP_ID) {
+        const markerLib = (await google.maps.importLibrary("marker")) as unknown as {
+          AdvancedMarkerElement: typeof google.maps.marker.AdvancedMarkerElement
+        }
+        const { AdvancedMarkerElement } = markerLib
 
-        const marker = new AdvancedMarkerElement({
-          map,
-          position: { lat: performer.latitude, lng: performer.longitude },
-          content,
+        if (cancelled) return
+
+        performersList.forEach((performer) => {
+          const content = document.createElement("div")
+          const root = createRoot(content)
+          root.render(
+            <PerformerMapPin
+              avatar={performer.avatar}
+              username={performer.username ?? null}
+              firstName={performer.firstName}
+              lastName={performer.lastName}
+              rating={performer.rating}
+              accent={performer.rating >= 4.5}
+            />
+          )
+
+          const marker = new AdvancedMarkerElement({
+            map,
+            position: { lat: performer.latitude, lng: performer.longitude },
+            content,
+          })
+
+          marker.addListener("click", () => scrollToSelectedPerformer(performer))
+          markerCleanupRef.current.push({ marker, root })
         })
+      } else {
+        if (cancelled) return
 
-        marker.addListener("click", () => scrollToSelectedPerformer(performer))
-      })
+        for (const performer of performersList) {
+          if (cancelled) return
+          const accent = performer.rating >= 4.5
+          const icon = await buildPerformerMapMarkerIcon({
+            avatar: performer.avatar,
+            username: performer.username ?? null,
+            firstName: performer.firstName,
+            lastName: performer.lastName,
+            rating: performer.rating,
+            accent,
+          })
+          const title = performerMapDisplayNick(performer.username ?? null, performer.firstName, performer.lastName)
+          const marker = new google.maps.Marker({
+            map,
+            position: { lat: performer.latitude, lng: performer.longitude },
+            title,
+            icon,
+            optimized: true,
+          })
 
-      isMarkersInitializedRef.current = true
+          marker.addListener("click", () => scrollToSelectedPerformer(performer))
+          markerCleanupRef.current.push({ marker })
+        }
+      }
     }
 
-    initMarkers()
-  }, [map, scrollToSelectedPerformer])
+    void run()
+
+    return () => {
+      cancelled = true
+      for (const { marker, root } of markerCleanupRef.current) {
+        MarkerUtils.setMap(marker, null)
+        root?.unmount()
+      }
+      markerCleanupRef.current = []
+    }
+  }, [map, performersList, scrollToSelectedPerformer])
 
   if (!isLoaded) return <p>Loading map…</p>
 
@@ -137,11 +172,10 @@ const PerformersMapGoogle = memo(({ taskId }: PerformersMapGoogleProps) => {
       <div className="map-performers-wrapper">
         <div className="map-performers-container" ref={performersContainerRef}>
           {performersList.map((performer) => {
-            // Адаптируем PerformerNearby к PerformerType для совместимости с PerformerItem
             const adaptedPerformer = {
               ...performer,
               position: { lat: performer.latitude, lng: performer.longitude },
-              lastSeenAt: new Date() // Fallback так как бекенд пока не возвращает lastSeenAt
+              lastSeenAt: new Date(),
             }
 
             return (

@@ -31,6 +31,13 @@ declare global {
         ): void
         close(): void
         ready(): void
+        /** Кнопка «Назад» в шапке Mini App (Bot API 6.1+). Без неё пользователи жмут только ✕ и думают, что «в меню не выйти». */
+        BackButton?: {
+          show(): void
+          hide(): void
+          onClick(callback: () => void): void
+          offClick(callback: () => void): void
+        }
         MainButton: {
           show(): void
           hide(): void

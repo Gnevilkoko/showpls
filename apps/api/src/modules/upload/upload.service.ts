@@ -13,12 +13,14 @@ export interface UploadResult {
   size: number;
 }
 
-// Allowed file types and size limits according to specifications
+// Allowed file types and size limits (incl. image/heic for iPhone)
 const ALLOWED_IMAGE_TYPES = [
   'image/jpeg',
   'image/png',
   'image/webp',
   'image/gif',
+  'image/heic',
+  'image/heif',
 ];
 
 const ALLOWED_VIDEO_TYPES = [

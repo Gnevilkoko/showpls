@@ -4,13 +4,14 @@ import { useTranslation } from "react-i18next"
 import { useAppSelector } from "../../store"
 import { useGetBalancesQuery } from "../../store/api/userApi"
 
-const formatBalance = (balanceStr: string): string => {
+const formatBalance = (value: string | number | undefined | null): string => {
   try {
-    const balance = BigInt(balanceStr)
+    const balanceStr = value != null ? String(value) : "0"
+    const balance = BigInt(balanceStr || "0")
     const whole = balance / BigInt(1e6)
     return whole.toString()
-  } catch (e) {
-    return "0";
+  } catch {
+    return "0"
   }
 }
 
@@ -21,12 +22,14 @@ const MiniWallet = () => {
 
   const { data: balances } = useGetBalancesQuery(
     { id: userData?.id ?? "" },
-    { skip: !userData?.id }
+    { skip: !userData?.id, refetchOnMountOrArgChange: true }
   )
 
-  const starsBalance = balances?.find((b) => b.token === "STARS" && b.blockchain === null)
-  const availableBalance = starsBalance ? formatBalance(starsBalance.balance) : "0"
-  const lockedBalance = starsBalance ? formatBalance(starsBalance.lockedBalance) : "0"
+  const starsEntries = balances?.filter((b) => b.token === "STARS" && b.blockchain === null) ?? []
+  const starsTotalBalance = starsEntries.reduce((sum, b) => sum + BigInt(b.balance || "0"), BigInt(0)).toString()
+  const starsTotalLocked = starsEntries.reduce((sum, b) => sum + BigInt(b.lockedBalance || "0"), BigInt(0)).toString()
+  const availableBalance = starsEntries.length ? formatBalance(starsTotalBalance) : "0"
+  const lockedBalance = starsEntries.length ? formatBalance(starsTotalLocked) : "0"
 
   const handleClickWallet = () => {
     navigate("/wallet")

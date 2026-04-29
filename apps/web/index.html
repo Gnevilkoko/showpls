@@ -4,7 +4,8 @@
     <meta charset="UTF-8" />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <!-- viewport-fit=cover — safe area на iPhone; maximum-scale=1 — отключает авто-зум при тапе/фокусе (чтобы масштаб не рушился в Telegram mini-app) -->
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, viewport-fit=cover" />
     <title>Showpls</title>
     <!-- Применяем тему до первого рендера, чтобы избежать мигания -->
     <script>

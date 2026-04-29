@@ -51,7 +51,7 @@ export class Balance {
   @Int256Field()
   lockedAmount: string
 
-  @Column({type: "timestamptz"})
+  @Column({ type: "timestamptz", default: () => "CURRENT_TIMESTAMP" })
   updatedAt: Date
 
   @CreateDateColumn({ type: "timestamptz" })

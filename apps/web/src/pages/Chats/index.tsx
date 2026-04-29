@@ -5,6 +5,7 @@ import ChatsHeader from "./components/ChatsHeader"
 import ChatsList from "./screens/ChatsList"
 import { useGetChatListQuery } from "../../store/api/chatApi"
 import { adaptChatListItemToChat, type ChatType } from "../../shared/types/adapters"
+import { isSupportAgentChatItem } from "../../shared/utils/supportChat"
 
 const Chats = () => {
   const { t } = useTranslation()
@@ -17,7 +18,6 @@ const Chats = () => {
     setPage(1)
   }, [])
 
-  // Получаем данные с сервера
   const { data: chatListData, isLoading, isFetching } = useGetChatListQuery({
     search: searchValue || undefined,
     isFavorite: isFavoriteList ? true : undefined,
@@ -25,7 +25,6 @@ const Chats = () => {
     page,
   })
 
-  // Сброс страницы при поиске
   useEffect(() => {
     setPage(1)
   }, [searchValue])
@@ -38,11 +37,32 @@ const Chats = () => {
     }
   }, [hasMore, isFetching])
 
-  // Адаптируем бекенд данные (ChatListItem[]) к интерфейсу фронтенда (ChatType[])
   const adaptedChats: ChatType[] = useMemo(() => {
     if (!chatListData?.items) return []
-    return chatListData.items.map((item) => adaptChatListItemToChat(item))
-  }, [chatListData])
+    const mapped = chatListData.items
+      .filter((item) => !(item.dealsCount === 0 && item.lastMessage === "Offer withdrawn"))
+      .map((item) => adaptChatListItemToChat(item))
+
+    const hasAgentChat = mapped.some((chat) => isSupportAgentChatItem(chat))
+    if (hasAgentChat) return mapped
+
+    return [
+      {
+        chat_id: "support",
+        avatar: "/favicon.svg",
+        first_name: "Showpls",
+        last_name: "Agent",
+        last_message: t("supportChatDescription") || "Support",
+        last_update: Date.now(),
+        is_favorite: false,
+        is_active_order: false,
+        orders: null,
+        is_read: true,
+        count_unread: 0,
+      },
+      ...mapped,
+    ]
+  }, [chatListData, t])
 
   const counters = useMemo(
     () => ({

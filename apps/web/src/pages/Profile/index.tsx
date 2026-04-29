@@ -8,13 +8,20 @@ import forwardIcon from "../../assets/icons/ui/forward.svg"
 import likeTagIcon from "../../assets/icons/ui/like-tag.svg"
 import notificationIcon from "../../assets/icons/status/notification.svg"
 import globalLangIcon from "../../assets/icons/ui/global-lang.svg"
-import { useState } from "react"
+import { useMemo, useState } from "react"
+import { Link, useNavigate } from "react-router-dom"
 import MiniWallet from "../../shared/components/MiniWallet"
 import ToggleProfileMode from "../../shared/components/ToggleProfileMode"
 import { useAppDispatch, useAppSelector } from "../../store"
 import { useTranslation } from "react-i18next"
 import { AVAILABLE_LANGUAGES } from "../../store/languageSlice"
-import { useGetMeQuery, useGetReviewsQuery, useUpdateLanguageMutation } from "../../store/api/userApi"
+import {
+  useGetMeQuery,
+  useGetReviewsQuery,
+  useToggleAvailableMutation,
+  useUpdateUserLocationMutation,
+  useUpdateLanguageMutation,
+} from "../../store/api/userApi"
 import Navigation from "../../shared/components/Navigation"
 import ProfileBtnItem from "./components/ProfileBtnItem"
 import { AVAILABLE_THEMES } from "../../constants"
@@ -22,20 +29,38 @@ import themeIcon from "../../assets/icons/ui/theme.svg"
 import ModalEditProfile from "./components/ModalEditProfile"
 import ModalReviews from "./components/ModalReviews"
 import { setTheme, type Theme } from "../../store/themeSlice"
-import Modal from "../../shared/components/Modal"
-import TransactionsList from "../Wallet/components/TransactionsList"
 import { useSelector } from "react-redux"
 import type { RootState } from "../../store"
+import { clearAuthData, updateUserPartial } from "../../store/userSlice"
+import { useSignOutMutation } from "../../store/api/authApi"
+import boxIcon from "../../assets/icons/ui/box.svg"
+import verificationShieldIcon from "../../assets/icons/ui/security-safe.svg"
+import supportMenuIcon from "../../assets/icons/ui/support.svg"
+import messageQuestionIcon from "../../assets/icons/ui/message-question.svg"
+import documentTextIcon from "../../assets/icons/ui/document-text.svg"
+import { useGetChatListQuery } from "../../store/api/chatApi"
+import ModalProfileNotifications from "./components/ModalProfileNotifications"
+import ModalPerformerVerification from "./components/ModalPerformerVerification"
+import { useNotification } from "../../shared/hooks/useNotification"
+import { NotificationHandler } from "../../shared/utils/notificationHandler"
+import { requestGeolocationPosition } from "../../shared/utils/performerDeviceProfile"
+import { usePerformerReadyGeolocation } from "../../shared/hooks/usePerformerReadyGeolocation"
 
 const Profile = () => {
+  const navigate = useNavigate()
   const { t } = useTranslation()
   const theme: Theme = useSelector((state: RootState) => state.theme)
   const dispatch = useAppDispatch()
+  const notification = useNotification()
   const [updateLanguage] = useUpdateLanguageMutation()
+  const [signOut] = useSignOutMutation()
+  const [toggleAvailable, { isLoading: togglingReady }] = useToggleAvailableMutation()
+  const [updateUserLocation] = useUpdateUserLocationMutation()
 
   const [isOpenEditProfile, setIsOpenEditProfile] = useState<boolean>(false)
   const [isOpenReviews, setIsOpenReviews] = useState<boolean>(false)
   const [isOpenNotifications, setIsOpenNotifications] = useState<boolean>(false)
+  const [isOpenVerification, setIsOpenVerification] = useState(false)
 
   const selectedLang = useAppSelector((state) => state.language)
   const selectedTheme = useAppSelector((state) => state.theme)
@@ -43,8 +68,9 @@ const Profile = () => {
   const userData = useAppSelector((state) => state.user.userData)
   const { data: profileData } = useGetMeQuery(undefined, { skip: !userData })
   const { data: reviews = [] } = useGetReviewsQuery(undefined, { skip: !userData })
+  const { data: chatListData } = useGetChatListQuery({ page: 1, limit: 15 }, { skip: !userData })
+  const unreadChats = chatListData?.countUnread ?? 0
 
-  const [isReady, setIsReady] = useState(false)
   const [isOpenLang, setIsOpenLang] = useState<boolean>(false)
   const [isOpenTheme, setIsOpenTheme] = useState<boolean>(false)
 
@@ -73,12 +99,72 @@ const Profile = () => {
     }, 300)
   }
 
-  if (!userData) {
+  const mergedProfile = useMemo(() => {
+    if (!userData) return null
+    return profileData ? { ...userData, ...profileData } : userData
+  }, [userData, profileData])
+
+  const handleReadyToggle = async () => {
+    if (!mergedProfile) return
+    const nextOn = !Boolean(mergedProfile.isAvailable)
+    const verified =
+      mergedProfile.performerVerification != null && typeof mergedProfile.performerVerification === "object"
+    if (nextOn && !verified) {
+      notification.showError("verifyFirstToWork")
+      setIsOpenVerification(true)
+      return
+    }
+    try {
+      if (nextOn && verified) {
+        let pos: GeolocationPosition
+        try {
+          pos = await requestGeolocationPosition()
+        } catch {
+          notification.showError("performLocationRequiredForReady")
+          return
+        }
+        try {
+          await updateUserLocation({
+            latitude: pos.coords.latitude,
+            longitude: pos.coords.longitude,
+          }).unwrap()
+        } catch (locErr) {
+          if (!NotificationHandler.wasErrorAlreadyShownByBaseQuery(locErr)) {
+            notification.showError("somethingWentWrong")
+          }
+          return
+        }
+      }
+      const r = await toggleAvailable().unwrap()
+      dispatch(updateUserPartial({ isAvailable: r.isAvailable }))
+    } catch (e: unknown) {
+      const msg = (e as { data?: { message?: string } })?.data?.message
+      if (msg === "PERFORMER_VERIFICATION_REQUIRED") {
+        notification.showError("verifyFirstToWork")
+        setIsOpenVerification(true)
+      } else if (msg === "PERFORMER_LOCATION_REQUIRED") {
+        notification.showError("performLocationRequiredForReady")
+      } else if (!NotificationHandler.wasErrorAlreadyShownByBaseQuery(e)) {
+        notification.showError("somethingWentWrong")
+      }
+    }
+  }
+
+  if (!userData || !mergedProfile) {
     return <div>{t("notAuthorized")}</div>
   }
 
-  const profile = profileData || userData
+  const profile = mergedProfile
+  const isReady = Boolean(mergedProfile.isAvailable)
+  const performerVerified =
+    mergedProfile.performerVerification != null && typeof mergedProfile.performerVerification === "object"
   const displayRating = (profileData?.rating ?? userData.rating ?? 5).toFixed(1)
+
+  usePerformerReadyGeolocation({
+    isAvailable: isReady,
+    isVerified: performerVerified,
+    userId: profile.id != null ? String(profile.id) : undefined,
+  })
 
   return (
     <div className="page profile">
@@ -146,8 +232,13 @@ const Profile = () => {
             </div>
 
             <div>
-              <label className="toggle-switch-urgent">
-                <input type="checkbox" checked={isReady} onChange={() => setIsReady((val) => !val)} />
+              <label className={`toggle-switch-urgent ${!performerVerified && !isReady ? "toggle-switch-urgent--needs-verify" : ""}`}>
+                <input
+                  type="checkbox"
+                  checked={isReady}
+                  onChange={handleReadyToggle}
+                  disabled={togglingReady}
+                />
                 <span className="slider" />
               </label>
             </div>
@@ -158,11 +249,25 @@ const Profile = () => {
           {activeMode === "performer" && <div className="dash" />}
 
           <ProfileBtnItem
+            title={t("myOrders")}
+            icon={boxIcon}
+            onClick={() =>
+              navigate("/tasks", {
+                state: { mode: activeMode === "customer" ? "createTask" : undefined },
+              })
+            }
+          />
+
+          <ProfileBtnItem title={t("verification")} icon={verificationShieldIcon} onClick={() => setIsOpenVerification(true)}>
+            {performerVerified ? <div className="profile__option-value">{t("performerVerification.verifiedShort")}</div> : null}
+          </ProfileBtnItem>
+
+          <ProfileBtnItem
             title={t("notifications")}
             icon={notificationIcon}
             onClick={() => setIsOpenNotifications(true)}
           >
-            <div className="profile__option-count">0</div>
+            {unreadChats > 0 ? <div className="profile__option-count">{unreadChats > 99 ? "99+" : unreadChats}</div> : null}
           </ProfileBtnItem>
 
           <div className="dash" />
@@ -204,10 +309,36 @@ const Profile = () => {
               ))}
             </ul>
           </ProfileBtnItem>
+
+          <ProfileBtnItem title={t("support")} icon={supportMenuIcon} onClick={() => navigate("/chat/support")} />
+
+          <ProfileBtnItem title={t("about")} icon={messageQuestionIcon} onClick={() => window.open("https://showpls.com", "_blank", "noopener,noreferrer")} />
+
+          <div className="dash" />
+
+          <ProfileBtnItem
+            title={t("privacySecurity")}
+            icon={documentTextIcon}
+            onClick={() => window.open("https://showpls.com/privacy.html", "_blank", "noopener,noreferrer")}
+          />
         </div>
       </div>
 
-      <button className="specials_button">{t("logOut")}</button>
+      {userData?.role === "admin" && (
+        <Link to="/admin" className="specials_button profile__admin-panel">
+          {t("adminPanel.title")}
+        </Link>
+      )}
+
+      <button
+        className="specials_button"
+        onClick={() => {
+          signOut()
+          dispatch(clearAuthData())
+        }}
+      >
+        {t("logOut")}
+      </button>
 
       <Navigation />
 
@@ -215,9 +346,13 @@ const Profile = () => {
 
       <ModalReviews isOpenReviews={isOpenReviews} setIsOpenReviews={setIsOpenReviews} reviews={reviews} />
 
-      <Modal isOpen={isOpenNotifications} onClose={() => setIsOpenNotifications(false)}>
-        <TransactionsList />
-      </Modal>
+      <ModalProfileNotifications
+        isOpen={isOpenNotifications}
+        onClose={() => setIsOpenNotifications(false)}
+        unreadCount={unreadChats}
+      />
+
+      <ModalPerformerVerification isOpen={isOpenVerification} onClose={() => setIsOpenVerification(false)} />
     </div>
   )
 }

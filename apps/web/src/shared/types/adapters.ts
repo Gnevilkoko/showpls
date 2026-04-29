@@ -2,6 +2,7 @@
 // Используются только там, где нужны специфичные для UI преобразования
 
 import type { RequestBackend, ChatListItem, MessageBackend, RequestMapItem, RequestStatus } from "./backend"
+import type { DealBackend } from "./backend"
 
 /**
  * Преобразует RequestBackend в TaskType для использования в UI
@@ -27,8 +28,10 @@ export type TaskType = Omit<RequestBackend, "latitude" | "longitude" | "attachme
 
 /**
  * Адаптер для преобразования RequestBackend в TaskType
+ * @param request — запрос с бэкенда
+ * @param deal — сделка по этой задаче (для arbitrationApproved)
  */
-export function adaptRequestToTask(request: RequestBackend): TaskType {
+export function adaptRequestToTask(request: RequestBackend, deal?: DealBackend | null): TaskType {
   // Вычисление tags из expiresAt/deadlineAt
   const tags: TaskType["tags"] = []
   if (request.isUrgent && request.deadlineAt) {
@@ -57,9 +60,9 @@ export function adaptRequestToTask(request: RequestBackend): TaskType {
     attachments: request.attachments.map((att) => att.url),
     customer_id: request.customer.id,
     performer_id: request.performer ? request.performer.id : null,
-    mode, // Вычисляется из metadata.verifProof
+    mode,
     tags,
-    arbitrationApproved: false, // По умолчанию false, так как это поле из DealBackend
+    arbitrationApproved: deal?.arbitrationApproved ?? false,
   }
 }
 
@@ -112,7 +115,16 @@ export function adaptChatListItemToChat(chat: ChatListItem, orders?: ChatOrderTy
 export type Message = {
   id: number | string
   type: "notification" | "message"
-  variant?: "upload" | "permissionToCancel" | "newOffer"
+  variant?:
+    | "upload"
+    | "permissionToCancel"
+    | "newOffer"
+    | "responseAccepted"
+    | "responseDeclined"
+    | "taskCompleted"
+    | "taskCancelled"
+    | "offerWithdrawn"
+    | "submissionRejected"
   sender_id: number | string
   receiver_id: number | string
   text: string | null
@@ -128,22 +140,42 @@ export type Message = {
  * Адаптер для преобразования MessageBackend в Message
  */
 export function adaptMessageBackendToMessage(message: MessageBackend, order?: TaskType): Message {
-  // Преобразование variant
+  // Старые сообщения с текстом "Response accepted" / "Response declined" показываем как уведомления с переводом
+  const rawText = message.text?.trim() ?? ""
+  let type = message.type
   let variant: Message["variant"] = undefined
-  if (message.variant === "newTask" || message.variant === "newOffer") {
+  let text: string | null = message.text
+
+  if (message.type === "message" && (rawText === "Response accepted" || rawText === "Response declined")) {
+    type = "notification"
+    variant = rawText === "Response accepted" ? "responseAccepted" : "responseDeclined"
+    text = null
+  } else if (message.type === "message" && rawText === "Offer withdrawn") {
+    type = "notification"
+    variant = "offerWithdrawn"
+    text = null
+  } else if (message.variant === "newTask" || message.variant === "newOffer") {
     variant = "newOffer"
-  } else if (message.variant === "upload" || message.variant === "permissionToCancel") {
+  } else if (
+    message.variant === "upload" ||
+    message.variant === "permissionToCancel" ||
+    message.variant === "responseAccepted" ||
+    message.variant === "responseDeclined" ||
+    message.variant === "taskCompleted" ||
+    message.variant === "taskCancelled" ||
+    message.variant === "offerWithdrawn" ||
+    message.variant === "submissionRejected"
+  ) {
     variant = message.variant
   }
-  // "taskCompleted" и "taskCancelled" игнорируются, так как не поддерживаются в старом типе Message
 
   return {
     id: message.id,
-    type: message.type,
+    type,
     variant,
     sender_id: message.sender.id,
     receiver_id: message.receiver.id,
-    text: message.text,
+    text,
     requestId: message.requestId ?? null,
     responseId: message.responseId ?? null,
     attachments: message.attachments,

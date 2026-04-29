@@ -29,6 +29,8 @@ import { LedgerModule } from "@ledger"
 import { CacheModule } from "@nestjs/cache-manager"
 import KeyvRedis from "@keyv/redis"
 import { SpecialsModule } from "./modules/specials/specials.module"
+import { HealthModule } from "./modules/health/health.module"
+import { DeviceModule } from "./modules/device/device.module"
 
 @Module({
   imports: [
@@ -163,6 +165,8 @@ import { SpecialsModule } from "./modules/specials/specials.module"
     SubmissionModule,
     ArbitrationModule,
     SpecialsModule,
+    HealthModule,
+    DeviceModule,
   ],
   providers: [BotHandler],
   controllers: [],

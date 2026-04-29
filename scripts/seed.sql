@@ -23,13 +23,6 @@ VALUES (
 )
 ON CONFLICT (id) DO UPDATE SET "lastKnownLocation" = ST_SetSRID(ST_MakePoint(37.630000, 55.760000), 4326);
 
--- 3.1. АДМИН (999999) - Добавлен!
-INSERT INTO "user" (id, "firstName", "tgId", role, "languageCode", banned, "lastSeenAt", "createdAt")
-VALUES (
-    999999, 'BigBossAdmin', 999999, 'admin', 'ru', false, NOW(), NOW()
-)
-ON CONFLICT (id) DO UPDATE SET role = 'admin';
-
 -- 4. Счет Заказчика
 INSERT INTO "account" (id, purpose, "ownerType", "ownerId", "createdAt")
 VALUES (1, 'main', 'user', 777777, NOW())

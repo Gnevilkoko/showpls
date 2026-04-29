@@ -1,11 +1,16 @@
 import { GoogleMap } from "@react-google-maps/api"
-import { memo, useCallback, useEffect, useRef, useState } from "react"
+import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { useGoogleMapLoaded } from "../../../providers/GoogleMapContext"
 import { GOOGLE_MAP_ID } from "../../../../constants"
-import type { TaskType } from "../../../types"
+import { getGoogleMapBaseOptions } from "../../../utils/googleMapBaseOptions"
+import { MarkerClusterer, MarkerUtils, type Marker as ClusterMarker } from "@googlemaps/markerclusterer"
+import type { PerformerType, TaskType } from "../../../types"
 import { createRoot, type Root } from "react-dom/client"
-import { MarkerClusterer } from "@googlemaps/markerclusterer"
 import starsWhiteIcon from "../../../../assets/icons/status/stars-white.svg"
+import PerformerItem from "../../../../pages/Tasks/PerformerItem"
+import PerformerMapPin from "../PerformerMapPin"
+import { buildPerformerMapMarkerIcon } from "../../../utils/performerMapCanvasIcon"
+import { performerMapDisplayNick } from "../../../utils/performerMapLabel"
 
 interface MarkerContentProps {
   count: number
@@ -24,218 +29,467 @@ const MarkerContent = ({ count, image }: MarkerContentProps) => {
   )
 }
 
+/** Исполнители «готов к работе» на карте (данные с бэкенда) */
+export type MainMapPerformerRow = {
+  id: string
+  username: string | null
+  firstName: string
+  lastName: string | null
+  avatar: string | null
+  latitude: number
+  longitude: number
+  rating: number
+  distance: number
+}
+
 interface MainMapGoogleProps {
   selectedTask: TaskType | null
   handleSelectTask: (task: TaskType) => void
   tasksList: TaskType[]
-  onBoundsChange?: (bounds: { north: number; south: number; east: number; west: number } | null) => void
+  /** По умолчанию маркеры задач; в режиме исполнителя — все готовые исполнители с геометкой */
+  mode?: "tasks" | "performers"
+  performersList?: MainMapPerformerRow[]
 }
+
+/** Не рендерим сотни карточек внизу — только карта + кластеры */
+const MAX_PERFORMERS_STRIP = 48
 
 const centerMap = { lat: 55.74982, lng: 37.623965 }
 
-const mapOptions: google.maps.MapOptions = {
-  disableDefaultUI: true,
-  mapId: GOOGLE_MAP_ID,
-  gestureHandling: "greedy",
-}
+const MainMapGoogle = memo(
+  ({
+    selectedTask,
+    handleSelectTask,
+    tasksList,
+    mode = "tasks",
+    performersList = [],
+  }: MainMapGoogleProps) => {
+    const [map, setMap] = useState<google.maps.Map | null>(null)
+    const isLoaded = useGoogleMapLoaded()
+    const markersRef = useRef<Map<string, ClusterMarker>>(new Map())
+    const rootsRef = useRef<Map<string, Root>>(new Map())
+    const clustererRef = useRef<MarkerClusterer | null>(null)
 
-const MainMapGoogle = memo(({ selectedTask, handleSelectTask, tasksList, onBoundsChange }: MainMapGoogleProps) => {
-  const [map, setMap] = useState<google.maps.Map | null>(null)
-  const isLoaded = useGoogleMapLoaded()
-  const markersRef = useRef<Map<string, google.maps.marker.AdvancedMarkerElement>>(new Map())
-  const rootsRef = useRef<Map<string, Root>>(new Map())
-  const clustererRef = useRef<MarkerClusterer | null>(null)
+    const performerMarkersRef = useRef<Map<string, ClusterMarker>>(new Map())
+    const performerRootsRef = useRef<Map<string, Root>>(new Map())
+    const performerClustererRef = useRef<MarkerClusterer | null>(null)
+    const mapPerformerRefs = useRef<Record<string, HTMLDivElement | null>>({})
+    const performersContainerRef = useRef<HTMLDivElement | null>(null)
 
-  const handleLoad = useCallback((mapInstance: google.maps.Map) => {
-    setMap(mapInstance)
-  }, [])
+    const mapOptions = useMemo(() => getGoogleMapBaseOptions(), [])
 
-  // Функция для получения bounds карты
-  const getBounds = useCallback((): { north: number; south: number; east: number; west: number } | null => {
-    if (!map) return null
+    const handleLoad = useCallback((mapInstance: google.maps.Map) => {
+      setMap(mapInstance)
+    }, [])
 
-    const bounds = map.getBounds()
-    if (!bounds) return null
+    const scrollToSelectedPerformer = useCallback(
+      (performer: MainMapPerformerRow) => {
+        if (!map || !performersContainerRef.current) return
 
-    const ne = bounds.getNorthEast()
-    const sw = bounds.getSouthWest()
+        const itemRef = mapPerformerRefs.current[performer.id.toString()]
+        const container = performersContainerRef.current
 
-    return {
-      north: ne.lat(),
-      south: sw.lat(),
-      east: ne.lng(),
-      west: sw.lng(),
-    }
-  }, [map])
+        if (itemRef && container) {
+          const targetScrollLeft = itemRef.offsetLeft - container.clientWidth / 2 + itemRef.offsetWidth / 2
+          const startScrollLeft = container.scrollLeft
+          const distance = targetScrollLeft - startScrollLeft
+          const duration = 500
+          let startTime: number | null = null
 
-  // Обработчик изменения bounds карты (zoom, pan, drag) с debounce
-  useEffect(() => {
-    if (!map || !onBoundsChange) return
+          const animateScroll = (currentTime: number) => {
+            if (startTime === null) startTime = currentTime
 
-    // Debounce для оптимизации (500ms)
-    let debounceTimer: number | null = null
-    const DEBOUNCE_DELAY = 500
+            const progress = Math.min((currentTime - startTime) / duration, 1)
+            const ease = (t: number) => (t < 0.5 ? 2 * t * t : -1 + (4 - 2 * t) * t)
 
-    const updateBounds = () => {
-      // Очищаем предыдущий таймер
-      if (debounceTimer !== null) {
-        clearTimeout(debounceTimer)
-      }
+            container.scrollLeft = startScrollLeft + distance * ease(progress)
 
-      // Устанавливаем новый таймер
-      debounceTimer = window.setTimeout(() => {
-        const bounds = getBounds()
-        if (bounds) {
-          onBoundsChange(bounds)
+            if (progress < 1) requestAnimationFrame(animateScroll)
+          }
+
+          requestAnimationFrame(animateScroll)
         }
-        debounceTimer = null
-      }, DEBOUNCE_DELAY)
-    }
 
-    // Слушаем события изменения карты
-    // Используем только события окончания действий для оптимизации
-    const listeners = [
-      map.addListener("bounds_changed", updateBounds),
-      map.addListener("dragend", updateBounds),
-      map.addListener("zoom_changed", updateBounds),
-    ]
+        map.panTo({ lat: performer.latitude, lng: performer.longitude })
+      },
+      [map]
+    )
 
-    // Первоначальное получение bounds
-    const initialBounds = getBounds()
-    if (initialBounds) {
-      onBoundsChange(initialBounds)
-    }
-
-    return () => {
-      if (debounceTimer !== null) {
-        clearTimeout(debounceTimer)
+    useEffect(() => {
+      if (map && selectedTask) {
+        map.panTo(selectedTask.position)
       }
-      listeners.forEach((listener) => {
-        google.maps.event.removeListener(listener)
-      })
-    }
-  }, [map, onBoundsChange, getBounds])
+    }, [map, selectedTask])
 
-  // Программное центрирование карты на выбранной задаче при изменении selectedTask
-  useEffect(() => {
-    if (map && selectedTask) {
-      map.panTo(selectedTask.position)
-    }
-  }, [map, selectedTask])
+    const previousTaskIdsRef = useRef<Set<string>>(new Set())
 
-  // Ref для хранения предыдущего списка ID задач (для оптимизации)
-  const previousTaskIdsRef = useRef<Set<string>>(new Set())
+    useEffect(() => {
+      if (!map) return
 
-  // Обновление маркеров при изменении tasksList с кластеризацией
-  useEffect(() => {
-    if (!map) return
-
-    const updateMarkers = async () => {
-      // Динамическая загрузка библиотеки маркеров Google Maps (для AdvancedMarkerElement)
-      const markerLib = (await google.maps.importLibrary("marker")) as unknown as {
-        AdvancedMarkerElement: typeof google.maps.marker.AdvancedMarkerElement
-      }
-      const { AdvancedMarkerElement } = markerLib
-
-      // Получаем множество ID текущих задач
-      const currentTaskIds = new Set(tasksList.map((task) => task.id))
-
-      // Проверяем, изменился ли список задач (сравниваем по ID)
-      const previousTaskIds = previousTaskIdsRef.current
-      const taskIdsChanged =
-        currentTaskIds.size !== previousTaskIds.size || ![...currentTaskIds].every((id) => previousTaskIds.has(id))
-
-      // Если список задач не изменился, не обновляем кластер
-      if (!taskIdsChanged && clustererRef.current) {
+      if (mode === "performers") {
+        if (clustererRef.current) {
+          clustererRef.current.clearMarkers()
+          clustererRef.current = null
+        }
+        for (const [, marker] of markersRef.current.entries()) {
+          MarkerUtils.setMap(marker, null)
+        }
+        for (const [, root] of rootsRef.current.entries()) {
+          root.unmount()
+        }
+        markersRef.current.clear()
+        rootsRef.current.clear()
+        previousTaskIdsRef.current = new Set()
         return
       }
 
-      // Обновляем ref с текущими ID
-      previousTaskIdsRef.current = currentTaskIds
+      const updateMarkers = async () => {
+        const currentTaskIds = new Set(tasksList.map((task) => task.id))
 
-      // Удаляем старый кластер, если он существует
-      if (clustererRef.current) {
-        clustererRef.current.clearMarkers()
-        clustererRef.current = null
-      }
+        const previousTaskIds = previousTaskIdsRef.current
+        const taskIdsChanged =
+          currentTaskIds.size !== previousTaskIds.size || ![...currentTaskIds].every((id) => previousTaskIds.has(id))
 
-      // Удаляем маркеры, которых нет в новом списке
-      for (const [taskId, marker] of markersRef.current.entries()) {
-        if (!currentTaskIds.has(taskId)) {
-          marker.map = null
-          const root = rootsRef.current.get(taskId)
-          if (root) {
-            root.unmount()
-          }
-          markersRef.current.delete(taskId)
-          rootsRef.current.delete(taskId)
-        }
-      }
-
-      // Создаем или обновляем маркеры для задач
-      const markers: google.maps.marker.AdvancedMarkerElement[] = []
-
-      tasksList.forEach((task) => {
-        // Если маркер уже существует, используем его
-        if (markersRef.current.has(task.id)) {
-          markers.push(markersRef.current.get(task.id)!)
+        if (!taskIdsChanged && clustererRef.current) {
           return
         }
 
-        // Создаем новый маркер
-        const content = document.createElement("div")
-        content.className = `custom-marker ${task.mode === "pro" ? "accent" : ""}`
+        previousTaskIdsRef.current = currentTaskIds
 
-        const root = createRoot(content)
-        root.render(<MarkerContent count={Number(task.price)} image={starsWhiteIcon} />)
+        if (clustererRef.current) {
+          clustererRef.current.clearMarkers()
+          clustererRef.current = null
+        }
 
-        const marker = new AdvancedMarkerElement({
-          map,
-          position: task.position,
-          content,
-        })
+        for (const [taskId, marker] of markersRef.current.entries()) {
+          if (!currentTaskIds.has(taskId)) {
+            MarkerUtils.setMap(marker, null)
+            const root = rootsRef.current.get(taskId)
+            if (root) {
+              root.unmount()
+            }
+            markersRef.current.delete(taskId)
+            rootsRef.current.delete(taskId)
+          }
+        }
 
-        marker.addListener("click", () => handleSelectTask(task))
+        if (GOOGLE_MAP_ID) {
+          const markerLib = (await google.maps.importLibrary("marker")) as unknown as {
+            AdvancedMarkerElement: typeof google.maps.marker.AdvancedMarkerElement
+          }
+          const { AdvancedMarkerElement } = markerLib
 
-        markersRef.current.set(task.id, marker)
-        rootsRef.current.set(task.id, root)
-        markers.push(marker)
-      })
+          const markers: google.maps.marker.AdvancedMarkerElement[] = []
 
-      // Создаем новый кластер с маркерами (только если список задач изменился)
-      if (markers.length > 0) {
-        clustererRef.current = new MarkerClusterer({
-          map,
-          markers,
-          renderer: {
-            render: ({ count, position }) => {
-              const clusterElement = document.createElement("div")
-              clusterElement.className = "cluster"
-              clusterElement.textContent = count.toString()
+          tasksList.forEach((task) => {
+            if (markersRef.current.has(task.id)) {
+              markers.push(markersRef.current.get(task.id)! as google.maps.marker.AdvancedMarkerElement)
+              return
+            }
 
-              const clusterMarker = new AdvancedMarkerElement({
-                position,
-                content: clusterElement,
-                map,
-              })
+            const content = document.createElement("div")
+            content.className = `custom-marker ${task.mode === "pro" ? "accent" : ""}`
 
-              return clusterMarker
-            },
-          },
-        })
+            const root = createRoot(content)
+            root.render(<MarkerContent count={Number(task.price)} image={starsWhiteIcon} />)
+
+            const marker = new AdvancedMarkerElement({
+              map,
+              position: task.position,
+              content,
+            })
+
+            marker.addListener("click", () => handleSelectTask(task))
+
+            markersRef.current.set(task.id, marker)
+            rootsRef.current.set(task.id, root)
+            markers.push(marker)
+          })
+
+          if (markers.length > 0) {
+            clustererRef.current = new MarkerClusterer({
+              map,
+              markers,
+              renderer: {
+                render: ({ count, position }) => {
+                  const clusterElement = document.createElement("div")
+                  clusterElement.className = "cluster"
+                  clusterElement.textContent = count.toString()
+
+                  const clusterMarker = new AdvancedMarkerElement({
+                    position,
+                    content: clusterElement,
+                    map,
+                  })
+
+                  return clusterMarker
+                },
+              },
+            })
+          }
+        } else {
+          const markers: google.maps.Marker[] = []
+
+          tasksList.forEach((task) => {
+            if (markersRef.current.has(task.id)) {
+              markers.push(markersRef.current.get(task.id)! as google.maps.Marker)
+              return
+            }
+
+            const marker = new google.maps.Marker({
+              map,
+              position: task.position,
+              title: String(task.price),
+              icon: {
+                url: starsWhiteIcon,
+                scaledSize: new google.maps.Size(40, 40),
+                anchor: new google.maps.Point(20, 40),
+              },
+            })
+
+            marker.addListener("click", () => handleSelectTask(task))
+
+            markersRef.current.set(task.id, marker)
+            markers.push(marker)
+          })
+
+          if (markers.length > 0) {
+            clustererRef.current = new MarkerClusterer({
+              map,
+              markers,
+              renderer: {
+                render: ({ count, position }) =>
+                  new google.maps.Marker({
+                    position,
+                    label: { text: String(count), color: "#111", fontSize: "11px", fontWeight: "700" },
+                    icon: {
+                      path: google.maps.SymbolPath.CIRCLE,
+                      scale: 18,
+                      fillColor: "#5c6bc0",
+                      fillOpacity: 0.95,
+                      strokeColor: "#fff",
+                      strokeWeight: 2,
+                    },
+                  }),
+              },
+            })
+          }
+        }
       }
-    }
 
-    updateMarkers()
-  }, [map, tasksList, handleSelectTask])
+      void updateMarkers()
+    }, [map, tasksList, handleSelectTask, mode])
 
-  if (!isLoaded) return <p>Loading map…</p>
+    useEffect(() => {
+      if (!map) return
 
-  return (
-    <div className="map-wrapper">
-      <GoogleMap mapContainerClassName="map" center={centerMap} zoom={14} onLoad={handleLoad} options={mapOptions} />
-    </div>
-  )
-})
+      if (mode !== "performers") {
+        if (performerClustererRef.current) {
+          performerClustererRef.current.clearMarkers()
+          performerClustererRef.current = null
+        }
+        for (const [, marker] of performerMarkersRef.current.entries()) {
+          MarkerUtils.setMap(marker, null)
+        }
+        for (const [, root] of performerRootsRef.current.entries()) {
+          root.unmount()
+        }
+        performerMarkersRef.current.clear()
+        performerRootsRef.current.clear()
+        return
+      }
+
+      let cancelled = false
+
+      const updatePerformerMarkers = async () => {
+        if (cancelled) return
+
+        if (performerClustererRef.current) {
+          performerClustererRef.current.clearMarkers()
+          performerClustererRef.current = null
+        }
+
+        for (const [, marker] of performerMarkersRef.current.entries()) {
+          MarkerUtils.setMap(marker, null)
+        }
+        for (const [, root] of performerRootsRef.current.entries()) {
+          root.unmount()
+        }
+        performerMarkersRef.current.clear()
+        performerRootsRef.current.clear()
+
+        if (GOOGLE_MAP_ID) {
+          const markerLib = (await google.maps.importLibrary("marker")) as unknown as {
+            AdvancedMarkerElement: typeof google.maps.marker.AdvancedMarkerElement
+          }
+          const { AdvancedMarkerElement } = markerLib
+
+          if (cancelled) return
+
+          const markers: google.maps.marker.AdvancedMarkerElement[] = []
+
+          performersList.forEach((performer) => {
+            const content = document.createElement("div")
+
+            const root = createRoot(content)
+            root.render(
+              <PerformerMapPin
+                avatar={performer.avatar}
+                username={performer.username}
+                firstName={performer.firstName}
+                lastName={performer.lastName}
+                rating={performer.rating}
+                accent={performer.rating >= 4.5}
+              />,
+            )
+
+            const marker = new AdvancedMarkerElement({
+              map,
+              position: { lat: performer.latitude, lng: performer.longitude },
+              content,
+            })
+
+            marker.addListener("click", () => scrollToSelectedPerformer(performer))
+
+            performerMarkersRef.current.set(performer.id, marker)
+            performerRootsRef.current.set(performer.id, root)
+            markers.push(marker)
+          })
+
+          if (markers.length > 0) {
+            performerClustererRef.current = new MarkerClusterer({
+              map,
+              markers,
+              renderer: {
+                render: ({ count, position }) => {
+                  const clusterElement = document.createElement("div")
+                  clusterElement.className = "cluster"
+                  clusterElement.textContent = count.toString()
+
+                  const clusterMarker = new AdvancedMarkerElement({
+                    position,
+                    content: clusterElement,
+                    map,
+                  })
+
+                  return clusterMarker
+                },
+              },
+            })
+          }
+        } else {
+          if (cancelled) return
+
+          const markers: google.maps.Marker[] = []
+
+          for (const performer of performersList) {
+            if (cancelled) return
+            const accent = performer.rating >= 4.5
+            const icon = await buildPerformerMapMarkerIcon({
+              avatar: performer.avatar,
+              username: performer.username,
+              firstName: performer.firstName,
+              lastName: performer.lastName,
+              rating: performer.rating,
+              accent,
+            })
+            const title = performerMapDisplayNick(performer.username, performer.firstName, performer.lastName)
+            const marker = new google.maps.Marker({
+              map,
+              position: { lat: performer.latitude, lng: performer.longitude },
+              title,
+              icon,
+              optimized: true,
+            })
+
+            marker.addListener("click", () => scrollToSelectedPerformer(performer))
+
+            performerMarkersRef.current.set(performer.id, marker)
+            markers.push(marker)
+          }
+
+          if (markers.length > 0) {
+            performerClustererRef.current = new MarkerClusterer({
+              map,
+              markers,
+              renderer: {
+                render: ({ count, position }) =>
+                  new google.maps.Marker({
+                    position,
+                    label: { text: String(count), color: "#111", fontSize: "11px", fontWeight: "700" },
+                    icon: {
+                      path: google.maps.SymbolPath.CIRCLE,
+                      scale: 18,
+                      fillColor: "#7e57c2",
+                      fillOpacity: 0.95,
+                      strokeColor: "#fff",
+                      strokeWeight: 2,
+                    },
+                  }),
+              },
+            })
+          }
+        }
+      }
+
+      void updatePerformerMarkers()
+
+      return () => {
+        cancelled = true
+        if (performerClustererRef.current) {
+          performerClustererRef.current.clearMarkers()
+          performerClustererRef.current = null
+        }
+      }
+    }, [map, mode, performersList, scrollToSelectedPerformer])
+
+    if (!isLoaded) return <p>Loading map…</p>
+
+    return (
+      <>
+        <div className="map-wrapper">
+          <GoogleMap
+            mapContainerClassName="map"
+            center={centerMap}
+            zoom={14}
+            onLoad={handleLoad}
+            options={mapOptions}
+          />
+        </div>
+
+        {mode === "performers" &&
+          performersList.length > 0 &&
+          performersList.length <= MAX_PERFORMERS_STRIP && (
+          <div className="map-performers-wrapper">
+            <div className="map-performers-container" ref={performersContainerRef}>
+              {performersList.map((performer) => {
+                const adaptedPerformer: PerformerType = {
+                  id: performer.id,
+                  firstName: performer.firstName,
+                  lastName: performer.lastName,
+                  avatar: performer.avatar,
+                  position: { lat: performer.latitude, lng: performer.longitude },
+                  lastSeenAt: new Date(),
+                  rating: performer.rating,
+                }
+
+                return (
+                  <PerformerItem
+                    key={performer.id}
+                    performer={adaptedPerformer}
+                    ref={(el: HTMLDivElement | null) => {
+                      mapPerformerRefs.current[performer.id.toString()] = el
+                    }}
+                    handleSelectPerformer={() => scrollToSelectedPerformer(performer)}
+                  />
+                )
+              })}
+            </div>
+          </div>
+        )}
+      </>
+    )
+  }
+)
 
 export default MainMapGoogle

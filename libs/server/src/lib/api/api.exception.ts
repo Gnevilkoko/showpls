@@ -4,6 +4,20 @@ import { ApiProperty } from "@nestjs/swagger"
 
 type ApiExceptionMessage = string | object
 
+function httpStatusForErrorCode(code: ErrorCode): number {
+  switch (code) {
+    case ErrorCode.UNAUTHORIZED:
+    case ErrorCode.ACCESS_TOKEN_EXPIRED:
+      return HttpStatus.UNAUTHORIZED
+    case ErrorCode.ACCESS_DENIED:
+      return HttpStatus.FORBIDDEN
+    case ErrorCode.RATE_LIMITED:
+      return HttpStatus.TOO_MANY_REQUESTS
+    default:
+      return HttpStatus.BAD_REQUEST
+  }
+}
+
 export class APIExceptionResponse {
   @ApiProperty({ type: "number" })
   statusCode: number
@@ -17,9 +31,10 @@ export class APIExceptionResponse {
 
 export class APIException extends HttpException {
   constructor(code: ErrorCode, message?: ApiExceptionMessage, cause?: Error) {
+    const status = httpStatusForErrorCode(code)
     super(
-      { statusCode: HttpStatus.BAD_REQUEST, errorCode: code, message } as APIExceptionResponse,
-      HttpStatus.BAD_REQUEST,
+      { statusCode: status, errorCode: code, message } as APIExceptionResponse,
+      status,
       { cause }
     )
   }

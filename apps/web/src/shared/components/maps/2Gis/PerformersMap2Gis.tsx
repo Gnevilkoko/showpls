@@ -27,7 +27,7 @@ const PerformersMap2Gis = memo(({ taskId }: PerformersMap2GisProps) => {
 
   // Получаем исполнителей с бэкенда
   const { data: nearbyPerformersData } = useGetNearbyPerformersQuery(
-    { requestId: taskId! },
+    { requestId: taskId!, radius: 50 },
     { skip: !taskId }
   )
 

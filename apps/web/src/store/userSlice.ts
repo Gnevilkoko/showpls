@@ -1,15 +1,26 @@
 import { createSlice, type PayloadAction } from "@reduxjs/toolkit"
 import type { UserDataType } from "../shared/types"
 
-interface UserState {
+const AUTH_STORAGE_KEY = "showpls_auth"
+
+export interface UserState {
   accessToken: string | null
   userData: UserDataType | null
 }
 
-const initialState: UserState = {
-  accessToken: null,
-  userData: null,
+function loadAuthFromStorage(): UserState {
+  try {
+    const s = localStorage.getItem(AUTH_STORAGE_KEY)
+    if (!s) return { accessToken: null, userData: null }
+    const d = JSON.parse(s) as UserState
+    if (d && typeof d.accessToken === "string" && d.userData) return d
+  } catch {
+    // ignore
+  }
+  return { accessToken: null, userData: null }
 }
+
+const initialState: UserState = loadAuthFromStorage()
 
 const userSlice = createSlice({
   name: "user",

@@ -1,8 +1,9 @@
 import { BadRequestException, ForbiddenException, Injectable, Logger, NotFoundException } from "@nestjs/common"
 import { InjectRepository } from "@nestjs/typeorm"
 import { DataSource, Repository } from "typeorm"
-import { Deal, FileAttachment, Request, Submission, SubmissionStatus, User } from "@share/entities"
+import { Deal, FileAttachment, Request, Response, Submission, SubmissionStatus, User } from "@share/entities"
 import { CreateSubmissionDto } from "./dto/create-submission.dto"
+import { RejectSubmissionDto } from "./dto/reject-submission.dto"
 import { RequestStatus } from "@share/request-status.enum"
 import { DealStatus } from "@share/deal-status.enum"
 import { NotificationService } from "../notification/notification.service"
@@ -24,6 +25,8 @@ export class SubmissionService {
     private readonly requestRepository: Repository<Request>,
     @InjectRepository(Deal)
     private readonly dealRepository: Repository<Deal>,
+    @InjectRepository(Response)
+    private readonly responseRepository: Repository<Response>,
     private readonly dataSource: DataSource,
     private readonly notificationService: NotificationService,
     private readonly chatService: ChatService,
@@ -229,6 +232,15 @@ export class SubmissionService {
       dealFound: !!deal,
       requestId: dto.requestId
     })
+    // Block new submission while previous one is pending customer review
+    const latestSubmission = await this.submissionRepository.findOne({
+      where: { request: { id: dto.requestId } },
+      order: { serverTs: "DESC" },
+    })
+    if (latestSubmission?.status === SubmissionStatus.SUBMITTED) {
+      throw new BadRequestException("Wait for customer to review the work before submitting again")
+    }
+
     if (!deal) {
       // Let's check if there are any deals for this request with this performer regardless of status
       const anyDeal = await this.dealRepository.findOne({
@@ -316,12 +328,20 @@ export class SubmissionService {
         await manager.update(Deal, { id: deal.id }, { status: DealStatus.InProgress })
       }
 
-      // Update Chat isActiveOrder = true
+      // Update Chat isActiveOrder = true and send in-chat notification so both sides see "Work submitted"
+      // Вкладываем URL сданных файлов в сообщение, чтобы заказчик видел их прямо в чате (без перехода в блок задачи)
       if (deal.chat) {
         await this.chatService.updateIsActiveOrder(deal.chat.id, true)
+        await this.chatService.sendMessage(user, deal.chat.id, {
+          type: "notification",
+          variant: "upload",
+          requestId: request.id,
+          responseId: deal.response?.id,
+          attachments: attachmentHashes.map((a) => a.url),
+        })
       }
 
-      // Send Notification to Customer
+      // Send push Notification to Customer
       await this.notificationService.send(String(request.customer.id), "notification", {
         type: "notification",
         variant: "upload",
@@ -403,10 +423,12 @@ export class SubmissionService {
       throw new NotFoundException("Request not found")
     }
 
-    // Check if user is customer
-    const isCustomer = request.customer.id === user.id
+    const userId = String(user.id)
+    const customerId = String(request.customer.id)
 
-    // Check if user is performer in any deal for this request
+    const isCustomer = userId === customerId
+
+    // Performer: в сделке по этому запросу или есть отклик (pending/accepted) по этому запросу
     let isPerformer = false
     if (!isCustomer) {
       const deal = await this.dealRepository.findOne({
@@ -415,7 +437,17 @@ export class SubmissionService {
           performer: { id: user.id },
         },
       })
-      isPerformer = !!deal
+      if (deal) {
+        isPerformer = true
+      } else {
+        const response = await this.responseRepository.findOne({
+          where: {
+            request: { id: requestId },
+            performer: { id: user.id },
+          },
+        })
+        isPerformer = !!response
+      }
     }
 
     if (!isCustomer && !isPerformer) {
@@ -429,5 +461,55 @@ export class SubmissionService {
     })
 
     return submission
+  }
+
+  /**
+   * Reject the latest submission (customer only). Sends a chat notification so the performer sees it.
+   */
+  async reject(user: User, dto: RejectSubmissionDto): Promise<{ submission: Submission }> {
+    this.validateUUID(dto.requestId, "requestId")
+
+    const request = await this.requestRepository.findOne({
+      where: { id: dto.requestId },
+      relations: ["customer"],
+    })
+    if (!request) {
+      throw new NotFoundException("Request not found")
+    }
+    if (request.customer.id !== user.id) {
+      throw new ForbiddenException("Only the customer can reject the submission")
+    }
+
+    const latestSubmission = await this.submissionRepository.findOne({
+      where: { request: { id: dto.requestId }, status: SubmissionStatus.SUBMITTED },
+      relations: ["request", "performer"],
+      order: { serverTs: "DESC" },
+    })
+    if (!latestSubmission) {
+      throw new BadRequestException("No submission pending review for this request")
+    }
+
+    latestSubmission.status = SubmissionStatus.REJECTED
+    await this.submissionRepository.save(latestSubmission)
+
+    const deal = await this.dealRepository.findOne({
+      where: { request: { id: dto.requestId } },
+      relations: ["chat", "chat.user1", "chat.user2", "performer"],
+    })
+    if (deal?.chat) {
+      await this.chatService.sendMessage(user, deal.chat.id, {
+        type: "notification",
+        variant: "submissionRejected",
+        requestId: request.id,
+      })
+      await this.notificationService.send(String(deal.performer.id), "notification", {
+        type: "notification",
+        variant: "submissionRejected",
+        requestId: request.id,
+        text: "Заказчик отклонил сданную работу. Можно загрузить новую.",
+      })
+    }
+
+    return { submission: latestSubmission }
   }
 }

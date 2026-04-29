@@ -1,10 +1,29 @@
 import { useTranslation } from "react-i18next"
-import { useState, useEffect, type ChangeEvent } from "react"
+import { useState, useEffect, useRef, type ChangeEvent } from "react"
 import type { UploadedImageType } from "../../../shared/types"
 import ModalContent from "../../../shared/components/ModalContent"
 import uploadIcon from "../../../assets/icons/actions/camera-white.svg"
 import plusIcon from "../../../assets/icons/ui/plus.svg"
 import { NotificationHandler } from "../../../shared/utils/notificationHandler"
+
+const ALLOWED_MIME_TYPES = [
+  "image/jpeg",
+  "image/png",
+  "image/webp",
+  "image/gif",
+  "image/heic",
+  "image/heif",
+  "video/mp4",
+  "video/quicktime",
+  "video/x-msvideo",
+]
+// iOS Safari: accept image/* so HEIC from library can be picked; specific list for better UX
+const ACCEPT_ATTR =
+  "image/jpeg,image/png,image/webp,image/gif,image/heic,image/heif,video/mp4,video/quicktime,video/x-msvideo"
+const ALLOWED_EXTENSIONS = [
+  "jpg", "jpeg", "png", "webp", "gif", "heic", "heif",
+  "mp4", "mov", "avi",
+]
 
 interface UploadWorkModalProps {
     onConfirm: (images: UploadedImageType[], geo: { latitude: number; longitude: number } | null) => void
@@ -16,34 +35,51 @@ const UploadWorkModal = ({ onConfirm, onCancel, isUploading }: UploadWorkModalPr
     const { t } = useTranslation()
     const [images, setImages] = useState<UploadedImageType[]>([])
     const [geo, setGeo] = useState<{ latitude: number; longitude: number } | null>(null)
+    // В Telegram Mini App геолокация через браузер обычно недоступна — не запрашиваем и не показываем ошибку
+    const isMiniApp = typeof window !== "undefined" && !!(window as any).Telegram?.WebApp
 
     useEffect(() => {
-        if (navigator.geolocation) {
-            navigator.geolocation.getCurrentPosition(
-                (pos) => setGeo({ latitude: pos.coords.latitude, longitude: pos.coords.longitude }),
-                (err) => {
-                    console.error("Geo error:", err)
-                    NotificationHandler.showErrorTranslated("locationError")
-                },
-                { enableHighAccuracy: true }
-            )
+        if (isMiniApp || !navigator.geolocation) return
+        navigator.geolocation.getCurrentPosition(
+            (pos) => setGeo({ latitude: pos.coords.latitude, longitude: pos.coords.longitude }),
+            () => {
+                // Ошибку не показываем: в мини-аппе это норма, в браузере — не мешаем пользователю
+            },
+            { enableHighAccuracy: true, timeout: 8000, maximumAge: 60000 }
+        )
+    }, [isMiniApp])
+
+    const isFileAllowed = (file: File): boolean => {
+        if (ALLOWED_MIME_TYPES.includes(file.type)) return true
+        // iOS Safari often leaves file.type empty for HEIC/photo library; allow by extension
+        if (!file.type && file.name) {
+            const ext = file.name.split(".").pop()?.toLowerCase()
+            return ALLOWED_EXTENSIONS.includes(ext || "")
         }
-    }, [])
+        return false
+    }
 
     const handleUpload = (e: ChangeEvent<HTMLInputElement>) => {
         const files = e.target.files
         if (!files) return
 
-        const newImages: UploadedImageType[] = Array.from(files).map((file) => ({
-            file,
-            url: URL.createObjectURL(file),
-        }))
-
-        setImages((prev) => [...prev, ...newImages])
+        const valid: UploadedImageType[] = []
+        for (let i = 0; i < files.length; i++) {
+            const file = files[i]
+            if (!isFileAllowed(file)) {
+                NotificationHandler.showErrorTranslated("invalidFileType")
+                continue
+            }
+            valid.push({ file, url: URL.createObjectURL(file) })
+        }
+        if (valid.length > 0) {
+            setImages((prev) => [...prev, ...valid])
+        }
         e.target.value = ""
     }
 
     const handleRemove = (url: string) => {
+        if (url.startsWith("blob:")) URL.revokeObjectURL(url)
         setImages((prev) => prev.filter((img) => img.url !== url))
     }
 
@@ -61,7 +97,13 @@ const UploadWorkModal = ({ onConfirm, onCancel, isUploading }: UploadWorkModalPr
                 <label className="message-input-dropdown-item" style={{ display: 'flex', alignItems: 'center', gap: '10px', cursor: 'pointer', padding: '10px', background: 'var(--bg-secondary)', borderRadius: '12px' }}>
                     <img src={plusIcon} alt="add" />
                     <span>{t("addFiles")}</span>
-                    <input type="file" accept="image/*" multiple onChange={handleUpload} style={{ display: "none" }} />
+                    <input
+                    type="file"
+                    accept={ACCEPT_ATTR}
+                    multiple
+                    onChange={handleUpload}
+                    style={{ display: "none" }}
+                  />
                 </label>
 
                 {images.length > 0 && (

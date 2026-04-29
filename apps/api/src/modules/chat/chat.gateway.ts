@@ -3,11 +3,11 @@ import { Server, Socket } from "socket.io"
 import { Logger } from "@nestjs/common"
 import AuthService from "../auth/auth.service"
 import { UserPayload } from "@share/user.payload"
-import { allowedOrigins } from "../../config/cors.config"
+import { isOriginAllowed } from "../../config/cors.config"
 
 @WebSocketGateway({
   cors: {
-    origin: allowedOrigins, // Единый список доверенных источников
+    origin: (origin, callback) => (isOriginAllowed(origin) ? callback(null, true) : callback(new Error("Not allowed by CORS"))),
     credentials: true,
   },
   path: "/chat/ws",
@@ -74,7 +74,9 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
         sender: message.sender,
         receiver: message.receiver,
         text: message.text,
-        attachments: message.attachments,
+        requestId: message.requestId ?? null,
+        responseId: message.responseId ?? null,
+        attachments: message.attachments ?? [],
         createdAt: message.createdAt,
         isRead: message.isRead,
       },
@@ -88,6 +90,16 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
     } else {
       this.logger.warn(`[notifyReceiver] No sockets found for receiverId=${receiverId}`)
     }
+  }
+
+  /** Собеседник «печатает» (например, ассистент Gemini готовит ответ). */
+  notifyTyping(userId: string, chatId: string, typing: boolean) {
+    const sockets = this.userSockets.get(userId)
+    if (!sockets) return
+    const payload = { type: "chat:typing" as const, chatId, typing }
+    sockets.forEach((socketId) => {
+      this.server.to(socketId).emit("chat:typing", payload)
+    })
   }
 
   notifyChatUpdate(userId: string, chatId: string, updates: any) {
@@ -186,6 +198,33 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
         })
       })
     }
+  }
+
+  /**
+   * Уведомляет участников чата об удалении сообщения (чтобы UI обновился без перезагрузки).
+   */
+  notifyMessageDeleted(
+    userIds: string[],
+    chatId: string,
+    messageId: string,
+    chatUpdates?: { lastMessage: string; lastUpdate: Date }
+  ) {
+    const payload = {
+      type: "message:deleted",
+      chatId,
+      messageId,
+      lastMessage: chatUpdates?.lastMessage,
+      lastUpdate: chatUpdates?.lastUpdate?.toISOString?.(),
+    }
+    const normalizedIds = [...new Set(userIds.map((id) => String(id)))]
+    normalizedIds.forEach((userId) => {
+      const sockets = this.userSockets.get(userId)
+      if (sockets) {
+        sockets.forEach((socketId) => {
+          this.server.to(socketId).emit("message:deleted", payload)
+        })
+      }
+    })
   }
 
   /**

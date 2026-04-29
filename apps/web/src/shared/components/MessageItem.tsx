@@ -14,17 +14,29 @@ type ChatResponseLite = {
 interface MessageItemProps {
   message: Message
   userId: number
+  chatId?: string
   chatResponses?: ChatResponseLite[]
   onCancelOrder?: () => void
+  onAcceptOrderRequest?: (requestId: string) => void
 }
 
-const MessageItem = memo(({ message, userId, chatResponses, onCancelOrder }: MessageItemProps) => {
-  if (message.type === "notification") {
-    return <NotificationMessage message={message} userId={userId} chatResponses={chatResponses} onCancelOrder={onCancelOrder} />
-  }
+const MessageItem = memo(
+  ({ message, userId, chatId, chatResponses, onCancelOrder, onAcceptOrderRequest }: MessageItemProps) => {
+    if (message.type === "notification") {
+      return (
+        <NotificationMessage
+          message={message}
+          userId={userId}
+          chatResponses={chatResponses}
+          onCancelOrder={onCancelOrder}
+          onAcceptOrderRequest={onAcceptOrderRequest}
+        />
+      )
+    }
 
-  return <RegularMessage message={message} userId={userId} />
-})
+    return <RegularMessage message={message} userId={userId} chatId={chatId} />
+  }
+)
 
 MessageItem.displayName = "MessageItem"
 

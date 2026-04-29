@@ -12,9 +12,6 @@ import BudgetField from "../components/BudgetField"
 import Modal from "../../../shared/components/Modal"
 import PerformersMapGoogle from "../../../shared/components/maps/google/PerformersMapGoogle"
 import VerifProofField from "../components/VerifProofField"
-import { useSelector } from "react-redux"
-import type { RootState } from "../../../store"
-import PerformersMap2Gis from "../../../shared/components/maps/2Gis/PerformersMap2Gis"
 import TitleTaskField from "../components/TitleTaskField"
 import { useNotification } from "../../../shared/hooks/useNotification"
 import { useCreateRequestMutation, type CreateRequestInput } from "../../../store/api/requestApi"
@@ -24,8 +21,6 @@ import { toast } from "react-toastify"
 
 const CustomerTaskForm = ({ callback }: { callback: () => void }) => {
   const { t } = useTranslation()
-  const language = useSelector((state: RootState) => state.language)
-  const isRussian = language === "ru"
   const notification = useNotification()
 
   // Состояния для валидации инпутов
@@ -345,7 +340,7 @@ const CustomerTaskForm = ({ callback }: { callback: () => void }) => {
       )}
 
       <Modal isOpen={isOpenPerformerDiscover} onClose={handleClosePerformerDiscover}>
-        {isRussian ? <PerformersMap2Gis /> : <PerformersMapGoogle />}
+        <PerformersMapGoogle />
       </Modal>
     </>
   )

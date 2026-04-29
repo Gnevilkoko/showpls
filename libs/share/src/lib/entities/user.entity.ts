@@ -23,9 +23,9 @@ export class User {
   // @Column("jsonb")
   // balances: Record<Token, string>
 
-  @ApiProperty({ type: "string" })
-  @Column("bigint")
-  tgId: string
+  @ApiProperty({ type: "string", nullable: true })
+  @Column("bigint", { nullable: true, unique: true })
+  tgId: string | null
 
   @ApiProperty({ type: "string", nullable: true })
   @Column("varchar", {
@@ -34,6 +34,10 @@ export class User {
     unique: true,
   })
   username: string | null
+
+  @ApiProperty({ type: "string", nullable: true })
+  @Column("varchar", { length: 32, nullable: true, unique: true })
+  phone: string | null
 
   @ApiProperty({ type: "string" })
   @Column("varchar", {
@@ -76,6 +80,11 @@ export class User {
   @ApiProperty({ type: "boolean" })
   @Column("boolean", { default: false })
   isAvailable: boolean
+
+  /** Снимок верификации исполнителя: гео + ОС/модель (web/Telegram). */
+  @ApiProperty({ type: "object", nullable: true, additionalProperties: true })
+  @Column({ type: "jsonb", nullable: true })
+  performerVerification: object | null
 
   @OneToMany(() => StarsTopUp, (topUp) => topUp.user)
   starsTopUps: Relation<StarsTopUp>[]

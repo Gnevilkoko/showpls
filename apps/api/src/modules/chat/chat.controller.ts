@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Param, Post, Query, UseGuards } from "@nestjs/common"
+import { Body, Controller, Delete, Get, Param, Post, Query, UseGuards } from "@nestjs/common"
 import { ApiSecurity, ApiTags } from "@nestjs/swagger"
 import { ChatService } from "./chat.service"
 import { GetUser } from "../user/decorators/get-user.decorator"
@@ -33,6 +33,13 @@ export class ChatController {
 
   @ApiSecurity("jwt-auth")
   @UseGuards(AuthGuard)
+  @Post("support")
+  async createSupportChat(@GetUser() user: User) {
+    return this.chatService.getOrCreateSupportChat(user)
+  }
+
+  @ApiSecurity("jwt-auth")
+  @UseGuards(AuthGuard)
   @Get(":id")
   async findOne(
     @Param("id") id: string,
@@ -51,6 +58,17 @@ export class ChatController {
     @Body() dto: SendMessageDto
   ) {
     return this.chatService.sendMessage(user, id, dto)
+  }
+
+  @ApiSecurity("jwt-auth")
+  @UseGuards(AuthGuard)
+  @Delete(":id/message/:messageId")
+  async deleteMessage(
+    @Param("id") id: string,
+    @Param("messageId") messageId: string,
+    @GetUser() user: User
+  ) {
+    await this.chatService.deleteMessage(user, id, messageId)
   }
 
   @ApiSecurity("jwt-auth")

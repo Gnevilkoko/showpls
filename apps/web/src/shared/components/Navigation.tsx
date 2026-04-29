@@ -72,11 +72,11 @@ const Navigation = () => {
       </button>
 
       <button
-        className={`nav-button ${activePath === "/profile" ? "active" : ""}`}
+        className={`nav-button ${activePath?.startsWith("/profile") ? "active" : ""}`}
         onClick={() => handleClick("/profile")}
       >
         <img
-          src={activePath === "/profile" ? userWhiteIcon : userIcon}
+          src={activePath?.startsWith("/profile") ? userWhiteIcon : userIcon}
           alt="Profile Icon"
           className="nav-button__icon"
         />

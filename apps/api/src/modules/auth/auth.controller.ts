@@ -1,17 +1,29 @@
 import { Body, Controller, Get, Post, Req } from "@nestjs/common"
 import { ValidationPipe } from "../../common/validation"
-import { SignInDto, SignInSchema } from "./dto/sign-in.dto"
+import {
+  SignInDto,
+  SignInSchema,
+  PhoneInitDto,
+  PhoneInitSchema,
+  PhoneVerifyDto,
+  PhoneVerifySchema,
+  AuthCallbackDto,
+  AuthCallbackSchema,
+  ExchangeCallbackCodeDto,
+  ExchangeCallbackCodeSchema,
+} from "./dto/sign-in.dto"
 import AuthService from "./auth.service"
+import { UCallerService } from "./ucaller.service"
 import { ConfigService, SessionConfig } from "../../config"
 import ms from "ms"
-import { get, omit } from "lodash"
-import { ApiBody, ApiExtraModels, ApiOkResponse, ApiTags, getSchemaPath } from "@nestjs/swagger"
+import { get } from "lodash"
+import { ApiBody, ApiExtraModels, ApiOkResponse, ApiOperation, ApiTags, getSchemaPath } from "@nestjs/swagger"
 import { User } from "@share/entities"
 import { Request } from "express"
 import { addMilliseconds, isPast } from "date-fns"
-import { instanceToPlain } from "class-transformer"
+import { JsonWebTokenError, TokenExpiredError } from "jsonwebtoken"
 import { APIException } from "@server/api"
-import { ErrorCode } from "@share"
+import { ErrorCode, FallbackLanguageCode, Role } from "@share"
 import { InjectRepository } from "@nestjs/typeorm"
 import { Repository } from "typeorm"
 import AuthExceptions from "./auth.exceptions"
@@ -19,6 +31,9 @@ import { RateLimit } from "../../common/rate-limit"
 import { InjectLogger } from "@server/logging"
 import { Logger } from "winston"
 import { GetUser } from "../user/decorators"
+import { UserService } from "../user/user.service"
+import { saveSession } from "./auth-session.util"
+import { toAccessTokenPayload, toPublicUser } from "./auth-user.serialize"
 
 @ApiExtraModels(User)
 @ApiTags("Auth")
@@ -30,6 +45,8 @@ export class AuthController {
   constructor(
     @InjectLogger() logger: Logger,
     protected service: AuthService,
+    protected ucaller: UCallerService,
+    protected userService: UserService,
     @InjectRepository(User) protected repository: Repository<User>
   ) {
     this.logger = logger.child({ context: AuthController.name })
@@ -85,18 +102,19 @@ export class AuthController {
       }
 
       req.session.user = {
-        id: user.id,
+        id: String(user.id),
         role: user.role,
       }
 
-      req.session.save()
+      await saveSession(req)
 
       await this.repository.update({ id: user.id }, { lastSeenAt: new Date() })
-      const plainUser = omit(instanceToPlain(user), [])
+      const plainUser = toPublicUser(user)
 
       return {
         user: plainUser,
-        accessToken: AuthService.generateToken(plainUser, this.accessTokenLifetime),
+        accessToken: AuthService.generateToken(toAccessTokenPayload(user), this.accessTokenLifetime),
+        authCallbackCode: AuthService.issueAuthCallbackCode(String(user.id)),
       }
     } catch (e) {
       if (e instanceof AuthExceptions.CredentialsAreInvalid) {
@@ -129,41 +147,244 @@ export class AuthController {
   })
   @Post("refresh-token")
   async refreshToken(@Req() req: Request) {
-    const expireAt = get(req.session, "refreshToken.expireAt", undefined)
-    const userId = get(req.session, "user.id", undefined)
+    try {
+      const expireAt = get(req.session, "refreshToken.expireAt", undefined)
+      const userId = get(req.session, "user.id", undefined)
 
-    if (!expireAt || !userId) {
-      throw new APIException(ErrorCode.UNAUTHORIZED, `Session not exists`)
+      if (!expireAt || !userId) {
+        throw new APIException(ErrorCode.UNAUTHORIZED, `Session not exists`)
+      }
+
+      if (isPast(new Date(expireAt))) {
+        throw new APIException(ErrorCode.UNAUTHORIZED, "Refresh token expired")
+      }
+
+      const user = await this.repository.findOneBy({
+        id: userId,
+      })
+
+      if (!user) {
+        throw new APIException(ErrorCode.UNAUTHORIZED, `User not found`)
+      }
+
+      try {
+        await this.service.checkPolitics(user)
+      } catch (e) {
+        if (e instanceof AuthExceptions.IsBanned) {
+          throw new APIException(ErrorCode.ACCESS_DENIED, `You are banned`)
+        }
+        throw new APIException(ErrorCode.UNAUTHORIZED, `Cannot update access token`)
+      }
+
+      await this.repository.update({ id: user.id }, { lastSeenAt: new Date() })
+
+      const plainUser = toPublicUser(user)
+      const accessToken = AuthService.generateToken(toAccessTokenPayload(user), this.accessTokenLifetime)
+
+      return {
+        user: plainUser,
+        accessToken,
+      }
+    } catch (e) {
+      if (e instanceof APIException) {
+        throw e
+      }
+      this.logger.error({
+        message: "refresh-token unexpected error",
+        err: e instanceof Error ? e.message : String(e),
+      })
+      throw new APIException(ErrorCode.UNAUTHORIZED, "Refresh token unavailable")
+    }
+  }
+
+  @ApiOperation({
+    summary: "Обмен кода с /auth/callback (JWT из query ?code=)",
+    description:
+      "После Telegram/phone auth клиент открывает showpls://auth/callback?code=… или https://…/auth/callback?code=…. " +
+      "Код выдаётся в ответах sign-in / phone/verify / POST auth/callback как authCallbackCode. " +
+      "Срок жизни кода ~10 минут.",
+  })
+  @ApiOkResponse({
+    schema: {
+      type: "object",
+      properties: {
+        accessToken: { type: "string" },
+        user: { $ref: getSchemaPath(User) },
+      },
+    },
+  })
+  @RateLimit({ limit: 20, ttl: ms("1m") })
+  @Post("exchange-callback-code")
+  async exchangeCallbackCode(
+    @Body(new ValidationPipe(ExchangeCallbackCodeSchema)) dto: ExchangeCallbackCodeDto,
+    @Req() req: Request,
+  ) {
+    let userId: string
+    try {
+      ;({ userId } = AuthService.verifyAuthCallbackCode(dto.code))
+    } catch (e) {
+      if (e instanceof TokenExpiredError) {
+        throw new APIException(ErrorCode.UNAUTHORIZED, "Auth code expired")
+      }
+      if (e instanceof JsonWebTokenError) {
+        throw new APIException(ErrorCode.UNAUTHORIZED, "Invalid auth code")
+      }
+      throw e
     }
 
-    if (isPast(new Date(expireAt))) {
-      throw new APIException(ErrorCode.UNAUTHORIZED, "Refresh token expired")
-    }
-
-    const user = await this.repository.findOneBy({
-      id: userId,
-    })
-
+    const user = await this.repository.findOneBy({ id: userId })
     if (!user) {
-      throw new APIException(ErrorCode.UNAUTHORIZED, `User not found`)
+      throw new APIException(ErrorCode.UNAUTHORIZED, "User not found")
     }
 
     try {
       await this.service.checkPolitics(user)
-    } catch (e) {
-      if (e instanceof AuthExceptions.IsBanned) {
-        throw new APIException(ErrorCode.ACCESS_DENIED, `You are banned`)
+    } catch (err) {
+      if (err instanceof AuthExceptions.IsBanned) {
+        throw new APIException(ErrorCode.ACCESS_DENIED, "You are banned")
       }
-      throw new APIException(ErrorCode.UNAUTHORIZED, `Cannot update access token`)
+      throw err
     }
 
-    await this.repository.update({ id: user.id }, { lastSeenAt: new Date() })
+    const now = new Date()
+    req.session.refreshToken = {
+      expireAt: addMilliseconds(now, SessionConfig.maxAge).toISOString(),
+    }
+    req.session.user = { id: String(user.id), role: user.role }
+    await saveSession(req)
 
-    const plainUser = omit(instanceToPlain(user), [])
+    await this.repository.update({ id: user.id }, { lastSeenAt: new Date() })
+    const plainUser = toPublicUser(user)
 
     return {
       user: plainUser,
-      accessToken: AuthService.generateToken(plainUser, this.accessTokenLifetime),
+      accessToken: AuthService.generateToken(toAccessTokenPayload(user), this.accessTokenLifetime),
+    }
+  }
+
+  @RateLimit({ limit: 5, ttl: ms("1m") })
+  @Post("phone/init")
+  async phoneInit(@Body(new ValidationPipe(PhoneInitSchema)) dto: PhoneInitDto) {
+    try {
+      const { ucallerId } = await this.ucaller.initCall(dto.phone)
+      return { status: true, ucallerId }
+    } catch (e: any) {
+      this.logger.error({ message: "Phone init failed", error: e?.message })
+      throw new APIException(ErrorCode.BUSINESS_ERROR, e?.message || "Failed to initiate call")
+    }
+  }
+
+  @RateLimit({ limit: 10, ttl: ms("1m") })
+  @Post("phone/verify")
+  async phoneVerify(@Body(new ValidationPipe(PhoneVerifySchema)) dto: PhoneVerifyDto, @Req() req: Request) {
+    const normalizedPhone = dto.phone.replace(/\D/g, "")
+
+    const isValid = this.ucaller.verifyCode(normalizedPhone, dto.code)
+    if (!isValid) {
+      throw new APIException(ErrorCode.UNAUTHORIZED, "Invalid or expired code")
+    }
+
+    let user = await this.repository.findOne({ where: { phone: normalizedPhone } })
+
+    if (!user) {
+      user = await this.userService.create({
+        tgId: null,
+        username: null,
+        firstName: normalizedPhone.slice(-4),
+        lastName: null,
+        avatar: null,
+        role: Role.Normal,
+        languageCode: FallbackLanguageCode,
+        phone: normalizedPhone,
+      })
+    }
+
+    if (user.banned) {
+      throw new APIException(ErrorCode.ACCESS_DENIED, "You are banned")
+    }
+
+    const now = new Date()
+    req.session.refreshToken = {
+      expireAt: addMilliseconds(now, SessionConfig.maxAge).toISOString(),
+    }
+    req.session.user = { id: String(user.id), role: user.role }
+    await saveSession(req)
+
+    await this.repository.update({ id: user.id }, { lastSeenAt: new Date() })
+    const plainUser = toPublicUser(user)
+
+    return {
+      user: plainUser,
+      accessToken: AuthService.generateToken(toAccessTokenPayload(user), this.accessTokenLifetime),
+      authCallbackCode: AuthService.issueAuthCallbackCode(String(user.id)),
+    }
+  }
+
+  @ApiOperation({ summary: "Unified auth callback for mobile/web" })
+  @RateLimit({ limit: 10, ttl: ms("1m") })
+  @Post("callback")
+  async authCallback(@Body(new ValidationPipe(AuthCallbackSchema)) dto: AuthCallbackDto, @Req() req: Request) {
+    let user: User | null = null
+
+    if (dto.method === "telegram") {
+      try {
+        user = await this.service.authenticate({ type: dto.type as any, payload: dto.payload })
+      } catch (e) {
+        if (e instanceof AuthExceptions.CredentialsAreInvalid) {
+          throw new APIException(ErrorCode.UNAUTHORIZED, "Credentials are invalid")
+        }
+        if (e instanceof AuthExceptions.CredentialsAreExpired) {
+          throw new APIException(ErrorCode.UNAUTHORIZED, "Credentials are expired")
+        }
+        if (e instanceof AuthExceptions.IsBanned) {
+          throw new APIException(ErrorCode.ACCESS_DENIED, "You are banned")
+        }
+        throw e
+      }
+    } else if (dto.method === "phone") {
+      const normalizedPhone = dto.phone.replace(/\D/g, "")
+      const isValid = this.ucaller.verifyCode(normalizedPhone, dto.code)
+      if (!isValid) {
+        throw new APIException(ErrorCode.UNAUTHORIZED, "Invalid or expired code")
+      }
+
+      user = await this.repository.findOne({ where: { phone: normalizedPhone } })
+      if (!user) {
+        user = await this.userService.create({
+          tgId: null,
+          username: null,
+          firstName: normalizedPhone.slice(-4),
+          lastName: null,
+          avatar: null,
+          role: Role.Normal,
+          languageCode: FallbackLanguageCode,
+          phone: normalizedPhone,
+        })
+      }
+
+      if (user.banned) {
+        throw new APIException(ErrorCode.ACCESS_DENIED, "You are banned")
+      }
+    }
+
+    if (!user) {
+      throw new APIException(ErrorCode.UNAUTHORIZED, "Authentication failed")
+    }
+
+    const now = new Date()
+    req.session.refreshToken = {
+      expireAt: addMilliseconds(now, SessionConfig.maxAge).toISOString(),
+    }
+    req.session.user = { id: String(user.id), role: user.role }
+    await saveSession(req)
+
+    await this.repository.update({ id: user.id }, { lastSeenAt: new Date() })
+    const plainUser = toPublicUser(user)
+
+    return {
+      user: plainUser,
+      accessToken: AuthService.generateToken(toAccessTokenPayload(user), this.accessTokenLifetime),
+      authCallbackCode: AuthService.issueAuthCallbackCode(String(user.id)),
     }
   }
 

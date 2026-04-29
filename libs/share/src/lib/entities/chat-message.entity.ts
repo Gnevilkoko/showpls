@@ -23,11 +23,31 @@ export class ChatMessage {
   type: "message" | "notification"
 
   @ApiProperty({
-    enum: ["upload", "newTask", "newOffer", "permissionToCancel", "taskCompleted", "taskCancelled"],
-    nullable: true
+    enum: [
+      "upload",
+      "newTask",
+      "newOffer",
+      "permissionToCancel",
+      "taskCompleted",
+      "taskCancelled",
+      "responseAccepted",
+      "responseDeclined",
+      "submissionRejected",
+    ],
+    nullable: true,
   })
   @Column("varchar", { nullable: true })
-  variant: "upload" | "newTask" | "newOffer" | "permissionToCancel" | "taskCompleted" | "taskCancelled" | null
+  variant:
+    | "upload"
+    | "newTask"
+    | "newOffer"
+    | "permissionToCancel"
+    | "taskCompleted"
+    | "taskCancelled"
+    | "responseAccepted"
+    | "responseDeclined"
+    | "submissionRejected"
+    | null
 
   @ApiProperty({ type: "string", nullable: true })
   @Column("text", { nullable: true })
@@ -48,6 +68,14 @@ export class ChatMessage {
   @ApiProperty({ type: "boolean" })
   @Column("boolean", { default: false })
   isRead: boolean
+
+  /**
+   * Если сообщение идёт от лица Showpls Agent, но написал живой админ (asSupport),
+   * здесь id админа. У ассистента Gemini и автоответов — null.
+   */
+  @ApiProperty({ type: "string", nullable: true })
+  @Column("bigint", { nullable: true })
+  supportHumanAuthorId: string | null
 
   @ApiProperty({ type: "string", format: "date" })
   @CreateDateColumn({ type: "timestamptz" })

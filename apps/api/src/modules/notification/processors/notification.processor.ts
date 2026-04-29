@@ -7,12 +7,15 @@ import { Notification } from "../notification.entity"
 import { Repository } from "typeorm"
 import { User } from "@share/entities/user.entity"
 import { BaseProcessor } from "../../queue/base/base-processor"
+import { DeviceService } from "../../device/device.service"
+import { type PushPayload, buildPushPayload, PushNotificationType } from "../push-payload"
 
 @Processor("notify-user")
 @Injectable()
 export class NotificationProcessor extends BaseProcessor {
   constructor(
     private readonly chatGateway: ChatGateway,
+    private readonly deviceService: DeviceService,
     @InjectRepository(Notification)
     private readonly notificationRepository: Repository<Notification>,
     @InjectRepository(User)
@@ -26,14 +29,12 @@ export class NotificationProcessor extends BaseProcessor {
 
     this.logger.log(`Processing notification for user ${userId}: ${eventType}`)
 
-    // 1. Check if user exists
     const user = await this.userRepository.findOne({ where: { id: userId } })
     if (!user) {
       this.logger.warn(`User ${userId} not found, skipping notification`)
-      return { skipped: true, reason: 'User not found' }
+      return { skipped: true, reason: "User not found" }
     }
 
-    // 2. Check WebSocket connection with error handling
     let websocketSent = false
     try {
       const isConnected = this.chatGateway.isUserConnected(userId)
@@ -50,34 +51,21 @@ export class NotificationProcessor extends BaseProcessor {
       }
     } catch (wsError) {
       this.logger.error(
-        `Failed to send WebSocket notification to user ${userId}: ${wsError instanceof Error ? wsError.message : 'Unknown WebSocket error'}`,
+        `Failed to send WebSocket notification to user ${userId}: ${wsError instanceof Error ? wsError.message : "Unknown WebSocket error"}`,
         wsError instanceof Error ? wsError.stack : undefined,
       )
     }
 
-    // 3. Try push notification if WebSocket failed or user is offline
     if (!websocketSent) {
-      try {
-        this.logger.log(`Sending Push Notification via FCM for user ${userId}...`)
-        // Mock FCM call - в реальном проекте здесь будет интеграция с FCM
-        // await this.fcmService.sendNotification(userId, { type: eventType, ...payload })
-        this.logger.log(`Push notification sent to user ${userId}`)
-      } catch (fcmError) {
-        this.logger.error(
-          `Failed to send push notification to user ${userId}: ${fcmError instanceof Error ? fcmError.message : 'Unknown FCM error'}`,
-          fcmError instanceof Error ? fcmError.stack : undefined,
-        )
-        // Не прерываем выполнение, продолжаем с сохранением в БД
-      }
+      await this.sendPushToDevices(userId, eventType, payload)
     }
 
-    // 4. Persistence with error handling
     try {
       const notification = this.notificationRepository.create({
         user,
-        type: payload.type || "notification", // Default to "notification" if not specified
-        variant: payload.variant || null, // New field for variant
-        text: payload.text || `Notification: ${eventType}`, // Fallback text
+        type: payload.type || "notification",
+        variant: payload.variant || null,
+        text: payload.text || `Notification: ${eventType}`,
         payload,
         isRead: false,
       })
@@ -85,10 +73,9 @@ export class NotificationProcessor extends BaseProcessor {
       this.logger.log(`Notification saved to database for user ${userId}`)
     } catch (dbError) {
       this.logger.error(
-        `Failed to save notification to database for user ${userId}: ${dbError instanceof Error ? dbError.message : 'Unknown DB error'}`,
+        `Failed to save notification to database for user ${userId}: ${dbError instanceof Error ? dbError.message : "Unknown DB error"}`,
         dbError instanceof Error ? dbError.stack : undefined,
       )
-      // Пробрасываем ошибку, так как сохранение в БД критично
       throw dbError
     }
 
@@ -102,12 +89,46 @@ export class NotificationProcessor extends BaseProcessor {
     }
   }
 
-  /**
-   * Отправка уведомления администратору о критических ошибках
-   */
+  private async sendPushToDevices(userId: string, eventType: string, payload: any): Promise<void> {
+    try {
+      const devices = await this.deviceService.getActiveTokens(userId)
+      if (devices.length === 0) {
+        this.logger.log(`No active push tokens for user ${userId}`)
+        return
+      }
+
+      const pushPayload: PushPayload = buildPushPayload({
+        title: payload.pushTitle || payload.title || "Showpls",
+        body: payload.pushBody || payload.text || `Notification: ${eventType}`,
+        type: (payload.pushType as PushNotificationType) || PushNotificationType.SYSTEM,
+        entityId: payload.entityId || null,
+        imageUrl: payload.imageUrl || null,
+      })
+
+      this.logger.log(`Prepared push payload for ${devices.length} device(s): ${JSON.stringify(pushPayload)}`)
+
+      for (const device of devices) {
+        try {
+          this.logger.log(`Push → ${device.platform}/${device.deviceId}: token=${device.pushToken.slice(0, 12)}...`)
+          // FCM/APNs integration point:
+          // await this.fcmService.send(device.pushToken, device.platform, pushPayload)
+        } catch (pushErr) {
+          this.logger.error(
+            `Failed to send push to device ${device.deviceId}: ${pushErr instanceof Error ? pushErr.message : "Unknown"}`,
+          )
+          if (pushErr instanceof Error && pushErr.message.includes("NotRegistered")) {
+            await this.deviceService.deactivateToken(device.pushToken)
+          }
+        }
+      }
+    } catch (err) {
+      this.logger.error(
+        `Failed to send push notifications to user ${userId}: ${err instanceof Error ? err.message : "Unknown"}`,
+      )
+    }
+  }
+
   protected async sendAdminAlert(message: string): Promise<void> {
     this.logger.error(`ADMIN ALERT: ${message}`)
-    // В реальном проекте здесь может быть интеграция с системой уведомлений
-    // await this.notificationService.sendAdminAlert(message)
   }
 }

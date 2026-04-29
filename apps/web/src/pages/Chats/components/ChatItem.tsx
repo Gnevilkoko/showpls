@@ -3,26 +3,45 @@ import userIcon from "../../../assets/icons/navigation/user.svg"
 import checkReadIcon from "../../../assets/icons/status/check-read.svg"
 import starOutlineIcon from "../../../assets/icons/status/star-outline.svg"
 import starFilledIcon from "../../../assets/icons/status/star-filled.svg"
+import pinPushIcon from "../../../assets/icons/status/pin-push.svg"
 import { formatTimeFromEpochMs } from "../../../shared/format"
 import { useNavigate } from "react-router-dom"
 import { memo, MouseEvent } from "react"
+import { useTranslation } from "react-i18next"
 import { useToggleFavoriteMutation } from "../../../store/api/chatApi"
+import { isSupportAgentChatItem } from "../../../shared/utils/supportChat"
 
 interface ChatPrevItemProps {
   chat: ChatType
 }
 
+const BACKEND_LAST_MESSAGE_KEYS: Record<string, string> = {
+  "New offer on your request": "newOfferOnYourRequest",
+  "Offer withdrawn": "offerWithdrawn",
+}
+
 const ChatItem = memo(({ chat }: ChatPrevItemProps) => {
+  const isSupportChat = isSupportAgentChatItem(chat)
+  const { t } = useTranslation()
   const time = formatTimeFromEpochMs(chat.last_update)
   const navigate = useNavigate()
   const [toggleFavorite, { isLoading: isToggling }] = useToggleFavoriteMutation()
+  const lastMessageDisplay =
+    chat.last_message && BACKEND_LAST_MESSAGE_KEYS[chat.last_message]
+      ? t(BACKEND_LAST_MESSAGE_KEYS[chat.last_message])
+      : chat.last_message
 
   const handleClickChat = () => {
-    navigate(`/chat/${chat.chat_id}`)
+    if (String(chat.chat_id) === "support") {
+      navigate("/chat/support")
+    } else {
+      navigate(`/chat/${chat.chat_id}`)
+    }
   }
 
   const handleToggleFavorite = (e: MouseEvent<HTMLButtonElement>) => {
     e.stopPropagation()
+    if (isSupportChat) return
     if (isToggling) return
     toggleFavorite({
       chatId: String(chat.chat_id),
@@ -32,7 +51,7 @@ const ChatItem = memo(({ chat }: ChatPrevItemProps) => {
 
   return (
     <div
-      className={`chats__prev-chat ${chat.chat_id === 0 ? "agent" : ""} ${chat.count_unread ? "unread" : ""} ${
+      className={`chats__prev-chat ${isSupportChat ? "agent" : ""} ${chat.count_unread ? "unread" : ""} ${
         chat.is_active_order ? "active-order" : ""
       }`}
       onClick={handleClickChat}
@@ -50,14 +69,20 @@ const ChatItem = memo(({ chat }: ChatPrevItemProps) => {
 
             <span>{time}</span>
 
-            <button className="prev-chat__favorite-btn" onClick={handleToggleFavorite} disabled={isToggling}>
+            {isSupportChat ? (
+              <span className="prev-chat__pin-wrap" title={t("pinnedSupportChat")} aria-label={t("pinnedSupportChat")}>
+                <img src={pinPushIcon} alt="" className="prev-chat__pin-icon" />
+              </span>
+            ) : null}
+
+            <button className="prev-chat__favorite-btn" onClick={handleToggleFavorite} disabled={isToggling || isSupportChat}>
               <img src={chat.is_favorite ? starFilledIcon : starOutlineIcon} alt="Favorite Icon" />
             </button>
           </div>
         </div>
 
         <div className="prev-chat__content">
-          <span className="prev-chat__message">{chat.last_message}</span>
+          <span className="prev-chat__message">{lastMessageDisplay}</span>
 
           {chat.count_unread ? (
             <div className="chats__count blue">

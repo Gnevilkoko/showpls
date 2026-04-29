@@ -57,6 +57,21 @@ export class NotificationHandler {
     return fallbackMessage || i18n.t("errors.unknownError")
   }
 
+  /**
+   * Ошибки с этими статусами уже показываются в baseQuery (тост).
+   * В catch компонента не показывать второй тост — иначе двойное сообщение (особенно на 403/500/503).
+   */
+  static wasErrorAlreadyShownByBaseQuery(error: unknown): boolean {
+    const status = (error as { status?: number | string })?.status
+    return (
+      status === 403 ||
+      status === 500 ||
+      status === 503 ||
+      status === "FETCH_ERROR" ||
+      status === "PARSING_ERROR"
+    )
+  }
+
   // Проверяет, является ли ошибка API ошибкой
   static isAPIError(error: unknown): error is APIError {
     return (

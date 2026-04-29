@@ -28,6 +28,17 @@ export type UserType = {
   userData: UserDataType
 }
 
+export type PerformerVerificationSnapshot = {
+  verifiedAt: string
+  latitude: number
+  longitude: number
+  accuracyM: number | null
+  os: string
+  osVersion: string
+  deviceModel: string
+  userAgent: string
+}
+
 export type UserDataType = {
   id: string
   role: string
@@ -44,6 +55,8 @@ export type UserDataType = {
   createdAt: string
   rating?: number
   reviewsCount?: number
+  isAvailable?: boolean
+  performerVerification?: PerformerVerificationSnapshot | Record<string, unknown> | null
 }
 
 // ⚠️ ВНИМАНИЕ: Эти типы устарели и используются только для совместимости со старым кодом

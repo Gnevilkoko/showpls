@@ -3,11 +3,12 @@ import Modal from "../../../shared/components/Modal"
 import { useNotification } from "../../../shared/hooks/useNotification"
 import { useAppSelector, useAppDispatch } from "../../../store"
 import { updateUserPartial } from "../../../store/userSlice"
-import { useFileToBase64 } from "../../../shared/hooks/useFileToBase64"
 import { useTranslation } from "react-i18next"
 import TaskPrimaryButton from "../../../shared/components/TaskPrimaryButton"
 import penWhiteIcon from "../../../assets/icons/actions/pen-white.svg"
 import userIcon from "../../../assets/icons/navigation/user.svg"
+import { useUpdateProfileMutation } from "../../../store/api/userApi"
+import { useUploadFileMutation } from "../../../store/api/uploadApi"
 
 interface ModalEditProfileProps {
   isOpenEditProfile: boolean
@@ -17,71 +18,81 @@ interface ModalEditProfileProps {
 const ModalEditProfile = ({ isOpenEditProfile, setIsOpenEditProfile }: ModalEditProfileProps) => {
   const { t } = useTranslation()
   const notification = useNotification()
+  const dispatch = useAppDispatch()
   const userData = useAppSelector((state) => state.user.userData)
+
   const [newAvatar, setNewAvatar] = useState<string>(userData?.avatar || "")
-  // Сохраняем файл в state для отправки на бекенд
   const [newAvatarFile, setNewAvatarFile] = useState<File | null>(null)
-  const { convertToBase64 } = useFileToBase64()
   const [newName, setNewName] = useState<string>(
-    `${userData?.firstName || ""}${userData?.lastName ? " " + userData.lastName : ""}`
+    `${userData?.firstName || ""}${userData?.lastName ? " " + userData.lastName : ""}`.trim()
   )
   const [newLocation, setNewLocation] = useState<string>(userData?.city || "")
   const [newAbout, setNewAbout] = useState<string>(userData?.about || "")
-  const dispatch = useAppDispatch()
 
-  const handleClearNewData = () => {
-    setTimeout(() => {
-      setNewAvatar(userData?.avatar || "")
-      setNewName(`${userData?.firstName || ""}${userData?.lastName ? " " + userData.lastName : ""}`)
-      setNewLocation(userData?.city || "")
-      setNewAbout(userData?.about || "")
-    }, 300)
+  const [updateProfile, { isLoading: isUpdating }] = useUpdateProfileMutation()
+  const [uploadFile, { isLoading: isUploading }] = useUploadFileMutation()
+
+  const isSubmitting = isUpdating || isUploading
+
+  const resetFormToUserData = () => {
+    setNewAvatar(userData?.avatar || "")
+    setNewAvatarFile(null)
+    setNewName(
+      `${userData?.firstName || ""}${userData?.lastName ? " " + userData.lastName : ""}`.trim()
+    )
+    setNewLocation(userData?.city || "")
+    setNewAbout(userData?.about || "")
   }
 
   const handleUploadAvatar = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
     if (file) {
-      const url = URL.createObjectURL(file)
-      setNewAvatar(url)
-
+      setNewAvatar(URL.createObjectURL(file))
       setNewAvatarFile(file)
     }
     e.target.value = ""
   }
 
   const handleSaveChanges = async () => {
-    notification.showSuccess(t("profileUpdated"))
-    setIsOpenEditProfile(false)
-    handleClearNewData()
+    try {
+      const [firstName, ...rest] = newName.trim().split(/\s+/)
+      const lastName = rest.join(" ") || null
 
-    // перед отправкой на бекенд конвертируем файл в base64
-    let base64 = ""
-    if (newAvatarFile) {
-      base64 = await convertToBase64(newAvatarFile)
+      let avatarUrl: string | null = userData?.avatar ?? null
+      if (newAvatarFile) {
+        const result = await uploadFile(newAvatarFile).unwrap()
+        avatarUrl = result.url
+      }
+
+      const updated = await updateProfile({
+        firstName: firstName || userData?.firstName || "",
+        lastName: lastName ?? null,
+        city: newLocation || null,
+        about: newAbout || null,
+        ...(avatarUrl !== undefined && { avatar: avatarUrl }),
+      }).unwrap()
+
+      dispatch(
+        updateUserPartial({
+          firstName: updated.firstName,
+          lastName: updated.lastName,
+          city: updated.city,
+          about: updated.about,
+          avatar: updated.avatar,
+        })
+      )
+
+      notification.showSuccess(t("profileUpdated"))
+      setIsOpenEditProfile(false)
+      resetFormToUserData()
+    } catch (err) {
+      notification.showError("somethingWentWrong")
     }
-
-    const [firstName, ...rest] = newName.trim().split(" ")
-    const lastName = rest.join(" ") || null
-
-    dispatch(updateUserPartial({
-      firstName: firstName || userData?.firstName,
-      lastName,
-      city: newLocation,
-      about: newAbout,
-      ...(newAvatar && { avatar: newAvatar }),
-    }))
-
-    handleClearNewData()
-
-    console.log("base64", base64)
-    console.log("newName", newName)
-    console.log("newLocation", newLocation)
-    console.log("newAbout", newAbout)
   }
 
   const handleCloseEditProfile = () => {
     setIsOpenEditProfile(false)
-    handleClearNewData()
+    resetFormToUserData()
   }
 
   return (
@@ -90,12 +101,11 @@ const ModalEditProfile = ({ isOpenEditProfile, setIsOpenEditProfile }: ModalEdit
 
       <label className="modal__avatar-container">
         <img src={newAvatar || userIcon} alt="Profile Avatar" className="modal__avatar" />
-        <input type="file" accept="image/*" multiple onChange={handleUploadAvatar} style={{ display: "none" }} />
+        <input type="file" accept="image/*" onChange={handleUploadAvatar} style={{ display: "none" }} />
       </label>
 
       <div className="modal__input-container">
         <span>{t("name")}</span>
-
         <input
           type="text"
           placeholder={t("enterYourName")}
@@ -108,7 +118,6 @@ const ModalEditProfile = ({ isOpenEditProfile, setIsOpenEditProfile }: ModalEdit
 
       <div className="modal__input-container">
         <span>{t("geolocation")}</span>
-
         <input
           type="text"
           placeholder={t("enterYourCity")}
@@ -121,7 +130,6 @@ const ModalEditProfile = ({ isOpenEditProfile, setIsOpenEditProfile }: ModalEdit
 
       <div className="modal__input-container">
         <span>{t("aboutMe")}</span>
-
         <input
           type="text"
           placeholder={t("enterYourAbout")}
@@ -132,7 +140,13 @@ const ModalEditProfile = ({ isOpenEditProfile, setIsOpenEditProfile }: ModalEdit
         />
       </div>
 
-      <TaskPrimaryButton color="green" icon={penWhiteIcon} text={t("saveChanges")} onClick={handleSaveChanges} />
+      <TaskPrimaryButton
+        color="green"
+        icon={penWhiteIcon}
+        text={t("saveChanges")}
+        onClick={handleSaveChanges}
+        disabled={isSubmitting}
+      />
     </Modal>
   )
 }

@@ -27,6 +27,9 @@ export type MessageVariant =
   | "permissionToCancel"
   | "taskCompleted"
   | "taskCancelled"
+  | "responseAccepted"
+  | "responseDeclined"
+  | "submissionRejected"
 
 export type SpecialSection = "missions" | "hotspots"
 export type SpecialClaimStatus = "available" | "claimed" | "unavailable"
@@ -217,13 +220,28 @@ export interface RequestMapItem {
   lat: number // latitude (не longitude!)
 }
 
-// Тип для исполнителей рядом с задачей
-export interface PerformerNearby {
+/** Ответ GET /user/list-performers и GET /user/list-performers-map */
+export interface PerformerListGeoItem {
   id: string
+  username: string | null
   firstName: string
   lastName: string | null
   avatar: string | null
-  rating: number // Всегда 0 на данный момент (TODO на бекенде)
+  rating: number
+  /** км от точки (радиусный поиск); на карте мира — 0 */
+  distance: number
+  lat: number
+  lng: number
+}
+
+// Тип для исполнителей рядом с задачей
+export interface PerformerNearby {
+  id: string
+  username?: string | null
+  firstName: string
+  lastName: string | null
+  avatar: string | null
+  rating: number
   latitude: number
   longitude: number
   distance: number // Расстояние в км

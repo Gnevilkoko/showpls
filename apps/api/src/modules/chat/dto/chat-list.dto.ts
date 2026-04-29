@@ -9,6 +9,7 @@ const chatListSchema = paginationSchema.extend({
       return val
     }, z.boolean().optional()),
   search: z.string().optional(),
+  scope: z.enum(["all", "support"]).optional(),
 })
 
 export class ChatListDto extends createZodDto(chatListSchema) {}

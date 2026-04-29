@@ -5,6 +5,8 @@ import { clearAuthData, setAuthData } from "../userSlice"
 
 const baseQueryWithAuth = fetchBaseQuery({
   baseUrl: "/api",
+  credentials: "include",
+  timeout: 20000,
   prepareHeaders: (headers, { getState }) => {
     const state = getState() as RootState
     const token = state.user?.accessToken
@@ -19,10 +21,27 @@ const baseQueryWithAuth = fetchBaseQuery({
 
 const baseQueryPublic = fetchBaseQuery({
   baseUrl: "/api",
+  credentials: "include",
+  timeout: 20000,
 })
 
 let isRefreshing = false
-let refreshPromise: Promise<unknown> | null = null
+let refreshPromise: Promise<void> | null = null
+const REFRESH_WAIT_TIMEOUT_MS = 8000
+
+async function waitRefreshSafe(promise: Promise<void>, timeoutMs: number): Promise<boolean> {
+  try {
+    await Promise.race([
+      promise,
+      new Promise<void>((resolve) => {
+        setTimeout(() => resolve(), timeoutMs)
+      }),
+    ])
+    return true
+  } catch {
+    return false
+  }
+}
 
 /**
  * Общий baseQuery конфиг для всех API которые требуют аутентификации
@@ -34,14 +53,19 @@ export const authenticatedBaseQuery: BaseQueryFn<string | FetchArgs, unknown, Fe
   api,
   extraOptions
 ) => {
-  // Если сейчас идет обновление токена, ждем завершения
+  // Если обновление токена уже идет, ждем его завершения
   if (isRefreshing && refreshPromise) {
-    await refreshPromise
+    const ok = await waitRefreshSafe(refreshPromise, REFRESH_WAIT_TIMEOUT_MS)
+    if (!ok) {
+      isRefreshing = false
+      refreshPromise = null
+    }
   }
 
   let result = await baseQueryWithAuth(args, api, extraOptions)
 
   if (result.error && result.error.status === 401) {
+    // Нет Bearer в стейте — сессия может жить в httpOnly cookie; пробуем refresh, как при протухшем JWT.
     if (!isRefreshing) {
       isRefreshing = true
 
@@ -57,11 +81,8 @@ export const authenticatedBaseQuery: BaseQueryFn<string | FetchArgs, unknown, Fe
             // Успешно обновили
             const data = refreshResult.data as { accessToken: string; user: any }
             api.dispatch(setAuthData({ accessToken: data.accessToken, userData: data.user }))
-
-            // Повторяем оригинальный запрос с новым токеном
-            result = await baseQueryWithAuth(args, api, extraOptions)
           } else {
-            // Ошибка обновления
+            // Ошибка обновления (сессия пропала/истекла или сервер не отдал токен)
             api.dispatch(clearAuthData())
             toast.error("Сессия истекла. Пожалуйста, войдите снова.", { toastId: "err-401" })
           }
@@ -72,23 +93,49 @@ export const authenticatedBaseQuery: BaseQueryFn<string | FetchArgs, unknown, Fe
       }
 
       refreshPromise = runRefresh()
-      await refreshPromise
+      const ok = await waitRefreshSafe(refreshPromise, REFRESH_WAIT_TIMEOUT_MS)
+      if (!ok) {
+        isRefreshing = false
+        refreshPromise = null
+      }
     } else {
       // Другой запрос уже инициировал обновление токена, просто дождемся его
       if (refreshPromise) {
-        await refreshPromise
+        const ok = await waitRefreshSafe(refreshPromise, REFRESH_WAIT_TIMEOUT_MS)
+        if (!ok) {
+          isRefreshing = false
+          refreshPromise = null
+        }
       }
-      // После обновления токена, повторяем наш запрос
+    }
+
+    const stateAfterRefresh = api.getState() as RootState
+    const hasTokenAfterRefresh = Boolean(stateAfterRefresh.user?.accessToken)
+
+    if (hasTokenAfterRefresh) {
+      // После обновления токена повторяем исходный запрос
       result = await baseQueryWithAuth(args, api, extraOptions)
+    } else {
+      // Возвращаем 401, но без зависания запроса
+      result = {
+        error: {
+          status: 401,
+          data: { message: "Unauthorized" },
+        },
+      }
     }
   } else if (result.error) {
     const status = result.error.status
     if (status === 403) {
+      const url = typeof args === "string" ? args : (args as FetchArgs).url
+      console.warn("[403] Запрос без прав:", url)
       toast.error("Недостаточно прав для выполнения действия (403)", { toastId: "err-403" })
     } else if (status === 404) {
       toast.error("Запрашиваемый ресурс не найден (404)", { toastId: "err-404" })
     } else if (status === 413) {
       toast.error("Файл слишком велик. Пожалуйста, выберите файл меньшего размера.", { toastId: "err-413" })
+    } else if (status === 503) {
+      toast.error("Сервис временно недоступен (503). Попробуйте позже.", { toastId: "err-503" })
     } else if (status === 500 || status === "FETCH_ERROR" || status === "PARSING_ERROR") {
       toast.error("Произошла ошибка сервера или сети. Попробуйте позже.", { toastId: "err-500" })
     }
@@ -114,6 +161,8 @@ export const publicBaseQuery: BaseQueryFn<string | FetchArgs, unknown, FetchBase
     const status = result.error.status
     if (status === 413) {
       toast.error("Файл слишком велик. Пожалуйста, выберите файл меньшего размера.", { toastId: "err-413-public" })
+    } else if (status === 503) {
+      toast.error("Сервис временно недоступен (503). Попробуйте позже.", { toastId: "err-503-public" })
     } else if (status === 500 || status === "FETCH_ERROR" || status === "PARSING_ERROR") {
       toast.error("Произошла ошибка сервера или сети. Попробуйте позже.", { toastId: "err-500-public" })
     }

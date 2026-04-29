@@ -2,13 +2,17 @@ import { Injectable, Logger, NotFoundException } from "@nestjs/common"
 import { InjectRepository, InjectDataSource } from "@nestjs/typeorm"
 import { EntityManager, Repository, DataSource } from "typeorm"
 import { Deal, User } from "@share/entities"
-import { Blockchain, LanguageCode, Role, Token } from "@share"
+import { Blockchain, ErrorCode, LanguageCode, Role, Token } from "@share"
+import { APIException } from "@server/api"
 import { DealStatus } from "@share/deal-status.enum"
 import { DbHelpers } from "../../db"
 import UserExceptions from "./user.exceptions"
 import { NotImplemented } from "@share/errors"
 import { UserListDto } from "./dto/user-list.dto"
 import { UpdateProfileDto } from "./dto/update-profile.dto"
+import { SubmitPerformerVerificationDto } from "./dto/submit-performer-verification.dto"
+import { PatchPerformerVerificationGeoDto } from "./dto/patch-performer-verification-geo.dto"
+import { GeoService } from "../geo/geo.service"
 import { paginate } from "nestjs-typeorm-paginate"
 import { Ledger } from "@ledger"
 import { AccountOwnerType, Entry } from "@ledger/entities"
@@ -21,6 +25,7 @@ export class UserService {
     @InjectRepository(User) protected repository: Repository<User>,
     @InjectDataSource() protected dataSource: DataSource,
     protected ledger: Ledger,
+    protected geoService: GeoService,
   ) {}
 
   async create({ balances, ...params }: CreateUserParams, manager?: EntityManager | undefined) {
@@ -38,7 +43,25 @@ export class UserService {
         .returning("*")
         .execute()
 
-      return this.repository.create(insertResult.raw[0] as object)
+      const user = this.repository.create(insertResult.raw[0] as object)
+
+      try {
+        const account = await this.ledger.account.create(
+          { ownerId: String(user.id), ownerType: AccountOwnerType.User },
+          undefined,
+        )
+        const starsCurrency = await this.ledger.currency.retrieve({ code: "STARS", blockchain: null })
+        if (account && starsCurrency) {
+          await this.ledger.balance.create(
+            { accountId: account.id, currencyId: starsCurrency.id },
+            undefined,
+          )
+        }
+      } catch (ledgerErr) {
+        this.logger.warn(`Failed to create ledger account for user ${user.id}: ${ledgerErr}`)
+      }
+
+      return user
     } catch (e) {
       if (DbHelpers.isUniqueError(e)) {
         throw new UserExceptions.AlreadyCreated()
@@ -123,7 +146,7 @@ export class UserService {
       throw new NotFoundException("User not found")
     }
 
-    const updateData: Partial<User> = {}
+    const updateData: Partial<Pick<User, "firstName" | "lastName" | "avatar" | "about" | "city">> = {}
     if (dto.firstName !== undefined) updateData.firstName = dto.firstName
     if (dto.lastName !== undefined) updateData.lastName = dto.lastName
     if (dto.avatar !== undefined) updateData.avatar = dto.avatar
@@ -144,8 +167,76 @@ export class UserService {
     }
 
     const newValue = !user.isAvailable
+    if (newValue && user.performerVerification == null) {
+      throw new APIException(ErrorCode.BUSINESS_ERROR, "PERFORMER_VERIFICATION_REQUIRED")
+    }
+    if (newValue) {
+      const rows = await this.repository.query(
+        `SELECT ("lastKnownLocation" IS NOT NULL) AS "has_loc" FROM "user" WHERE id = $1`,
+        [userId],
+      )
+      if (!rows[0]?.has_loc) {
+        throw new APIException(ErrorCode.BUSINESS_ERROR, "PERFORMER_LOCATION_REQUIRED")
+      }
+    }
+
     await this.repository.update(userId, { isAvailable: newValue })
     return { isAvailable: newValue }
+  }
+
+  async submitPerformerVerification(
+    userId: string,
+    dto: SubmitPerformerVerificationDto,
+  ): Promise<{ performerVerification: object }> {
+    const user = await this.repository.findOne({ where: { id: userId } })
+    if (!user) {
+      throw new NotFoundException("User not found")
+    }
+
+    const verifiedAt = new Date().toISOString()
+    const snapshot = {
+      verifiedAt,
+      latitude: dto.latitude,
+      longitude: dto.longitude,
+      accuracyM: dto.accuracyM ?? null,
+      os: dto.os,
+      osVersion: dto.osVersion,
+      deviceModel: dto.deviceModel,
+      userAgent: dto.userAgent,
+    }
+
+    await this.repository.update(userId, { performerVerification: snapshot })
+    await this.geoService.updateUserLocation(userId, dto.latitude, dto.longitude)
+
+    return { performerVerification: snapshot as object }
+  }
+
+  async updatePerformerVerificationGeo(
+    userId: string,
+    dto: PatchPerformerVerificationGeoDto,
+  ): Promise<{ performerVerification: object }> {
+    const user = await this.repository.findOne({ where: { id: userId } })
+    if (!user) {
+      throw new NotFoundException("User not found")
+    }
+    if (user.performerVerification == null) {
+      throw new APIException(ErrorCode.BUSINESS_ERROR, "PERFORMER_VERIFICATION_REQUIRED")
+    }
+
+    const prev = user.performerVerification as Record<string, unknown>
+    const verifiedAt = new Date().toISOString()
+    const snapshot = {
+      ...prev,
+      verifiedAt,
+      latitude: dto.latitude,
+      longitude: dto.longitude,
+      accuracyM: dto.accuracyM ?? null,
+    }
+
+    await this.repository.update(userId, { performerVerification: snapshot as object })
+    await this.geoService.updateUserLocation(userId, dto.latitude, dto.longitude)
+
+    return { performerVerification: snapshot as object }
   }
 
   async delete() {
@@ -226,28 +317,41 @@ export class UserService {
       undefined
     )
 
-    const balances: Balance[] = []
+    const aggregated = new Map<string, { balance: bigint; lockedBalance: bigint; token: Token; blockchain: Blockchain | null }>()
 
-    for (let currency of currencies) {
+    for (const currency of currencies) {
       let balance = "0"
       let lockedBalance = "0"
       if (account) {
         const b = await this.ledger.balance.retrieve({ accountId: account.id, currencyId: currency.id }, undefined)
         if (b) {
-          balance = b.amount
-          lockedBalance = b.lockedAmount
+          balance = typeof b.amount === "string" ? b.amount : String(b.amount ?? 0)
+          lockedBalance = typeof b.lockedAmount === "string" ? b.lockedAmount : String(b.lockedAmount ?? 0)
         }
       }
-
-      balances.push({
-        token: currency.code as Token,
-        blockchain: currency.blockchain as Blockchain | null,
-        balance: balance,
-        lockedBalance: lockedBalance,
-      })
+      const key = `${currency.code}\0${currency.blockchain ?? ""}`
+      const existing = aggregated.get(key)
+      const addBalance = BigInt(balance)
+      const addLocked = BigInt(lockedBalance)
+      if (existing) {
+        existing.balance += addBalance
+        existing.lockedBalance += addLocked
+      } else {
+        aggregated.set(key, {
+          balance: addBalance,
+          lockedBalance: addLocked,
+          token: currency.code as Token,
+          blockchain: currency.blockchain as Blockchain | null,
+        })
+      }
     }
 
-    return balances
+    return Array.from(aggregated.values()).map(({ token, blockchain, balance, lockedBalance }) => ({
+      token,
+      blockchain,
+      balance: balance.toString(),
+      lockedBalance: lockedBalance.toString(),
+    }))
   }
 }
 
@@ -260,11 +364,12 @@ type Balance = {
 
 export type CreateUserParams = {
   role: Role
-  tgId: string
+  tgId: string | null
   username?: string | null
   firstName: string
   lastName?: string | null
   avatar?: string | null
   languageCode: LanguageCode
   balances?: Record<Token, string>
+  phone?: string | null
 }

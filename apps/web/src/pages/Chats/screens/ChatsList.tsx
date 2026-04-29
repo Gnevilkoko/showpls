@@ -3,6 +3,7 @@ import type { ChatType } from "../../../shared/types"
 import { useInView } from "react-intersection-observer"
 import { useTranslation } from "react-i18next"
 import ChatItem from "../components/ChatItem"
+import { isSupportAgentChatItem } from "../../../shared/utils/supportChat"
 
 interface ChatsListProps {
   list: ChatType[]
@@ -19,8 +20,6 @@ const ChatsList = ({ list, isFavoriteList, searchValue, hasMore, isFetching, onL
     threshold: 0,
   })
 
-  // фильтруем список на избранные, совпадения в поиске,
-  // если фильтров нет - возвращает все значения
   const filteredChats = useMemo(() => {
     const normalized = searchValue?.toLowerCase() ?? ""
 
@@ -38,22 +37,18 @@ const ChatsList = ({ list, isFavoriteList, searchValue, hasMore, isFetching, onL
 
         return true
       })
-      // сортировка: сначала активные ордеры, потом остальные
-      .sort((a, b) => Number(b.is_active_order) - Number(a.is_active_order))
-
-    // Поднимаем чат Showpls Agent (id = 0) в самый верх, без дубликатов
-    const agent = list.find((chat) => chat.chat_id === 0)
-    if (agent) {
-      result = result.filter((chat) => chat.chat_id !== agent.chat_id)
-      result.unshift(agent)
-    }
+      .sort((a, b) => {
+        const aSupport = isSupportAgentChatItem(a)
+        const bSupport = isSupportAgentChatItem(b)
+        if (aSupport !== bSupport) return aSupport ? -1 : 1
+        const byActiveOrder = Number(b.is_active_order) - Number(a.is_active_order)
+        if (byActiveOrder !== 0) return byActiveOrder
+        return Number(b.last_update) - Number(a.last_update)
+      })
 
     return result
   }, [list, isFavoriteList, searchValue])
 
-
-
-  // Подгрузка новых чатов при достижении низа
   useEffect(() => {
     if (inView && hasMore && !isFetching) {
       onLoadMore()

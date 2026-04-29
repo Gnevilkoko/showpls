@@ -1,3 +1,15 @@
+/* iOS: не менять размер текста при повороте, меньше «прыжков» масштаба */
+html {
+  -webkit-text-size-adjust: 100%;
+}
+
+/* iOS: при фокусе в поле с font-size < 16px Safari делает авто-зум. Минимум 16px везде убирает это. */
+input,
+textarea,
+select {
+  font-size: max(16px, 1em);
+}
+
 body {
   font-family: "Space Grotesk", sans-serif;
 }

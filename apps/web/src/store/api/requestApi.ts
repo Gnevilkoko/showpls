@@ -1,6 +1,7 @@
 import { createApi } from "@reduxjs/toolkit/query/react"
 import { authenticatedBaseQuery } from "./baseQuery"
 import { chatApi } from "./chatApi"
+import { submissionApi } from "./submissionApi"
 import { userApi } from "./userApi"
 import type {
   RequestBackend,
@@ -123,7 +124,7 @@ export const requestApi = createApi({
           dispatch(userApi.util.invalidateTags(["User", "Reviews"]))
         } catch { }
       },
-      invalidatesTags: ["Request"], // Создается чат, кеш обновляется через onQueryStarted
+      invalidatesTags: ["Request"],
     }),
 
     // Endpoint для получения списка задач
@@ -228,7 +229,7 @@ export const requestApi = createApi({
           dispatch(chatApi.util.invalidateTags(["Chat"]))
         } catch { }
       },
-      invalidatesTags: ["Request", "Response"], // Создается чат, кеш обновляется через onQueryStarted
+      invalidatesTags: ["Request", "Response"],
     }),
 
     // Endpoint для редактирования задачи
@@ -257,10 +258,11 @@ export const requestApi = createApi({
         method: "POST",
         body,
       }),
-      async onQueryStarted(_arg, { dispatch, queryFulfilled }) {
+      async onQueryStarted({ id }, { dispatch, queryFulfilled }) {
         try {
           await queryFulfilled
           dispatch(chatApi.util.invalidateTags(["Chat"]))
+          dispatch(submissionApi.util.invalidateTags(["Submission", { type: "Submission", id: `request-${id}` }]))
         } catch { }
       },
       invalidatesTags: (_result, _error, { id }) => [{ type: "Request", id }],

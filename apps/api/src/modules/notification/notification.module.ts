@@ -7,6 +7,7 @@ import { NotificationProcessor } from "./processors/notification.processor"
 import { Notification } from "./notification.entity"
 import { ChatModule } from "../chat/chat.module"
 import { QueueModule } from "../queue/queue.module"
+import { DeviceModule } from "../device/device.module"
 import { User } from "@share/entities/user.entity"
 
 @Module({
@@ -18,7 +19,7 @@ import { User } from "@share/entities/user.entity"
         removeOnFail: 50,
         attempts: 3,
         backoff: {
-          type: 'exponential',
+          type: "exponential",
           delay: 2000,
         },
       },
@@ -26,6 +27,7 @@ import { User } from "@share/entities/user.entity"
     TypeOrmModule.forFeature([Notification, User]),
     QueueModule,
     ChatModule,
+    DeviceModule,
   ],
   controllers: [NotificationController],
   providers: [NotificationService, NotificationProcessor],

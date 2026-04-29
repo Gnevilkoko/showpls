@@ -13,8 +13,9 @@ import TransactionsList from "./components/TransactionsList"
 import { TG_SCHEME, TME_LINK } from "../../constants"
 import { useGetBalancesQuery, useLazyGetBalancesQuery } from "../../store/api/userApi"
 
-const formatBalance = (balanceStr: string): string => {
-  const balance = BigInt(balanceStr)
+const formatBalance = (value: string | number | undefined | null): string => {
+  const balanceStr = value != null ? String(value) : "0"
+  const balance = BigInt(balanceStr || "0")
   const whole = balance / BigInt(1e6)
   return whole.toString()
 }
@@ -30,18 +31,25 @@ const Wallet = () => {
   const userToken = useAppSelector((state) => state.user.accessToken)
   const userData = useAppSelector((state) => state.user.userData)
 
-  const { data: balances, isLoading: isBalancesLoading } = useGetBalancesQuery(
+  // При каждом открытии страницы кошелька и при возврате во вкладку — запрашиваем свежий баланс с сервера
+  const { data: balances, isLoading: isBalancesLoading, isError: isBalancesError } = useGetBalancesQuery(
     { id: userData?.id ?? "" },
-    { skip: !userData?.id }
+    {
+      skip: !userData?.id,
+      refetchOnMountOrArgChange: true,
+      refetchOnFocus: true,
+    }
   )
   const [triggerGetBalances] = useLazyGetBalancesQuery()
 
   const pollingIntervalRef = useRef<number | null>(null)
   const pollingTimeoutRef = useRef<number | null>(null)
 
-  const starsBalance = balances?.find((b) => b.token === "STARS" && b.blockchain === null)
-  const availableBalance = starsBalance ? formatBalance(starsBalance.balance) : "0"
-  const lockedBalance = starsBalance ? formatBalance(starsBalance.lockedBalance) : "0"
+  const starsEntries = balances?.filter((b) => b.token === "STARS" && b.blockchain === null) ?? []
+  const starsTotalBalance = starsEntries.reduce((sum, b) => sum + BigInt(b.balance || "0"), BigInt(0)).toString()
+  const starsTotalLocked = starsEntries.reduce((sum, b) => sum + BigInt(b.lockedBalance || "0"), BigInt(0)).toString()
+  const availableBalance = isBalancesError ? "—" : starsEntries.length ? formatBalance(starsTotalBalance) : "0"
+  const lockedBalance = starsEntries.length ? formatBalance(starsTotalLocked) : "0"
 
   const stopPolling = useCallback(() => {
     if (pollingIntervalRef.current) {
@@ -67,9 +75,10 @@ const Wallet = () => {
       pollingIntervalRef.current = window.setInterval(async () => {
         try {
           const result = await triggerGetBalances({ id: userData.id }).unwrap()
-          const newStarsBalance = result.find((b) => b.token === "STARS" && b.blockchain === null)
+          const newStarsEntries = result.filter((b) => b.token === "STARS" && b.blockchain === null)
+          const newStarsTotal = newStarsEntries.reduce((s, b) => s + BigInt(b.balance || "0"), BigInt(0))
 
-          if (newStarsBalance && BigInt(newStarsBalance.balance) > BigInt(previousBalance)) {
+          if (newStarsTotal > BigInt(previousBalance)) {
             stopPolling()
             notification.showSuccess("paymentSuccess")
             setIsOpenModalTopUp(false)
@@ -147,7 +156,7 @@ const Wallet = () => {
         return
       }
 
-      const currentBalance = starsBalance?.balance ?? "0"
+      const currentBalance = starsTotalBalance
 
       webApp.openInvoice(data.link, (status) => {
         switch (status) {

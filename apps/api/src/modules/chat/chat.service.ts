@@ -1,6 +1,6 @@
-import { Injectable, NotFoundException, ForbiddenException } from "@nestjs/common"
+import { forwardRef, Inject, Injectable, NotFoundException, ForbiddenException } from "@nestjs/common"
 import { InjectRepository, InjectDataSource } from "@nestjs/typeorm"
-import { Repository, Brackets, In, DataSource } from "typeorm"
+import { Repository, Brackets, In, DataSource, Not, QueryFailedError } from "typeorm"
 import { Chat } from "@share/entities/chat.entity"
 import { ChatMessage } from "@share/entities/chat-message.entity"
 import { Deal } from "@share/entities/deal.entity"
@@ -12,6 +12,7 @@ import { SendMessageDto } from "./dto/send-message.dto"
 import { PaginationDto } from "../../common/dto/pagination.dto"
 import { Role } from "@share/role.enum"
 import { ChatGateway } from "./chat.gateway"
+import { GeminiAssistantService } from "./gemini-assistant.service"
 
 @Injectable()
 export class ChatService {
@@ -30,7 +31,9 @@ export class ChatService {
     private readonly requestRepository: Repository<Request>,
     @InjectDataSource()
     private readonly dataSource: DataSource,
-    private readonly chatGateway: ChatGateway
+    private readonly chatGateway: ChatGateway,
+    @Inject(forwardRef(() => GeminiAssistantService))
+    private readonly geminiAssistant: GeminiAssistantService
   ) {}
 
   async getOrCreateChat(user1Id: string, user2Id: string, manager?: DataSource): Promise<Chat> {
@@ -74,7 +77,7 @@ export class ChatService {
   }
 
   async findAll(user: User, query: ChatListDto) {
-    const { isFavorite, search, limit = 10, page = 1 } = query
+    const { isFavorite, search, limit = 10, page = 1, scope } = query
     const offset = (page - 1) * limit
 
     const qb = this.chatRepository
@@ -82,11 +85,27 @@ export class ChatService {
       .leftJoinAndSelect("chat.user1", "user1")
       .leftJoinAndSelect("chat.user2", "user2")
       .leftJoinAndSelect("chat.admin", "admin")
-      .where(
+
+    const isAdminGlobalList =
+      user.role === Role.Admin && (scope === "all" || scope === "support")
+    if (!isAdminGlobalList) {
+      qb.where(
         new Brackets((qb) => {
           qb.where("chat.user1Id = :userId", { userId: user.id }).orWhere("chat.user2Id = :userId", { userId: user.id })
         })
       )
+    }
+
+    if (user.role === Role.Admin && scope === "support") {
+      qb.andWhere(
+        new Brackets((qb) => {
+          qb.where("user1.username = :supportAgent", { supportAgent: ChatService.SUPPORT_AGENT_USERNAME }).orWhere(
+            "user2.username = :supportAgent",
+            { supportAgent: ChatService.SUPPORT_AGENT_USERNAME }
+          )
+        })
+      )
+    }
 
     if (isFavorite) {
       qb.andWhere(
@@ -147,12 +166,18 @@ export class ChatService {
       const myIsFavorite = isUser1 ? chat.isFavorite : chat.isFavorite2
       const chatDeals = dealsByChat.get(chat.id) || []
       const latestDeal = chatDeals[0] || null
+      const isSupportChatForUser =
+        this.isSupportAgent(chat.user1) || this.isSupportAgent(chat.user2)
 
-      return {
+      const userSide = isSupportChatForUser
+        ? (this.isSupportAgent(chat.user1) ? chat.user2 : chat.user1)
+        : null
+
+      const base = {
         chatId: chat.id,
-        avatar: otherUser.avatar,
-        firstName: otherUser.firstName,
-        lastName: otherUser.lastName,
+        avatar: isSupportChatForUser ? "/favicon.svg" : otherUser.avatar,
+        firstName: isSupportChatForUser ? "Showpls" : otherUser.firstName,
+        lastName: isSupportChatForUser ? "Agent" : otherUser.lastName,
         lastMessage: chat.lastMessage,
         lastUpdate: chat.lastUpdate,
         isFavorite: myIsFavorite,
@@ -164,6 +189,20 @@ export class ChatService {
         activeRequestPrice: latestDeal?.request?.price || null,
         dealsCount: chatDeals.length,
       }
+
+      if (isAdminGlobalList) {
+        return {
+          ...base,
+          user1: { id: chat.user1.id, firstName: chat.user1.firstName, lastName: chat.user1.lastName, avatar: chat.user1.avatar },
+          user2: { id: chat.user2.id, firstName: chat.user2.firstName, lastName: chat.user2.lastName, avatar: chat.user2.avatar },
+          isSupportChat: isSupportChatForUser,
+          supportUserId: userSide?.id ?? null,
+          supportUserName: userSide ? `${userSide.firstName} ${userSide.lastName || ""}`.trim() : null,
+          supportUserAvatar: userSide?.avatar ?? null,
+        }
+      }
+
+      return base
     })
 
     return {
@@ -174,24 +213,152 @@ export class ChatService {
     }
   }
 
+  static readonly SUPPORT_AGENT_TG_ID = "0"
+  static readonly SUPPORT_AGENT_USERNAME = "showpls-support-agent"
+
+  private async getOrCreateSupportAgent(): Promise<User> {
+    const whereAgent = { username: ChatService.SUPPORT_AGENT_USERNAME }
+    let agent = await this.userRepository.findOne({ where: whereAgent })
+    if (agent) return agent
+
+    const draft = this.userRepository.create({
+      tgId: ChatService.SUPPORT_AGENT_TG_ID,
+      username: ChatService.SUPPORT_AGENT_USERNAME,
+      firstName: "Showpls",
+      lastName: "Agent",
+      avatar: "/favicon.svg",
+      role: Role.Admin,
+      languageCode: "en" as any,
+      banned: false,
+      isAvailable: false,
+      lastSeenAt: new Date(),
+      about: null,
+      city: null,
+      lastKnownLocation: null,
+      locationUpdatedAt: null,
+    })
+    try {
+      return await this.userRepository.save(draft)
+    } catch (e) {
+      // Два параллельных POST /chat/support (напр. React StrictMode) — второй INSERT ловит unique violation.
+      if (e instanceof QueryFailedError && (e as QueryFailedError & { driverError?: { code?: string } }).driverError?.code === "23505") {
+        agent = await this.userRepository.findOne({ where: whereAgent })
+        if (agent) return agent
+      }
+      throw e
+    }
+  }
+
+  isSupportAgent(user: User | null | undefined): boolean {
+    if (!user) return false
+    return user.username === ChatService.SUPPORT_AGENT_USERNAME
+  }
+
+  /**
+   * Сообщение от лица Showpls Agent без живого автора — ответ ассистента Gemini.
+   */
+  async postSupportAssistantMessage(chatId: string, text: string): Promise<void> {
+    const agent = await this.getOrCreateSupportAgent()
+    const chat = await this.chatRepository.findOne({
+      where: { id: chatId },
+      relations: ["user1", "user2", "admin"],
+    })
+    if (!chat || !(this.isSupportAgent(chat.user1) || this.isSupportAgent(chat.user2))) return
+
+    const receiver = this.isSupportAgent(chat.user1) ? chat.user2 : chat.user1
+    const dto: SendMessageDto = { type: "message", text }
+
+    const completeMessage = await this.dataSource.transaction(async (txManager) => {
+      return this.sendMessageWithManager(
+        agent,
+        chat,
+        receiver,
+        false,
+        dto,
+        txManager.getRepository(Chat),
+        txManager.getRepository(ChatMessage),
+        null
+      )
+    })
+
+    if (!completeMessage) return
+
+    const broadcastTargetIds = [String(receiver.id)]
+    broadcastTargetIds.forEach((targetId) => {
+      this.chatGateway.notifyReceiver(targetId, completeMessage, chat.id)
+      this.chatGateway.notifyChatUpdate(targetId, chat.id, {
+        lastMessage: chat.lastMessage,
+        lastUpdate: chat.lastUpdate,
+        countUnread: targetId === String(chat.user1.id) ? chat.countUnread : chat.countUnread2,
+      })
+    })
+    this.chatGateway.notifyReceiver(String(agent.id), completeMessage, chat.id)
+    this.chatGateway.notifyChatUpdate(String(agent.id), chat.id, {
+      lastMessage: chat.lastMessage,
+      lastUpdate: chat.lastUpdate,
+      countUnread: String(agent.id) === String(chat.user1.id) ? chat.countUnread : chat.countUnread2,
+    })
+  }
+
+  async getOrCreateSupportChat(user: User): Promise<{ chatId: string }> {
+    const agent = await this.getOrCreateSupportAgent()
+
+    if (String(user.id) === String(agent.id)) {
+      throw new ForbiddenException("Support agent cannot open support chat with itself")
+    }
+
+    const chat = await this.getOrCreateChat(String(user.id), String(agent.id))
+    return { chatId: chat.id }
+  }
+
+  /** Нормализация id (bigint из БД — строка, из JWT payload — может быть number). */
+  private static normalizeUserId(v: unknown): string {
+    if (v == null || v === "") return ""
+    if (typeof v === "bigint") return String(v)
+    return String(v)
+  }
+
   async findOne(id: string, user: User, query: PaginationDto & { search?: string }) {
+    const currentId = ChatService.normalizeUserId(user?.id)
+    if (!currentId) {
+      throw new ForbiddenException("Access denied")
+    }
+
+    const rawRow = await this.chatRepository
+      .createQueryBuilder("chat")
+      .select("chat.id", "cid")
+      .addSelect("chat.user1Id", "user1Id")
+      .addSelect("chat.user2Id", "user2Id")
+      .addSelect("chat.adminId", "adminId")
+      .where("chat.id = :id", { id })
+      .getRawOne<Record<string, unknown>>()
+
+    if (!rawRow) {
+      throw new NotFoundException("Chat not found")
+    }
+
+    // PostgreSQL/driver может вернуть ключи в нижнем регистре (user1id, user2id, adminid)
+    const u1 = ChatService.normalizeUserId(rawRow.user1Id ?? rawRow.user1id)
+    const u2 = ChatService.normalizeUserId(rawRow.user2Id ?? rawRow.user2id)
+    const adminId = ChatService.normalizeUserId(rawRow.adminId ?? rawRow.adminid)
+
+    const isParticipant = currentId === u1 || currentId === u2 || currentId === adminId || user.role === Role.Admin
+    if (!isParticipant) {
+      throw new ForbiddenException("Access denied")
+    }
+
     const chat = await this.chatRepository.findOne({
       where: { id },
       relations: ["user1", "user2", "admin"],
     })
-
     if (!chat) {
       throw new NotFoundException("Chat not found")
     }
 
-    if (chat.user1.id !== user.id && chat.user2.id !== user.id && chat.admin?.id !== user.id) {
-      throw new ForbiddenException("Access denied")
-    }
-
     // Reset unread count
-    if (chat.user1.id === user.id) {
+    if (currentId === u1) {
       chat.countUnread = 0
-    } else if (chat.user2.id === user.id) {
+    } else if (currentId === u2) {
       chat.countUnread2 = 0
     }
     await this.chatRepository.save(chat)
@@ -246,7 +413,7 @@ export class ChatService {
         admin: chat.admin,
         lastMessage: chat.lastMessage,
         lastUpdate: chat.lastUpdate,
-        isFavorite: chat.user1.id === user.id ? chat.isFavorite : chat.isFavorite2,
+        isFavorite: currentId === u1 ? chat.isFavorite : chat.isFavorite2,
         isActiveOrder: chat.isActiveOrder,
         isArbitration: chat.isArbitration,
         isRead: true, // При открытии чата countUnread сбрасывается в 0 (строки 166-172)
@@ -269,6 +436,83 @@ export class ChatService {
     }
   }
 
+  /**
+   * Удаляет сообщение. Только отправитель может удалить своё сообщение.
+   * Системные уведомления (type === "notification") удалять нельзя.
+   * После удаления при необходимости обновляет lastMessage в чате.
+   */
+  async deleteMessage(user: User, chatId: string, messageId: string): Promise<void> {
+    const message = await this.messageRepository.findOne({
+      where: { id: messageId },
+      relations: ["chat", "sender"],
+    })
+
+    if (!message) {
+      throw new NotFoundException("Message not found")
+    }
+
+    if (message.chat.id !== chatId) {
+      throw new NotFoundException("Message not found")
+    }
+
+    const currentId = ChatService.normalizeUserId(user?.id)
+    const senderId = ChatService.normalizeUserId(message.sender?.id)
+    if (!currentId || currentId !== senderId) {
+      throw new ForbiddenException("Only the sender can delete their message")
+    }
+
+    if (message.type === "notification") {
+      throw new ForbiddenException("System notifications cannot be deleted")
+    }
+
+    const latestInChat = await this.messageRepository.findOne({
+      where: { chat: { id: chatId } },
+      order: { createdAt: "DESC" },
+    })
+    const isLastMessage = latestInChat?.id === message.id
+
+    await this.messageRepository.remove(message)
+
+    let lastMessage: string = ""
+    let lastUpdate: Date = new Date()
+
+    if (isLastMessage) {
+      const lastRemaining = await this.messageRepository.findOne({
+        where: { chat: { id: chatId } },
+        order: { createdAt: "DESC" },
+      })
+      const chat = await this.chatRepository.findOne({ where: { id: chatId } })
+      if (chat) {
+        chat.lastMessage = lastRemaining
+          ? lastRemaining.text || (lastRemaining.attachments?.length ? "Attachment" : "Message")
+          : ""
+        chat.lastUpdate = lastRemaining ? lastRemaining.createdAt : new Date()
+        await this.chatRepository.save(chat)
+        lastMessage = chat.lastMessage
+        lastUpdate = chat.lastUpdate
+      }
+    } else {
+      const chat = await this.chatRepository.findOne({ where: { id: chatId } })
+      if (chat) {
+        lastMessage = chat.lastMessage ?? ""
+        lastUpdate = chat.lastUpdate ?? new Date()
+      }
+    }
+
+    const chatWithUsers = await this.chatRepository.findOne({
+      where: { id: chatId },
+      relations: ["user1", "user2", "admin"],
+    })
+    if (chatWithUsers) {
+      const userIds = [
+        ChatService.normalizeUserId(chatWithUsers.user1?.id),
+        ChatService.normalizeUserId(chatWithUsers.user2?.id),
+        chatWithUsers.admin ? ChatService.normalizeUserId(chatWithUsers.admin.id) : "",
+      ].filter(Boolean) as string[]
+      this.chatGateway.notifyMessageDeleted(userIds, chatId, messageId, { lastMessage, lastUpdate })
+    }
+  }
+
   async sendMessage(user: User, chatId: string, dto: SendMessageDto, manager?: DataSource) {
     const chatRepo = manager ? manager.getRepository(Chat) : this.chatRepository
     const messageRepo = manager ? manager.getRepository(ChatMessage) : this.messageRepository
@@ -282,44 +526,90 @@ export class ChatService {
       throw new NotFoundException("Chat not found")
     }
 
-    // Convert IDs to strings for comparison to handle bigint/string mismatch
-    const userId = String(user.id)
-    const user1Id = String(chat.user1.id)
-    const user2Id = String(chat.user2.id)
-    const adminId = chat.admin ? String(chat.admin.id) : null
+    const userId = ChatService.normalizeUserId(user?.id)
+    const user1Id = ChatService.normalizeUserId(chat.user1?.id)
+    const user2Id = ChatService.normalizeUserId(chat.user2?.id)
+    const adminId = chat.admin ? ChatService.normalizeUserId(chat.admin.id) : ""
 
-    if (userId !== user1Id && userId !== user2Id && userId !== adminId && user.role !== Role.Admin) {
+    if (!userId || (userId !== user1Id && userId !== user2Id && userId !== adminId && user.role !== Role.Admin)) {
       throw new ForbiddenException("Access denied")
     }
 
-    const receiver = userId === user1Id ? chat.user2 : chat.user1
+    const isSupportChat = this.isSupportAgent(chat.user1) || this.isSupportAgent(chat.user2)
+    const isAdminSender = user.role === Role.Admin && userId !== user1Id && userId !== user2Id
+    const wantsAsSupport = dto.asSupport === true && user.role === Role.Admin && isSupportChat
 
-    // Use transaction if no manager provided, otherwise use the provided manager
+    let effectiveSender: User = user
+    let receiver: User
+
+    if (isSupportChat && (isAdminSender || wantsAsSupport)) {
+      const agentSide = this.isSupportAgent(chat.user1) ? chat.user1 : chat.user2
+      const userSide = this.isSupportAgent(chat.user1) ? chat.user2 : chat.user1
+      effectiveSender = agentSide
+      receiver = userSide
+    } else {
+      receiver = userId === user1Id ? chat.user2 : chat.user1
+    }
+
+    const shouldBroadcastToBothParticipants = isAdminSender && chat.isArbitration && !isSupportChat
+    const supportHumanAuthorId =
+      isSupportChat && this.isSupportAgent(effectiveSender) && user.role === Role.Admin ? userId : null
+
     const completeMessage = manager
-      ? await this.sendMessageWithManager(user, chat, receiver, dto, chatRepo, messageRepo)
+      ? await this.sendMessageWithManager(
+          effectiveSender,
+          chat,
+          receiver,
+          shouldBroadcastToBothParticipants,
+          dto,
+          chatRepo,
+          messageRepo,
+          supportHumanAuthorId
+        )
       : await this.dataSource.transaction(async (txManager) => {
           return this.sendMessageWithManager(
-            user,
+            effectiveSender,
             chat,
             receiver,
+            shouldBroadcastToBothParticipants,
             dto,
             txManager.getRepository(Chat),
-            txManager.getRepository(ChatMessage)
+            txManager.getRepository(ChatMessage),
+            supportHumanAuthorId
           )
         })
 
+    const broadcastTargetIds = shouldBroadcastToBothParticipants
+      ? [String(chat.user1.id), String(chat.user2.id)]
+      : [String(receiver.id)]
+
     // Use the complete message with relations for notifications
-    this.chatGateway.notifyReceiver(receiver.id, completeMessage, chat.id)
-    this.chatGateway.notifyReceiver(user.id, completeMessage, chat.id)
-    this.chatGateway.notifyChatUpdate(receiver.id, chat.id, {
-      lastMessage: chat.lastMessage,
-      lastUpdate: chat.lastUpdate,
-      countUnread: receiver.id === chat.user1.id ? chat.countUnread : chat.countUnread2,
+    broadcastTargetIds.forEach((targetId) => {
+      this.chatGateway.notifyReceiver(targetId, completeMessage, chat.id)
+      this.chatGateway.notifyChatUpdate(targetId, chat.id, {
+        lastMessage: chat.lastMessage,
+        lastUpdate: chat.lastUpdate,
+        countUnread: targetId === String(chat.user1.id) ? chat.countUnread : chat.countUnread2,
+      })
     })
+
+    this.chatGateway.notifyReceiver(String(user.id), completeMessage, chat.id)
     this.chatGateway.notifyChatUpdate(user.id, chat.id, {
       lastMessage: chat.lastMessage,
       lastUpdate: chat.lastUpdate,
     })
+
+    if (
+      completeMessage &&
+      !manager &&
+      this.geminiAssistant.isEnabled() &&
+      isSupportChat &&
+      dto.type !== "notification" &&
+      Boolean(dto.text?.trim()) &&
+      !this.isSupportAgent(completeMessage.sender)
+    ) {
+      void this.geminiAssistant.onUserSaysInSupportChat(chat.id, completeMessage.id)
+    }
 
     return completeMessage
   }
@@ -328,9 +618,11 @@ export class ChatService {
     user: User,
     chat: Chat,
     receiver: User,
+    broadcastToBothParticipants: boolean,
     dto: SendMessageDto,
     chatRepo: Repository<Chat>,
-    messageRepo: Repository<ChatMessage>
+    messageRepo: Repository<ChatMessage>,
+    supportHumanAuthorId: string | null = null
   ) {
     const message = messageRepo.create({
       chat,
@@ -343,6 +635,7 @@ export class ChatService {
       requestId: dto.requestId || null,
       responseId: dto.responseId || null,
       isRead: false,
+      supportHumanAuthorId,
     })
 
     // Save the message
@@ -352,7 +645,10 @@ export class ChatService {
     chat.lastMessage = dto.text || (dto.attachments?.length ? "Attachment" : "Message")
     chat.lastUpdate = new Date()
 
-    if (receiver.id === chat.user1.id) {
+    if (broadcastToBothParticipants) {
+      chat.countUnread += 1
+      chat.countUnread2 += 1
+    } else if (receiver.id === chat.user1.id) {
       chat.countUnread += 1
     } else {
       chat.countUnread2 += 1
@@ -379,13 +675,16 @@ export class ChatService {
       throw new NotFoundException("Chat not found")
     }
 
-    if (chat.user1.id !== user.id && chat.user2.id !== user.id) {
+    const userId = ChatService.normalizeUserId(user?.id)
+    const user1Id = ChatService.normalizeUserId(chat.user1?.id)
+    const user2Id = ChatService.normalizeUserId(chat.user2?.id)
+    if (!userId || (userId !== user1Id && userId !== user2Id)) {
       throw new ForbiddenException("Access denied")
     }
 
     // Use transaction to ensure data consistency
     await this.dataSource.transaction(async (manager) => {
-      if (chat.user1.id === user.id) {
+      if (userId === user1Id) {
         chat.isFavorite = isFavorite
       } else {
         chat.isFavorite2 = isFavorite
@@ -410,7 +709,10 @@ export class ChatService {
       throw new NotFoundException("Chat not found")
     }
 
-    if (chat.user1.id !== user.id && chat.user2.id !== user.id) {
+    const userId = ChatService.normalizeUserId(user?.id)
+    const user1Id = ChatService.normalizeUserId(chat.user1?.id)
+    const user2Id = ChatService.normalizeUserId(chat.user2?.id)
+    if (!userId || (userId !== user1Id && userId !== user2Id)) {
       throw new ForbiddenException("Access denied")
     }
 

@@ -36,6 +36,7 @@ export interface ChatListParams {
   limit?: number // Количество записей (по умолчанию: 10)
   isFavorite?: boolean // Фильтр по избранным
   search?: string // Поиск по имени или сообщению
+  scope?: "all" | "support" // Админ: all — все чаты; support — только обращения в поддержку (агент)
 }
 
 export interface ChatListResponse {
@@ -116,7 +117,7 @@ export const chatApi = createApi({
         }
       },
       serializeQueryArgs: ({ endpointName, queryArgs }) => {
-        return `${endpointName}-${queryArgs.isFavorite || false}-${queryArgs.search || ""}`
+        return `${endpointName}-${queryArgs.isFavorite || false}-${queryArgs.search || ""}-${queryArgs.scope || "default"}`
       },
       merge: (currentCache, newItems, { arg }) => {
         if (arg.page === 1 || !arg.page) {
@@ -359,6 +360,28 @@ export const chatApi = createApi({
       }),
       invalidatesTags: [{ type: "Chat", id: "LIST" }],
     }),
+
+    // Endpoint для создания/получения реального чата поддержки
+    createSupportChat: builder.mutation<{ chatId: string }, void>({
+      query: () => ({
+        url: `/chat/support`,
+        method: "POST",
+      }),
+      invalidatesTags: [{ type: "Chat", id: "LIST" }],
+    }),
+
+    // Удаление своего сообщения (фото, видео, текст). Только отправитель, только type=message.
+    deleteMessage: builder.mutation<void, { chatId: string; messageId: string }>({
+      query: ({ chatId, messageId }) => ({
+        url: `/chat/${chatId}/message/${messageId}`,
+        method: "DELETE",
+      }),
+      invalidatesTags: (_result, _error, { chatId }) => [
+        { type: "Chat", id: chatId },
+        { type: "Chat", id: "LIST" },
+        { type: "Message", id: `LIST-${chatId}` },
+      ],
+    }),
   }),
 })
 
@@ -366,16 +389,19 @@ export const {
   useGetChatListQuery,
   useGetChatQuery,
   useSendMessageMutation,
+  useDeleteMessageMutation,
   useToggleFavoriteMutation,
   useMarkReadMutation,
   useJoinAsAdminMutation,
   useCreateSavedChatMutation,
+  useCreateSupportChatMutation,
 } = chatApi
 
 export const chatApiEndpoints = {
   getChatList: chatApi.endpoints.getChatList,
   getChat: chatApi.endpoints.getChat,
   sendMessage: chatApi.endpoints.sendMessage,
+  deleteMessage: chatApi.endpoints.deleteMessage,
   toggleFavorite: chatApi.endpoints.toggleFavorite,
   markRead: chatApi.endpoints.markRead,
   joinAsAdmin: chatApi.endpoints.joinAsAdmin,
@@ -412,6 +438,29 @@ export const chatApiHelpers = {
         { type: "Chat", id: chatId },
         { type: "Message", id: `LIST-${chatId}` },
       ])
+    )
+  },
+
+  /**
+   * Удаляет сообщение из кэша при получении события message:deleted (сразу у собеседника без перезагрузки).
+   */
+  removeMessageFromCache: (
+    dispatch: AppDispatch,
+    chatId: string,
+    messageId: string,
+    chatUpdates?: { lastMessage?: string; lastUpdate?: string }
+  ) => {
+    dispatch(
+      chatApi.util.updateQueryData("getChat", { id: chatId }, (draft) => {
+        if (!draft?.messages) return
+        draft.messages = draft.messages.filter((m) => m.id !== messageId)
+        if (chatUpdates?.lastMessage !== undefined && draft.chat) {
+          draft.chat.lastMessage = chatUpdates.lastMessage
+        }
+        if (chatUpdates?.lastUpdate !== undefined && draft.chat) {
+          draft.chat.lastUpdate = chatUpdates.lastUpdate
+        }
+      })
     )
   },
 

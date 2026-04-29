@@ -1,8 +1,14 @@
 import { forwardRef, Inject, Injectable, Logger, OnModuleDestroy, OnModuleInit } from "@nestjs/common"
 import { InjectRepository } from "@nestjs/typeorm"
-import type { Dispatcher } from "undici"
-import { fetch as undiciFetch, ProxyAgent } from "undici"
+import axios, { isAxiosError } from "axios"
+import type { Agent as HttpAgent } from "http"
 import { Repository } from "typeorm"
+
+// package exports + TS "node" resolution: через require для сборки API
+// eslint-disable-next-line @typescript-eslint/no-require-imports
+const { HttpsProxyAgent } = require("https-proxy-agent") as {
+  HttpsProxyAgent: new (uri: string) => HttpAgent
+}
 import { ChatMessage } from "@share/entities/chat-message.entity"
 import { Chat } from "@share/entities/chat.entity"
 import { ChatService } from "./chat.service"
@@ -51,14 +57,24 @@ function geminiProxyUrisFromEnv(): string[] {
   return []
 }
 
+/** Ответ как у fetch для callGemini (ok/status/text/json). */
+type GeminiHttpResponse = {
+  ok: boolean
+  status: number
+  text: () => Promise<string>
+  json: () => Promise<unknown>
+}
+
 @Injectable()
 export class GeminiAssistantService implements OnModuleInit, OnModuleDestroy {
   private readonly logger = new Logger(GeminiAssistantService.name)
   private readonly apiKey = process.env.GEMINI_API_KEY?.trim() || ""
   private readonly configuredModel = process.env.GEMINI_MODEL?.trim() || DEFAULT_GEMINI_MODEL
-  private geminiProxyAgents: ProxyAgent[] = []
-  /** Пустой список = только прямое соединение; иначе перебор прокси при сетевом сбое */
-  private geminiDispatchers: (Dispatcher | undefined)[] = [undefined]
+  /**
+   * Цепочка агентов: HTTP CONNECT через прокси (credentials в URL), затем опционально прямой HTTPS.
+   * `null` = без прокси. Встроенный `proxy:` у axios для HTTPS даёт HPE_INVALID_CONSTANT / «SSL required».
+   */
+  private geminiHttpsAgents: (HttpAgent | null)[] = [null]
 
   constructor(
     @InjectRepository(ChatMessage)
@@ -77,8 +93,11 @@ export class GeminiAssistantService implements OnModuleInit, OnModuleDestroy {
   onModuleInit() {
     const uris = geminiProxyUrisFromEnv()
     if (uris.length > 0) {
-      this.geminiProxyAgents = uris.map((uri) => new ProxyAgent(uri))
-      this.geminiDispatchers = this.geminiProxyAgents
+      this.geminiHttpsAgents = uris.map((uri) => new HttpsProxyAgent(uri))
+      const noDirect = process.env.GEMINI_PROXY_NO_DIRECT_FALLBACK === "true"
+      if (!noDirect) {
+        this.geminiHttpsAgents.push(null)
+      }
       const summary = uris.map((uri) => {
         try {
           const u = new URL(uri)
@@ -89,7 +108,12 @@ export class GeminiAssistantService implements OnModuleInit, OnModuleDestroy {
           return "[некорректный GEMINI_HTTP_PROXY]"
         }
       })
-      this.logger.log(`Gemini: исходящие запросы через прокси: ${summary.join(" → запасной: ")}`)
+      this.logger.log(
+        `Gemini: HTTPS через HttpsProxyAgent: ${summary.join(" → запасной: ")}` +
+          (noDirect ? "" : " → затем прямой канал без прокси при ошибках")
+      )
+    } else {
+      this.geminiHttpsAgents = [null]
     }
     if (!this.isEnabled()) {
       this.logger.warn("GEMINI_API_KEY пуст — автоответы поддержки отключены (проверь .env и docker env_file для api)")
@@ -100,28 +124,47 @@ export class GeminiAssistantService implements OnModuleInit, OnModuleDestroy {
   }
 
   onModuleDestroy() {
-    for (const agent of this.geminiProxyAgents) {
-      void agent.close()
+    for (const a of this.geminiHttpsAgents) {
+      if (a) a.destroy()
     }
   }
 
-  private async geminiPost(url: string, body: object) {
-    const opts = {
-      method: "POST" as const,
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(body),
-    }
-    const dispatchers = this.geminiDispatchers
+  private async geminiPost(url: string, body: object): Promise<GeminiHttpResponse> {
     let lastErr: unknown
-    for (let i = 0; i < dispatchers.length; i++) {
-      const dispatcher = dispatchers[i]
+    const chain = this.geminiHttpsAgents
+    for (let i = 0; i < chain.length; i++) {
+      const agent = chain[i]
       try {
-        return await undiciFetch(url, { ...opts, dispatcher })
+        const r = await axios.post<string>(url, body, {
+          headers: { "Content-Type": "application/json" },
+          timeout: 120_000,
+          proxy: false,
+          httpsAgent: agent ?? undefined,
+          httpAgent: agent ?? undefined,
+          validateStatus: () => true,
+          responseType: "text",
+          transformResponse: [(data) => data],
+        })
+        const raw = typeof r.data === "string" ? r.data : String(r.data ?? "")
+        return {
+          ok: r.status >= 200 && r.status < 300,
+          status: r.status,
+          text: async () => raw,
+          json: async () => {
+            try {
+              return JSON.parse(raw || "{}") as unknown
+            } catch {
+              throw new SyntaxError("Gemini response is not JSON")
+            }
+          },
+        }
       } catch (err) {
         lastErr = err
-        const msg = err instanceof Error ? err.message : String(err)
-        if (i < dispatchers.length - 1) {
-          this.logger.warn(`Gemini: сбой прокси ${i + 1}/${dispatchers.length} (${msg}), пробуем следующий`)
+        const msg = formatAxiosOrError(err)
+        if (i < chain.length - 1) {
+          this.logger.warn(
+            `Gemini: сбой канала ${i + 1}/${chain.length}${agent ? " (прокси)" : " (прямой)"} (${msg}), следующий вариант`
+          )
         }
       }
     }
@@ -297,11 +340,11 @@ export class GeminiAssistantService implements OnModuleInit, OnModuleDestroy {
         log,
       }
     } catch (e) {
-      const msg = (e as Error).message
+      const detail = formatAxiosOrError(e)
       return {
         ok: false,
         userMessage: "Не удалось связаться с ассистентом. Попробуйте позже или напишите оператору.",
-        log: `Gemini request failed: ${msg}`,
+        log: `Gemini request failed: ${detail}`,
       }
     }
   }
@@ -335,6 +378,19 @@ export class GeminiAssistantService implements OnModuleInit, OnModuleDestroy {
     this.logger.warn(`Gemini JSON parse fail: ${cleaned.slice(0, 300)}`)
     return null
   }
+}
+
+function formatAxiosOrError(err: unknown): string {
+  if (isAxiosError(err)) {
+    const bits = [err.message]
+    if (err.code) bits.push(`code=${err.code}`)
+    if (err.response?.status != null) bits.push(`http=${err.response.status}`)
+    const d = err.response?.data
+    if (typeof d === "string" && d.length && d.length < 400) bits.push(`body=${d.slice(0, 300)}`)
+    return bits.join(" | ")
+  }
+  if (err instanceof Error) return err.message
+  return String(err)
 }
 
 function userFacingHttpError(status: number): string {

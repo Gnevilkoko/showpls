@@ -6,7 +6,7 @@ export class GetNearbyPerformersDto {
   @ApiPropertyOptional({
     type: Number,
     description: "Search radius in km",
-    default: 5,
+    default: 50,
     minimum: 0.1,
     maximum: 100,
   })
@@ -15,7 +15,7 @@ export class GetNearbyPerformersDto {
   @IsNumber()
   @Min(0.1)
   @Max(100)
-  radius?: number = 5
+  radius?: number = 50
 
   @ApiPropertyOptional({
     type: Number,

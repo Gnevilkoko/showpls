@@ -1,7 +1,7 @@
 services:
 
   traefik:
-    image: traefik:v3.1.0
+    image: traefik:v3.6
     command:
       - "--log.level=DEBUG"
       - "--api.dashboard=true"
@@ -30,22 +30,27 @@ services:
 
   api:
     image: node:lts-alpine
+    env_file:
+      - ".env.development"
     volumes:
       - ".:/app"
       - "api_node_modules:/app/node_modules"
+    environment:
+      NX_DAEMON: "false"
+      NX_ISOLATE_PLUGINS: "false"
+      NODE_ENV: "development"
     entrypoint: ["/bin/sh"]
     command:
       - "-c"
       - "cd /app && npm ci --no-audit && npm run dev:api"
     labels:
       - "traefik.enable=true"
-      - "traefik.http.routers.backend.rule=PathPrefix(`/api`) ||  PathPrefix(`/socket.io`)"
+      - "traefik.http.routers.backend.rule=PathPrefix(`/api`) || PathPrefix(`/socket.io`)"
       - "traefik.http.routers.backend.priority=10"
       - "traefik.http.routers.backend.entrypoints=web"
-      - "traefik.http.services.backend.loadbalancer.server.url=http://127.0.0.1:8080"
-      - "traefik.http.services.backend.loadbalancer.server.port=8080"
+      - "traefik.http.services.backend.loadbalancer.server.url=http://api:8080"
     healthcheck:
-      test: ["CMD-SHELL", "wget -q --spider http://127.0.0.1:8080/api/swagger || exit 1"]
+      test: ["CMD-SHELL", "wget -q --spider http://127.0.0.1:8080/api/health || exit 1"]
       interval: 10s
       timeout: 5s
       retries: 12
@@ -60,6 +65,8 @@ services:
       - "web_node_modules:/app/node_modules"
     environment:
       VITE_API_URL: "http://api:8080"
+      NX_DAEMON: "false"
+      NX_ISOLATE_PLUGINS: "false"
     entrypoint: ["/bin/sh"]
     command:
       - "-c"
@@ -69,8 +76,7 @@ services:
       - "traefik.http.routers.web.rule=PathPrefix(`/`)"
       - "traefik.http.routers.web.priority=1"
       - "traefik.http.routers.web.entrypoints=web"
-      - "traefik.http.services.web.loadbalancer.server.url=http://127.0.0.1:3000"
-      - "traefik.http.services.web.loadbalancer.server.port=3000"   
+      - "traefik.http.services.web.loadbalancer.server.url=http://web:3000"
     healthcheck:
       test: ["CMD-SHELL", "wget -q --spider http://127.0.0.1:3000 || exit 1"]
       interval: 10s

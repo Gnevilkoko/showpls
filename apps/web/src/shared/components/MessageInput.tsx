@@ -1,11 +1,12 @@
 import attachIcon from "../../assets/icons/actions/attach.svg"
 import emojiIcon from "../../assets/icons/ui/emoji.svg"
 import sendIcon from "../../assets/icons/actions/send.svg"
-import { useEffect, useRef, useState, type ChangeEvent } from "react"
+import { useCallback, useEffect, useRef, useState, type ChangeEvent } from "react"
 import { useTranslation } from "react-i18next"
 import type { UploadedImageType } from "../types"
 import plusIcon from "../../assets/icons/ui/plus.svg"
 import { toast } from "react-toastify"
+import Camera from "./Camera"
 
 type MessageInputProps = {
   value: string
@@ -22,7 +23,23 @@ const MessageInput = ({ value, onChange, images, onImagesChange, onImageClick, o
   const textareaRef = useRef<HTMLTextAreaElement | null>(null)
 
   const [isDropdownOpen, setIsDropdownOpen] = useState<boolean>(false)
+  const [isCameraOpen, setIsCameraOpen] = useState(false)
   const dropdownRef = useRef<HTMLDivElement>(null)
+
+  const handleCameraCapture = useCallback(
+    (file: File) => {
+      const url = URL.createObjectURL(file)
+      const newImage: UploadedImageType = {
+        file,
+        url,
+        mediaType: "image",
+      }
+      onImagesChange([...images, newImage])
+      setIsCameraOpen(false)
+      setIsDropdownOpen(false)
+    },
+    [images, onImagesChange]
+  )
 
   const handleDropdownToggle = () => {
     setIsDropdownOpen((prev) => !prev)
@@ -46,9 +63,15 @@ const MessageInput = ({ value, onChange, images, onImagesChange, onImageClick, o
     if (validFiles.length > 0) {
       const newImages: UploadedImageType[] = validFiles.map((file) => {
         const url = URL.createObjectURL(file)
-        const mediaType: UploadedImageType["mediaType"] =
+        let mediaType: UploadedImageType["mediaType"] =
           file.type.startsWith("video/") ? "video" : file.type.startsWith("image/") ? "image" : "file"
-
+        // iOS/Telegram often leaves file.type empty for camera/HEIC
+        if (mediaType === "file" && /\.(jpg|jpeg|heic|heif|png|webp|gif)$/i.test(file.name || "")) {
+          mediaType = "image"
+        }
+        if (mediaType === "file" && /\.(mp4|mov|avi|webm)$/i.test(file.name || "")) {
+          mediaType = "video"
+        }
         return {
           file,
           url,
@@ -142,6 +165,18 @@ const MessageInput = ({ value, onChange, images, onImagesChange, onImageClick, o
                 />
               </label>
 
+              <button
+                className="message-input-dropdown-item"
+                type="button"
+                onClick={() => {
+                  setIsCameraOpen(true)
+                  setIsDropdownOpen(false)
+                }}
+              >
+                <img src={plusIcon} alt="Camera" />
+                <span>{t("takeSnapshot")}</span>
+              </button>
+
               <button className="message-input-dropdown-item" type="button">
                 <img src={plusIcon} alt="plus Icon" />
                 <span>{t("addTask")}</span>
@@ -176,6 +211,12 @@ const MessageInput = ({ value, onChange, images, onImagesChange, onImageClick, o
           <img src={sendIcon} alt="Send Icon" />
         </button>
       </div>
+
+      <Camera
+        isOpen={isCameraOpen}
+        onClose={() => setIsCameraOpen(false)}
+        onCapture={handleCameraCapture}
+      />
     </div>
   )
 }

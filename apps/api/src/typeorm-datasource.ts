@@ -1,21 +1,17 @@
-import { DataSource } from 'typeorm';
-import { ConfigService } from './config/config.service';
-import databaseConfig from './config/database.config';
-import * as path from 'path';
+import { DataSource } from "typeorm"
+import { ConfigService } from "./config/config.service"
+import databaseConfig from "./config/database.config"
+import { allMigrationsOrdered } from "./db/migrations.register"
 
-// Load environment variables (e.g., .env.development)
-ConfigService.loadEnv();
+ConfigService.loadEnv()
 
-// Get the shared database configuration
-const config = databaseConfig();
+const base = databaseConfig()
 
-// Export the DataSource instance for TypeORM CLI
+/** npm run migration:* — та же полная цепочка, что и `db/data-source.ts`. */
 export default new DataSource({
-  ...config,
-  // Ensure migrations are correctly located
-  migrations: [
-    path.join(__dirname, 'db/migrations/*{.ts,.js}'),
-  ],
-  // Ensure synchronize is false for migration generation to avoid auto-syncing during CLI operations
+  ...base,
   synchronize: false,
-});
+  dropSchema: false,
+  migrationsRun: false,
+  migrations: allMigrationsOrdered,
+})

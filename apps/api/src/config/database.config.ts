@@ -4,6 +4,7 @@ import {
   Chat,
   ChatMessage,
   Deal,
+  DeviceToken,
   FileAttachment,
   Request,
   Response,
@@ -23,6 +24,7 @@ import { PostgresConnectionOptions } from "typeorm/driver/postgres/PostgresConne
 import { z } from "zod"
 import { ConfigService } from "./config.service"
 import { Models } from "@ledger"
+import { runtimeIncrementalMigrations } from "../db/migrations.register"
 
 const schema = z.object({
   host: z.string(),
@@ -75,6 +77,7 @@ export default function () {
       FileAttachment,
       Arbitration,
       Notification,
+      DeviceToken,
     ] as MixedList<Function>,
     migrations: [] as MixedList<Function>,
     migrationsTableName: "migrations",
@@ -97,6 +100,7 @@ export default function () {
     dataSourceOptions = {
       ...baseConfig,
       ...sharedOptions,
+      migrations: runtimeIncrementalMigrations,
       migrationsRun: true,
       synchronize: false,
       dropSchema: false,

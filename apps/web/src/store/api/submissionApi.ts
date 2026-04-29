@@ -2,6 +2,14 @@ import { createApi } from "@reduxjs/toolkit/query/react"
 import { authenticatedBaseQuery } from "./baseQuery"
 import type { SubmissionBackend } from "../../shared/types/backend"
 
+export interface RejectSubmissionInput {
+  requestId: string
+}
+
+export interface RejectSubmissionResult {
+  submission: SubmissionBackend
+}
+
 /**
  * Типы для создания Submission (доказательства выполнения работы)
  */
@@ -27,7 +35,7 @@ export interface CreateSubmissionInput {
 export const submissionApi = createApi({
   reducerPath: "submissionApi",
   baseQuery: authenticatedBaseQuery,
-  tagTypes: ["Submission", "Request"],
+  tagTypes: ["Submission", "Request", "Chat", "Message"],
   endpoints: (builder) => ({
     /**
      * Создание Submission - загрузка доказательства выполнения работы
@@ -41,7 +49,30 @@ export const submissionApi = createApi({
         method: "POST",
         body,
       }),
-      invalidatesTags: (_result, _error, { requestId }) => ["Submission", { type: "Request", id: requestId }],
+      invalidatesTags: (_result, _error, { requestId }) => [
+        "Submission",
+        { type: "Request", id: requestId },
+        "Chat",
+        "Message",
+      ],
+    }),
+
+    /**
+     * Отклонение сдачи (только заказчик). Отправляет уведомление в чат исполнителю.
+     * POST /submission/reject
+     */
+    rejectSubmission: builder.mutation<RejectSubmissionResult, RejectSubmissionInput>({
+      query: (body) => ({
+        url: "/submission/reject",
+        method: "POST",
+        body,
+      }),
+      invalidatesTags: (_result, _error, { requestId }) => [
+        "Submission",
+        { type: "Request", id: requestId },
+        "Chat",
+        "Message",
+      ],
     }),
 
     /**
@@ -64,10 +95,16 @@ export const submissionApi = createApi({
   }),
 })
 
-export const { useCreateSubmissionMutation, useGetSubmissionQuery, useGetSubmissionByRequestQuery } = submissionApi
+export const {
+  useCreateSubmissionMutation,
+  useRejectSubmissionMutation,
+  useGetSubmissionQuery,
+  useGetSubmissionByRequestQuery,
+} = submissionApi
 
 export const submissionApiEndpoints = {
   createSubmission: submissionApi.endpoints.createSubmission,
+  rejectSubmission: submissionApi.endpoints.rejectSubmission,
   getSubmission: submissionApi.endpoints.getSubmission,
   getSubmissionByRequest: submissionApi.endpoints.getSubmissionByRequest,
 }

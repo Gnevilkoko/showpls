@@ -8,6 +8,7 @@ import { AuthGuard } from "../auth/guards/auth.guard"
 import { GetUser } from "../user/decorators/get-user.decorator"
 import { User } from "@share/entities"
 import { RateLimit, IpRateLimit } from "../../common/rate-limit"
+import ms from "ms"
 
 @ApiTags("Responses")
 @Controller("responses")
@@ -34,8 +35,8 @@ export class ResponseController {
 
   @ApiSecurity("jwt-auth")
   @UseGuards(AuthGuard)
-  @IpRateLimit({ ttl: 60, limit: 10 }) // 10 requests per minute per IP
-  @RateLimit({ ttl: 60, limit: 5 }) // 5 requests per minute per account
+  @IpRateLimit({ ttl: ms("1m"), limit: 10 }) // 10 requests per minute per IP
+  @RateLimit({ ttl: ms("1m"), limit: 5 }) // 5 requests per minute per account
   @Post(":id/accept")
   @ApiOperation({ summary: "Accept a response and create a deal" })
   async accept(@GetUser() user: User, @Param("id") id: string, @Body() dto: AcceptResponseDto) {
@@ -44,11 +45,20 @@ export class ResponseController {
 
   @ApiSecurity("jwt-auth")
   @UseGuards(AuthGuard)
-  @IpRateLimit({ ttl: 60, limit: 10 })
-  @RateLimit({ ttl: 60, limit: 5 })
+  @IpRateLimit({ ttl: ms("1m"), limit: 10 })
+  @RateLimit({ ttl: ms("1m"), limit: 5 })
   @Post(":id/reject")
   @ApiOperation({ summary: "Reject a response" })
   async reject(@GetUser() user: User, @Param("id") id: string, @Body() dto: RejectResponseDto) {
     return this.responseService.rejectResponse(user, id, dto)
+  }
+
+  @ApiSecurity("jwt-auth")
+  @UseGuards(AuthGuard)
+  @RateLimit({ ttl: ms("1m"), limit: 10 })
+  @Post(":id/cancel")
+  @ApiOperation({ summary: "Withdraw own response (performer only, pending only)" })
+  async cancel(@GetUser() user: User, @Param("id") id: string) {
+    return this.responseService.withdrawResponse(user, id)
   }
 }

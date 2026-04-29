@@ -1,28 +1,28 @@
 import { useTranslation } from "react-i18next"
-import { useEffect, useRef, useState, useMemo, useCallback } from "react"
+import { useEffect, useRef, useState, useMemo } from "react"
 import { useNavigate } from "react-router-dom"
-import { useSelector } from "react-redux"
 import type { TaskType } from "../../../shared/types"
 import {
   useCancelRequestMutation,
+  useGetRequestQuery,
   useGetRequestListQuery,
-  useGetRequestMapQuery,
   useGetRequestResponsesQuery,
   useRespondToRequestMutation,
 } from "../../../store/api/requestApi"
+import { useListPerformersOnMapQuery } from "../../../store/api/userApi"
 import type { RequestListParams } from "../../../store/api/requestApi"
-import { adaptRequestToTask, adaptRequestMapItemToTask } from "../../../shared/types/adapters"
-import { useAppSelector, type RootState } from "../../../store"
+import { adaptRequestToTask } from "../../../shared/types/adapters"
+import { useAppDispatch, useAppSelector, type RootState } from "../../../store"
+import { requestApi } from "../../../store/api/requestApi"
 import { NotificationHandler } from "../../../shared/utils/notificationHandler"
+import { isRequestOwnedByUser } from "../../../shared/utils/requestOwnership"
 import Modal from "../../../shared/components/Modal"
 import TaskInfo from "../../../shared/components/TaskInfo"
 import TaskItem from "../components/TaskItem"
 import TaskPrimaryButton from "../../../shared/components/TaskPrimaryButton"
 import ToggleSectionButton from "../components/ToggleSectionButton"
 import ResponseTaskField from "../components/ResponseTaskField"
-import MainMap2Gis from "../../../shared/components/maps/2Gis/MainMap2Gis"
-import MainMapGoogle from "../../../shared/components/maps/google/MainMapGoogle"
-import PerformersMap2Gis from "../../../shared/components/maps/2Gis/PerformersMap2Gis"
+import MainMapGoogle, { type MainMapPerformerRow } from "../../../shared/components/maps/google/MainMapGoogle"
 import PerformersMapGoogle from "../../../shared/components/maps/google/PerformersMapGoogle"
 import penWhiteIcon from "../../../assets/icons/actions/pen-white.svg"
 import loupeWhiteIcon from "../../../assets/icons/ui/loupe-white.svg"
@@ -37,37 +37,19 @@ const DEFAULT_FILTERS: RequestListParams = {
   sortBy: "createdAt",
   sortOrder: "desc",
 }
-const DEBOUNCE_DELAY_MS = 500 // Задержка для debounce обновления bounds
-const MAX_BOUNDS_SIZE_KM = 1000 // Максимальный размер bounding box в километрах
-
-// Функция для расчета расстояния между двумя точками в километрах (формула гаверсинуса)
-function calculateDistanceKm(lat1: number, lon1: number, lat2: number, lon2: number): number {
-  const R = 6371 // Радиус Земли в километрах
-  const dLat = ((lat2 - lat1) * Math.PI) / 180
-  const dLon = ((lon2 - lon1) * Math.PI) / 180
-  const a =
-    Math.sin(dLat / 2) * Math.sin(dLat / 2) +
-    Math.cos((lat1 * Math.PI) / 180) * Math.cos((lat2 * Math.PI) / 180) * Math.sin(dLon / 2) * Math.sin(dLon / 2)
-  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a))
-  return R * c
+interface PerformerDiscoverProps {
+  /** ID задачи из URL (?requestId=…) — при открытии по шарингу открываем эту задачу в модалке */
+  initialRequestId?: string
+  /** Вызывается после того, как задача по initialRequestId открыта (для очистки query из URL) */
+  onInitialRequestHandled?: () => void
 }
 
-// Валидация размера bounding box
-function validateBoundsSize(north: number, south: number, east: number, west: number): boolean {
-  // Вычисляем размеры по широте и долготе
-  const latDistance = calculateDistanceKm(south, (east + west) / 2, north, (east + west) / 2)
-  const lngDistance = calculateDistanceKm((north + south) / 2, west, (north + south) / 2, east)
-
-  // Проверяем, что оба размера не превышают максимум
-  return latDistance <= MAX_BOUNDS_SIZE_KM && lngDistance <= MAX_BOUNDS_SIZE_KM
-}
-
-const PerformerDiscover = () => {
+const PerformerDiscover = ({ initialRequestId, onInitialRequestHandled }: PerformerDiscoverProps) => {
   const { t } = useTranslation()
   const navigate = useNavigate()
-  const userId = useAppSelector((state: RootState) => Number(state.user.userData?.id))
-  const language = useSelector((state: RootState) => state.language)
-  const isRussian = language === "ru"
+  const dispatch = useAppDispatch()
+  const userId = useAppSelector((state: RootState) => state.user.userData?.id ?? "")
+  const initialRequestHandledRef = useRef(false)
 
   // Состояния UI
   const [activeSection, setActiveSection] = useState<"list" | "map">("list")
@@ -76,15 +58,6 @@ const PerformerDiscover = () => {
   const [isOpenResponseTask, setIsOpenResponseTask] = useState(false)
   const [isOpenPerformerDiscover, setIsOpenPerformerDiscover] = useState(false)
   const [respondedTaskIds, setRespondedTaskIds] = useState<Set<string>>(new Set())
-
-  // Состояния для карты (bounds)
-  const [mapBounds, setMapBounds] = useState<{
-    north: number
-    south: number
-    east: number
-    west: number
-  } | null>(null)
-  const debounceTimerRef = useRef<number | null>(null)
 
   // Состояния формы отклика
   const [responseTaskMessage, setResponseTaskMessage] = useState("")
@@ -104,75 +77,24 @@ const PerformerDiscover = () => {
     refetchOnMountOrArgChange: true,
   })
 
-  // API запросы для карты (используем bounds)
   const {
-    data: requestMapData,
-    isLoading: isLoadingMap,
-    error: mapError,
-  } = useGetRequestMapQuery(
-    mapBounds
-      ? {
-          north: mapBounds.north,
-          south: mapBounds.south,
-          east: mapBounds.east,
-          west: mapBounds.west,
-        }
-      : // Дефолтные bounds (не будут использованы из-за skip)
-        {
-          north: 90,
-          south: -90,
-          east: 180,
-          west: -180,
-        },
-    {
-      skip: activeSection !== "map" || !mapBounds,
-    }
-  )
+    data: listPerformersRaw,
+    isError: isMapPerformersError,
+    refetch: refetchMapPerformers,
+  } = useListPerformersOnMapQuery(undefined, {
+    skip: activeSection !== "map",
+  })
 
   const { data: requestResponses } = useGetRequestResponsesQuery(selectedTask?.id || "", {
     skip: !isOpenModal || !selectedTask?.id,
   })
 
-  const [cancelRequest] = useCancelRequestMutation()
+  // Fresh request snapshot for strict owner checks in modal actions.
+  const [selectedRequestFresh, setSelectedRequestFresh] = useState<any | null>(null)
+  const [isLoadingSelectedRequest, setIsLoadingSelectedRequest] = useState(false)
+
+  const [cancelRequest, { isLoading: isCancelling }] = useCancelRequestMutation()
   const [respondToRequest] = useRespondToRequestMutation()
-
-  // Обработчик изменения bounds карты с debounce и валидацией
-  const handleBoundsChange = useCallback(
-    (bounds: { north: number; south: number; east: number; west: number } | null) => {
-      // Очищаем предыдущий таймер
-      if (debounceTimerRef.current !== null) {
-        clearTimeout(debounceTimerRef.current)
-      }
-
-      // Устанавливаем новый таймер
-      debounceTimerRef.current = window.setTimeout(() => {
-        if (!bounds) {
-          setMapBounds(null)
-          return
-        }
-
-        // Валидация размера bounding box
-        const isValid = validateBoundsSize(bounds.north, bounds.south, bounds.east, bounds.west)
-        if (isValid) {
-          setMapBounds(bounds)
-        } else {
-          // Если bounds слишком большие, не обновляем (не делаем запрос)
-          setMapBounds(null)
-        }
-        debounceTimerRef.current = null
-      }, DEBOUNCE_DELAY_MS)
-    },
-    []
-  )
-
-  // Очистка таймера при размонтировании
-  useEffect(() => {
-    return () => {
-      if (debounceTimerRef.current) {
-        clearTimeout(debounceTimerRef.current)
-      }
-    }
-  }, [])
 
   // Преобразование данных для списка
   const listTasks = useMemo(() => {
@@ -180,16 +102,24 @@ const PerformerDiscover = () => {
     return requests.map((request) => adaptRequestToTask(request))
   }, [requestListData])
 
-  // Преобразование данных для карты
-  const mapTasks = useMemo(() => {
-    const mapItems = requestMapData || []
-    return mapItems.map((item) => adaptRequestMapItemToTask(item))
-  }, [requestMapData])
+  const tasks = listTasks
+  const isLoading = isLoadingList
+  const error = listError
 
-  // Выбираем задачи в зависимости от активной секции
-  const tasks = activeSection === "list" ? listTasks : mapTasks
-  const isLoading = activeSection === "list" ? isLoadingList : isLoadingMap
-  const error = activeSection === "list" ? listError : mapError
+  const performersForMap = useMemo((): MainMapPerformerRow[] => {
+    const raw = listPerformersRaw ?? []
+    return raw.map((p) => ({
+      id: p.id,
+      username: p.username,
+      firstName: p.firstName,
+      lastName: p.lastName,
+      avatar: p.avatar,
+      latitude: p.lat,
+      longitude: p.lng,
+      distance: p.distance,
+      rating: p.rating,
+    }))
+  }, [listPerformersRaw])
 
   // Обновление списка при смене секции
   useEffect(() => {
@@ -197,6 +127,43 @@ const PerformerDiscover = () => {
       refetchList()
     }
   }, [activeSection, refetchList])
+
+  // Задача по ссылке не в первой странице списка — подгружаем по ID
+  const [requestIdToFetchFromUrl, setRequestIdToFetchFromUrl] = useState<string | null>(null)
+  const { data: initialRequestData } = useGetRequestQuery(requestIdToFetchFromUrl ?? "", {
+    skip: !requestIdToFetchFromUrl,
+  })
+
+  // Открытие задачи по ссылке (?requestId=…)
+  useEffect(() => {
+    if (!initialRequestId || initialRequestHandledRef.current) return
+    if (isLoading && listTasks.length === 0) return
+
+    const taskInList = listTasks.find((t) => String(t.id) === String(initialRequestId))
+    if (taskInList) {
+      setActiveSection("list")
+      setSelectedTask(taskInList)
+      setIsOpenModal(true)
+      initialRequestHandledRef.current = true
+      onInitialRequestHandled?.()
+      return
+    }
+    if (!requestIdToFetchFromUrl && listTasks.length >= 0) {
+      setRequestIdToFetchFromUrl(initialRequestId)
+    }
+  }, [initialRequestId, listTasks, isLoading, requestIdToFetchFromUrl, onInitialRequestHandled])
+
+  useEffect(() => {
+    if (!initialRequestId || !initialRequestData || !requestIdToFetchFromUrl) return
+    if (initialRequestHandledRef.current) return
+    const task = adaptRequestToTask(initialRequestData)
+    setActiveSection("list")
+    setSelectedTask(task)
+    setIsOpenModal(true)
+    setRequestIdToFetchFromUrl(null)
+    initialRequestHandledRef.current = true
+    onInitialRequestHandled?.()
+  }, [initialRequestId, initialRequestData, requestIdToFetchFromUrl, onInitialRequestHandled])
 
   // Обработчики задач
   const handleSelectTask = (task: TaskType) => {
@@ -207,17 +174,35 @@ const PerformerDiscover = () => {
   const handleCloseTask = () => {
     setIsOpenModal(false)
     setSelectedTask(null)
+    setSelectedRequestFresh(null)
   }
 
   const handleCancelTask = async (taskId: string) => {
+    if (isCancelling) return
     try {
+      // Один вызов API: лишний getRequest на мобильных часто падает по сети и маскируется как «ошибка отмены».
       await cancelRequest(taskId).unwrap()
       NotificationHandler.showSuccessTranslated("taskCancelled")
       handleCloseTask()
       if (activeSection === "list") {
         refetchList()
       }
-    } catch {
+    } catch (err: unknown) {
+      const e = err as { status?: number; data?: { message?: string } }
+      if (e?.status === 403) {
+        NotificationHandler.showErrorTranslated("accessDenied")
+        return
+      }
+      if (
+        e?.status === 400 &&
+        typeof e?.data?.message === "string" &&
+        e.data.message.includes("cannot be cancelled")
+      ) {
+        NotificationHandler.showSuccessTranslated("taskCancelled")
+        handleCloseTask()
+        if (activeSection === "list") refetchList()
+        return
+      }
       NotificationHandler.showErrorTranslated("errorCancellingTask")
     }
   }
@@ -234,6 +219,14 @@ const PerformerDiscover = () => {
 
   const handleRespondToTask = async (taskId: string) => {
     try {
+      const freshRequest = await dispatch(
+        requestApi.endpoints.getRequest.initiate(taskId, { forceRefetch: true })
+      ).unwrap()
+      if (isRequestOwnedByUser(freshRequest, userId)) {
+        NotificationHandler.showErrorTranslated("cannotRespondOwnTask")
+        return
+      }
+
       const response = await respondToRequest({
         requestId: taskId,
         body: { message: responseTaskMessage },
@@ -247,9 +240,16 @@ const PerformerDiscover = () => {
       }
       handleCloseResponseModal()
       navigate(`/chat/${response.chatId}`)
-    } catch (err) {
-      console.error("[DEBUG] respondToRequest error:", err)
-      NotificationHandler.showErrorTranslated("errorRespondingToTask")
+    } catch (err: any) {
+      const status = err?.status
+      const code = err?.data?.errorCode || err?.data?.message
+      if (status === 409 || code === "RESPONSE_ALREADY_EXISTS" || code === "CONFLICT") {
+        NotificationHandler.showErrorTranslated("youAlreadyRespondedToThisTask")
+      } else if (status === 400 || code === "INVALID_STATUS") {
+        NotificationHandler.showErrorTranslated("taskNoLongerAcceptingResponses")
+      } else {
+        NotificationHandler.showErrorTranslated("errorRespondingToTask")
+      }
     }
   }
 
@@ -264,8 +264,47 @@ const PerformerDiscover = () => {
     setIsOpenPerformerDiscover(false)
   }
 
-  // Проверка владельца задачи
-  const isTaskOwner = selectedTask?.customer_id === userId
+  useEffect(() => {
+    if (!isOpenModal || !selectedTask?.id) {
+      setSelectedRequestFresh(null)
+      setIsLoadingSelectedRequest(false)
+      return
+    }
+
+    let cancelled = false
+    setIsLoadingSelectedRequest(true)
+    void dispatch(
+      requestApi.endpoints.getRequest.initiate(selectedTask.id, { forceRefetch: true })
+    )
+      .unwrap()
+      .then((fresh) => {
+        if (!cancelled) {
+          setSelectedRequestFresh(fresh ?? null)
+        }
+      })
+      .catch(() => {
+        if (!cancelled) {
+          setSelectedRequestFresh(null)
+        }
+      })
+      .finally(() => {
+        if (!cancelled) {
+          setIsLoadingSelectedRequest(false)
+        }
+      })
+
+    return () => {
+      cancelled = true
+    }
+  }, [dispatch, isOpenModal, selectedTask?.id])
+
+  const isTaskOwner = useMemo(() => {
+    return isRequestOwnedByUser(selectedRequestFresh, userId)
+  }, [selectedRequestFresh, userId])
+
+  // Never trust owner from map/list snapshot for destructive actions.
+  const ownerKnown = selectedRequestFresh != null
+  const canShowRespondButton = !isTaskOwner && ownerKnown
 
   const hasAlreadyResponded = selectedTask
     ? respondedTaskIds.has(selectedTask.id) ||
@@ -279,8 +318,8 @@ const PerformerDiscover = () => {
     : false
 
   // Условный рендеринг карты
-  const MapComponent = isRussian ? MainMap2Gis : MainMapGoogle
-  const PerformersMapComponent = isRussian ? PerformersMap2Gis : PerformersMapGoogle
+  const MapComponent = MainMapGoogle
+  const PerformersMapComponent = PerformersMapGoogle
 
   return (
     <div className="performer__container">
@@ -344,13 +383,22 @@ const PerformerDiscover = () => {
           />
         ))}
 
-      {/* Карта */}
+      {activeSection === "map" && isMapPerformersError && (
+        <div className="status-state-container">
+          <span>{t("errorLoadingTasks")}</span>
+          <button type="button" onClick={() => void refetchMapPerformers()} className="task__button">
+            {t("retry")}
+          </button>
+        </div>
+      )}
+
       {activeSection === "map" && (
         <MapComponent
+          mode="performers"
           selectedTask={selectedTask}
           handleSelectTask={handleSelectTask}
-          tasksList={tasks}
-          onBoundsChange={handleBoundsChange}
+          tasksList={[]}
+          performersList={performersForMap}
         />
       )}
 
@@ -372,17 +420,26 @@ const PerformerDiscover = () => {
                 onClick={() => handleCancelTask(selectedTask.id)}
                 icon={closeIcon}
                 text={t("deleteTask")}
+                disabled={isCancelling}
+                disabledHint={isCancelling ? `${t("loading")}…` : undefined}
               />
             </>
-          ) : (
+          ) : canShowRespondButton || !ownerKnown ? (
             <TaskPrimaryButton
               color="green"
               onClick={handleOpenResponseModal}
               icon={penWhiteIcon}
               text={hasAlreadyResponded ? t("alreadyResponded") : t("respondToTheTask")}
-              disabled={hasAlreadyResponded}
+              disabled={!ownerKnown || isLoadingSelectedRequest || hasAlreadyResponded || selectedTask?.status !== "published"}
+              disabledHint={
+                !ownerKnown || isLoadingSelectedRequest
+                  ? `${t("loading")}…`
+                  : selectedTask?.status !== "published"
+                    ? t("taskNoLongerAcceptingResponses")
+                    : undefined
+              }
             />
-          )}
+          ) : null}
         </Modal>
       )}
 

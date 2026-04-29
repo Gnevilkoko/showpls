@@ -77,8 +77,10 @@ export class ResponseService {
 
     const savedResponse = await this.responseRepository.save(response)
 
-    // 5. Ensure Chat exists
-    const chat = await this.chatService.getOrCreateChat(request.customer.id, user.id)
+    // 5. Ensure Chat exists (normalize ids: JWT may have number, DB has bigint/string)
+    const customerId = String(request.customer.id)
+    const performerId = String(user.id)
+    const chat = await this.chatService.getOrCreateChat(customerId, performerId)
 
     // 6. Send notification message to chat about new offer
     await this.chatService.sendMessage(user, chat.id, {
@@ -226,10 +228,10 @@ export class ResponseService {
         })
         .execute()
 
-      // 10. Send system message about acceptance
+      // 10. Send notification so UI shows translated "Offer accepted" (not raw chat text)
       await this.chatService.sendMessage(user, chat.id, {
-        text: "Response accepted",
-        type: "message",
+        type: "notification",
+        variant: "responseAccepted",
         requestId: savedDeal.request.id,
         responseId: response.id,
       })
@@ -318,5 +320,61 @@ export class ResponseService {
         response: { id: response.id, status: response.status },
       }
     })
+  }
+
+  /**
+   * Исполнитель отзывает свой оффер (только пока статус pending).
+   */
+  async withdrawResponse(user: User, responseId: string) {
+    const response = await this.responseRepository.findOne({
+      where: { id: responseId },
+      relations: ["request", "request.customer", "performer"],
+    })
+
+    if (!response) {
+      throw new NotFoundException("Response not found")
+    }
+
+    if (response.status !== ResponseStatus.Pending) {
+      throw new BadRequestException("Response is not pending, cannot withdraw")
+    }
+
+    if (response.performer.id !== user.id) {
+      throw new ForbiddenException("Only the performer can withdraw their response")
+    }
+
+    await this.dataSource.transaction(async (manager) => {
+      await manager.update(Response, { id: response.id }, { status: ResponseStatus.Cancelled })
+    })
+
+    // Do side effects after status update so API response is not blocked by chat/queue latency.
+    this.chatGateway.notifyProposalStatusChanged(response.request.customer.id, response.id, ResponseStatus.Cancelled)
+
+    void (async () => {
+      try {
+        const chat = await this.chatService.getOrCreateChat(response.request.customer.id, response.performer.id)
+        await this.chatService.sendMessage(user, chat.id, {
+          text: "Offer withdrawn",
+          type: "message",
+          requestId: response.request.id,
+          responseId: response.id,
+        })
+      } catch {
+        // Keep API path reliable even if chat side effects fail.
+      }
+    })()
+
+    void this.notificationService
+      .send(String(response.request.customer.id), "response_withdrawn", {
+        requestId: response.request.id,
+        text: `Performer withdrew their offer for request "${response.request.title || "Request"}".`,
+      })
+      .catch(() => {
+        // Keep API path reliable even if notification queue is unavailable.
+      })
+
+    return {
+      response: { id: response.id, status: ResponseStatus.Cancelled },
+    }
   }
 }

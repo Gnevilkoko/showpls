@@ -11,6 +11,7 @@ import { AuthGuard } from "../auth/guards/auth.guard"
 import { GetUser } from "../user/decorators/get-user.decorator"
 import { User } from "@share/entities"
 import { RateLimit, IpRateLimit } from "../../common/rate-limit"
+import ms from "ms"
 import { RouteCache } from "../../common/cache/route-cache.decorator"
 import { ResponseService } from "../response/response.service"
 import { GeoService } from "../geo/geo.service"
@@ -28,8 +29,8 @@ export class RequestController {
 
   @ApiSecurity("jwt-auth")
   @UseGuards(AuthGuard)
-  @IpRateLimit({ ttl: 60, limit: 5 }) // 5 requests per minute per IP
-  @RateLimit({ ttl: 60, limit: 3 }) // 3 requests per minute per account
+  @IpRateLimit({ ttl: ms("1m"), limit: 5 }) // 5 requests per minute per IP
+  @RateLimit({ ttl: ms("1m"), limit: 3 }) // 3 requests per minute per account
   @Post('create')
   @ApiOperation({ summary: "Create a new request" })
   async create(@GetUser() user: User, @Body() dto: CreateRequestDto) {
@@ -38,8 +39,8 @@ export class RequestController {
 
   @ApiSecurity("jwt-auth")
   @UseGuards(AuthGuard)
-  @IpRateLimit({ ttl: 60, limit: 5 }) // 5 requests per minute per IP
-  @RateLimit({ ttl: 60, limit: 3 }) // 3 requests per minute per account
+  @IpRateLimit({ ttl: ms("1m"), limit: 5 }) // 5 requests per minute per IP
+  @RateLimit({ ttl: ms("1m"), limit: 3 }) // 3 requests per minute per account
   @Post('create-direct')
   @ApiOperation({ summary: "Create a request with direct offer to a specific performer" })
   @ApiOkResponse({
@@ -91,7 +92,7 @@ export class RequestController {
 
   @ApiSecurity("jwt-auth")
   @UseGuards(AuthGuard)
-  @IpRateLimit({ ttl: 60, limit: 60 }) // 60 requests per minute per IP
+  @IpRateLimit({ ttl: ms("1m"), limit: 60 }) // 60 requests per minute per IP
   @RouteCache({ ttl: 300 }) // 5 minutes TTL
   @Get('list')
   @ApiOperation({ summary: "Get requests with filtering and pagination" })
@@ -118,7 +119,7 @@ export class RequestController {
     },
   })
   @UseGuards(AuthGuard)
-  @IpRateLimit({ ttl: 60, limit: 60 }) // 60 requests per minute per IP
+  @IpRateLimit({ ttl: ms("1m"), limit: 60 }) // 60 requests per minute per IP
   @RouteCache({ ttl: 300 }) // 5 minutes TTL
   @Get("map")
   async getRequestMap(@Query() dto: GetRequestMapDto) {
@@ -149,8 +150,8 @@ export class RequestController {
 
   @ApiSecurity("jwt-auth")
   @UseGuards(AuthGuard)
-  @IpRateLimit({ ttl: 60, limit: 10 }) // 10 requests per minute per IP
-  @RateLimit({ ttl: 60, limit: 5 }) // 5 requests per minute per account
+  @IpRateLimit({ ttl: ms("1m"), limit: 10 }) // 10 requests per minute per IP
+  @RateLimit({ ttl: ms("1m"), limit: 5 }) // 5 requests per minute per account
   @Post(":id/respond")
   @ApiOperation({ summary: "Respond to a request" })
   async respond(@GetUser() user: User, @Param("id") id: string, @Body() dto: RespondToRequestDto) {
@@ -183,8 +184,8 @@ export class RequestController {
     },
   })
   @UseGuards(AuthGuard)
-  @IpRateLimit({ ttl: 60, limit: 60 }) // 60 requests per minute per IP
-  @RateLimit({ ttl: 60, limit: 60 }) // 60 requests per minute per account
+  @IpRateLimit({ ttl: ms("1m"), limit: 60 }) // 60 requests per minute per IP
+  @RateLimit({ ttl: ms("1m"), limit: 60 }) // 60 requests per minute per account
   @RouteCache({ ttl: 120 }) // 2 minutes TTL
   @Get(":id/nearby-performers")
   async getNearbyPerformers(@Param("id") id: string, @Query() dto: GetNearbyPerformersDto) {
@@ -209,8 +210,8 @@ export class RequestController {
 
   @ApiSecurity("jwt-auth")
   @UseGuards(AuthGuard)
-  @IpRateLimit({ ttl: 60, limit: 5 }) // 5 requests per minute per IP
-  @RateLimit({ ttl: 60, limit: 3 }) // 3 requests per minute per account
+  @IpRateLimit({ ttl: ms("1m"), limit: 5 }) // 5 requests per minute per IP
+  @RateLimit({ ttl: ms("1m"), limit: 3 }) // 3 requests per minute per account
   @Post(":id/complete")
   @ApiOperation({ summary: "Complete a task (customer only)" })
   @ApiOkResponse({

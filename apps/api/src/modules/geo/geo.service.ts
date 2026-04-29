@@ -11,6 +11,7 @@ interface PerformerNearby {
   firstName: string
   lastName: string | null
   avatar: string | null
+  rating: number
   distance: number
   lng: number
   lat: number
@@ -176,10 +177,11 @@ export class GeoService {
         ST_Distance(
           "lastKnownLocation"::geography,
           ST_SetSRID(ST_MakePoint($1, $2), 4326)::geography
-        ) as distance
+        ) / 1000 as distance
       FROM "user"
-      WHERE role = 'normal'
+      WHERE role IN ('normal', 'admin')
       AND banned = false
+      AND "isAvailable" = true
       AND "lastKnownLocation" IS NOT NULL
       AND ST_DWithin(
         "lastKnownLocation"::geography,
@@ -198,6 +200,7 @@ export class GeoService {
       firstName: r.firstName,
       lastName: r.lastName,
       avatar: r.avatar,
+      rating: 5,
       distance: Number(r.distance),
       lng: Number(r.lng),
       lat: Number(r.lat),
@@ -210,12 +213,60 @@ export class GeoService {
   }
 
   /**
+   * All performers with isAvailable and lastKnownLocation (for world map).
+   * Без Redis-кэша: выборка лёгкая (индекс + LIMIT), зато список всегда согласован с БД.
+   */
+  async getPerformersReadyForMap(limit = 1500): Promise<PerformerNearby[]> {
+    const cap = Math.min(2000, Math.max(1, Math.floor(limit)))
+
+    const query = `
+      SELECT
+        id,
+        username,
+        "firstName",
+        "lastName",
+        avatar,
+        COALESCE((
+          SELECT ROUND(AVG(d."customerRating")::numeric, 1)
+          FROM deal d
+          WHERE d."performerId" = "user".id
+            AND d.status = 'completed'
+            AND d."customerRating" IS NOT NULL
+        ), 5) as rating,
+        ST_X("lastKnownLocation"::geometry) as lng,
+        ST_Y("lastKnownLocation"::geometry) as lat,
+        0::double precision as distance
+      FROM "user"
+      WHERE role IN ('normal', 'admin')
+        AND banned = false
+        AND "isAvailable" = true
+        AND "lastKnownLocation" IS NOT NULL
+      ORDER BY "locationUpdatedAt" DESC NULLS LAST
+      LIMIT $1
+    `
+
+    const results = await this.userRepository.query(query, [cap])
+
+    return results.map((r: any) => ({
+      id: r.id,
+      username: r.username,
+      firstName: r.firstName,
+      lastName: r.lastName,
+      avatar: r.avatar,
+      rating: Number(r.rating),
+      distance: Number(r.distance),
+      lng: Number(r.lng),
+      lat: Number(r.lat),
+    }))
+  }
+
+  /**
    * Get performers nearby a specific request location
    * Uses request coordinates as center point
    */
   async getPerformersNearbyRequest(
     requestId: string,
-    radiusKm: number = 5,
+    radiusKm: number = 50,
     limit: number = 50,
   ): Promise<{ items: PerformerNearby[] }> {
     // Check cache first
@@ -245,6 +296,7 @@ export class GeoService {
     const query = `
       SELECT
         id,
+        username,
         "firstName",
         "lastName",
         avatar,
@@ -262,8 +314,9 @@ export class GeoService {
           ST_SetSRID(ST_MakePoint($1, $2), 4326)::geography
         ) / 1000 as distance
       FROM "user"
-      WHERE role = 'normal'
+      WHERE role IN ('normal', 'admin')
       AND banned = false
+      AND "isAvailable" = true
       AND "lastKnownLocation" IS NOT NULL
       AND ST_DWithin(
         "lastKnownLocation"::geography,
@@ -279,6 +332,7 @@ export class GeoService {
     // Format results
     const items = results.map((r: any) => ({
       id: r.id,
+      username: r.username ?? null,
       firstName: r.firstName,
       lastName: r.lastName,
       avatar: r.avatar,
@@ -310,9 +364,5 @@ export class GeoService {
     `
 
     await this.userRepository.query(query, [lng, lat, userId])
-
-    // Note: Cache invalidation for nearby performers is handled by TTL
-    // For more aggressive invalidation, we could clear cache keys matching pattern
-    // but this would require additional Redis operations
   }
 }

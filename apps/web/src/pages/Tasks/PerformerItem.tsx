@@ -28,9 +28,7 @@ const PerformerItem = ({ performer, ref, handleSelectPerformer }: PerformerItemP
               {performer.firstName} {performer.lastName && performer.lastName}
             </span>
 
-            <span className="performer-item__online-status">
-              {t("wasOnline")} {lastOnline}
-            </span>
+            <span className="performer-item__online-status">{lastOnline}</span>
           </div>
         </div>
 

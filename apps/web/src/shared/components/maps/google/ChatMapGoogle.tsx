@@ -1,60 +1,67 @@
 import { GoogleMap } from "@react-google-maps/api"
-import { memo, useCallback, useEffect, useRef, useState } from "react"
+import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react"
 import pinIcon from "../../../../assets/icons/ui/pin.svg"
 import { useGoogleMapLoaded } from "../../../providers/GoogleMapContext"
 import { GOOGLE_MAP_ID } from "../../../../constants"
-
-const mapOptions: google.maps.MapOptions = {
-  disableDefaultUI: true,
-  mapId: GOOGLE_MAP_ID,
-  gestureHandling: "greedy",
-}
+import { getGoogleMapBaseOptions } from "../../../utils/googleMapBaseOptions"
 
 interface ChatMapGoogleProps {
   coordinates: { lat: number; lng: number }
 }
 
 const ChatMapGoogle = memo(({ coordinates }: ChatMapGoogleProps) => {
+  const mapOptions = useMemo(() => getGoogleMapBaseOptions(), [])
   const isLoaded = useGoogleMapLoaded()
   const [map, setMap] = useState<google.maps.Map | null>(null)
   const [mapIsFocused, setMapIsFocused] = useState(false)
-  const markerRef = useRef<google.maps.marker.AdvancedMarkerElement | null>(null)
+  const markerRef = useRef<google.maps.Marker | google.maps.marker.AdvancedMarkerElement | null>(null)
 
   const handleLoad = useCallback((mapInstance: google.maps.Map) => {
     setMap(mapInstance)
   }, [])
 
-  // Создаем маркер на карте
   useEffect(() => {
     if (!map || !coordinates) return
 
     const initMarker = async () => {
-      const markerLib = (await google.maps.importLibrary("marker")) as unknown as {
-        AdvancedMarkerElement: typeof google.maps.marker.AdvancedMarkerElement
-      }
-      const { AdvancedMarkerElement } = markerLib
-
-      // Удаляем предыдущий маркер если есть
       if (markerRef.current) {
-        markerRef.current.map = null
+        if (markerRef.current instanceof google.maps.Marker) {
+          markerRef.current.setMap(null)
+        } else {
+          markerRef.current.map = null
+        }
+        markerRef.current = null
       }
 
-      // Создаем контент для маркера
-      const content = document.createElement("div")
-      content.className = "chat-map__marker"
-      content.innerHTML = `<img src="${pinIcon}" alt="Pin Icon" />`
+      if (GOOGLE_MAP_ID) {
+        const markerLib = (await google.maps.importLibrary("marker")) as unknown as {
+          AdvancedMarkerElement: typeof google.maps.marker.AdvancedMarkerElement
+        }
+        const { AdvancedMarkerElement } = markerLib
 
-      // Создаем новый маркер
-      const marker = new AdvancedMarkerElement({
-        map,
-        position: coordinates,
-        content,
-      })
+        const content = document.createElement("div")
+        content.className = "chat-map__marker"
+        content.innerHTML = `<img src="${pinIcon}" alt="Pin Icon" />`
 
-      markerRef.current = marker
+        markerRef.current = new AdvancedMarkerElement({
+          map,
+          position: coordinates,
+          content,
+        })
+      } else {
+        markerRef.current = new google.maps.Marker({
+          map,
+          position: coordinates,
+          icon: {
+            url: pinIcon,
+            scaledSize: new google.maps.Size(40, 40),
+            anchor: new google.maps.Point(20, 40),
+          },
+        })
+      }
     }
 
-    initMarker()
+    void initMarker()
   }, [map, coordinates])
 
   const timeoutRef = useRef<number | null>(null)

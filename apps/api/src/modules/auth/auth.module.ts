@@ -1,6 +1,7 @@
 import { Global, MiddlewareConsumer, Module, NestModule, RequestMethod } from "@nestjs/common"
 import { AuthController } from "./auth.controller"
 import AuthService from "./auth.service"
+import { UCallerService } from "./ucaller.service"
 import { TypeOrmModule } from "@nestjs/typeorm"
 import { Deal, User } from "@share/entities"
 import { UserController } from "../user/user.controller"
@@ -14,7 +15,7 @@ import { GeoModule } from "../geo/geo.module"
 @Global()
 @Module({
   imports: [TypeOrmModule.forFeature([User, Deal]), GeoModule],
-  providers: [AuthService, AbilityFactory, UserService],
+  providers: [AuthService, UCallerService, AbilityFactory, UserService],
   controllers: [AuthController, UserController],
   exports: [AbilityFactory, UserService],
 })

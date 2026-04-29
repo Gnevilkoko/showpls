@@ -7,7 +7,7 @@ import crypto from "crypto"
 import qs from "qs"
 import { AuthDataValidator, objectToAuthDataMap } from "@telegram-auth/server"
 import { BotConfig, JwtConfig } from "../../config"
-import jwt, { SignOptions } from "jsonwebtoken"
+import jwt, { JsonWebTokenError, SignOptions } from "jsonwebtoken"
 import AuthExceptions from "./auth.exceptions"
 import { UserService } from "../user/user.service"
 import { TGUser } from "./auth.types"
@@ -51,7 +51,7 @@ class AuthService {
 
     if (!ignoreExpiration) {
       const distance = new Date().getTime() - new Date(+tgUser.authDate * 1000).getTime()
-      if (distance > ms("1h")) {
+      if (distance > ms("24h")) {
         throw new AuthExceptions.CredentialsAreExpired()
       }
     }
@@ -176,6 +176,19 @@ class AuthService {
       ignoreExpiration: false,
       algorithms: ["RS256"],
     }) as T
+  }
+
+  /** Короткоживущий код для deep link /web: /auth/callback?code=… и showpls://auth/callback?code=… */
+  public static issueAuthCallbackCode(userId: string, ttlMs: number = ms("10m")): string {
+    return AuthService.generateToken({ acb: 1 as const, userId: String(userId) }, ttlMs)
+  }
+
+  public static verifyAuthCallbackCode(token: string): { userId: string } {
+    const p = AuthService.verifySignature<{ acb?: number; userId?: string }>(token)
+    if (p.acb !== 1 || !p.userId) {
+      throw new JsonWebTokenError("Not an auth callback token")
+    }
+    return { userId: p.userId }
   }
 }
 

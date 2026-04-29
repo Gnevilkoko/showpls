@@ -25,6 +25,9 @@ node_modules
 !.vscode/launch.json
 !.vscode/extensions.json
 
+# server data (postgres/redis bind mounts)
+/data
+
 # misc
 /.sass-cache
 /connect.lock

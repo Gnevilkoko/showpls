@@ -86,6 +86,20 @@ export const responseApi = createApi({
       ],
     }),
 
+    /** Отзыв оффера исполнителем (только pending) */
+    withdrawResponse: builder.mutation<RejectResponseResult, { responseId: string }>({
+      query: ({ responseId }) => ({
+        url: `/responses/${responseId}/cancel`,
+        method: "POST",
+      }),
+      invalidatesTags: (_result, _error, { responseId }) => [
+        { type: "Response", id: responseId },
+        "Deal",
+        "Chat",
+        "Request",
+      ],
+    }),
+
     /**
      * Получение отклика по ID
      * GET /responses/:id
@@ -116,12 +130,18 @@ export const responseApi = createApi({
   }),
 })
 
-export const { useAcceptResponseMutation, useRejectResponseMutation, useGetResponseQuery, useGetResponsesQuery } =
-  responseApi
+export const {
+  useAcceptResponseMutation,
+  useRejectResponseMutation,
+  useWithdrawResponseMutation,
+  useGetResponseQuery,
+  useGetResponsesQuery,
+} = responseApi
 
 export const responseApiEndpoints = {
   acceptResponse: responseApi.endpoints.acceptResponse,
   rejectResponse: responseApi.endpoints.rejectResponse,
+  withdrawResponse: responseApi.endpoints.withdrawResponse,
   getResponse: responseApi.endpoints.getResponse,
   getResponses: responseApi.endpoints.getResponses,
 }
