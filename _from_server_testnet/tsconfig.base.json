@@ -1,0 +1,31 @@
+{
+  "compileOnSave": false,
+  "compilerOptions": {
+    "rootDir": ".",
+    "sourceMap": true,
+    "declaration": false,
+    "strict": true,
+    "moduleResolution": "node",
+    "emitDecoratorMetadata": true,
+    "experimentalDecorators": true,
+    "importHelpers": true,
+    "target": "es2022",
+    "module": "esnext",
+    "lib": ["es2022", "dom"],
+    "skipLibCheck": true,
+    "skipDefaultLibCheck": true,
+    "esModuleInterop": true,
+    "strictNullChecks": true,
+    "strictPropertyInitialization": false,
+    "baseUrl": ".",
+    "paths": {
+      "@server": ["libs/server/src/index.ts"],
+      "@server/*": ["libs/server/src/lib/*"],
+      "@share": ["libs/share/src/index.ts"],
+      "@share/*": ["libs/share/src/lib/*"],
+      "@ledger": ["libs/ledger/src/index.ts"],
+      "@ledger/*": ["libs/ledger/src/lib/*"]
+    }
+  },
+  "exclude": ["node_modules", "tmp"]
+}

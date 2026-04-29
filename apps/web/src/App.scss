@@ -1214,6 +1214,15 @@ $border-color-active-order: var(--border-color-active-order);
   box-shadow: 2px 2px 6px 0px #00000026 inset;
 }
 
+/* «Загрузить ещё» на главной (specials): в светлой теме — белый текст на зелёном, как у action-banner */
+:root[data-theme="light"] .page.home .home__specials-banner .specials_button,
+:root:not([data-theme]) .page.home .home__specials-banner .specials_button {
+  background: linear-gradient(180deg, #54febd 0%, #2eca8e 100%);
+  color: #ffffff;
+  border-color: transparent;
+  box-shadow: 0px 5vw 4vw -2vw #00a7674d;
+}
+
 // =========== tasks ===========
 
 .tasks-page-title {
@@ -1650,6 +1659,11 @@ $border-color-active-order: var(--border-color-active-order);
   padding: 11px;
   cursor: pointer;
   min-height: 53px;
+  font-family: Space Grotesk, sans-serif;
+  font-weight: 500;
+  font-size: 18px;
+  line-height: 100%;
+  color: #ffffff;
 
   &.green {
     background: linear-gradient(180deg, #54febd 0%, #2eca8e 100%);
@@ -2230,6 +2244,23 @@ $border-color-active-order: var(--border-color-active-order);
   background-color: $bg-secondary;
   box-shadow: 0px 2px 5px 0px #262b3108, 0px 10px 10px 0px #262b3105, 0px 22px 13px 0px #262b3103,
     0px 40px 16px 0px #262b3100, 0px 62px 17px 0px #262b3100;
+}
+
+.profile-orders__menu-item {
+  cursor: pointer;
+  transition: transform 0.15s ease, filter 0.15s ease, box-shadow 0.15s ease;
+
+  &:hover {
+    transform: translateY(-1px);
+    filter: brightness(1.06);
+    box-shadow: 0px 2px 5px 0px #262b3108, 0px 10px 10px 0px #262b3105, 0px 22px 13px 0px #262b3103,
+      0px 40px 16px 0px #262b3100, 0px 62px 17px 0px #262b3100, 0 0 0 1px rgba(255, 255, 255, 0.08);
+  }
+
+  &:active {
+    transform: translateY(0px);
+    filter: brightness(1.02);
+  }
 }
 
 .trans-status-icon {

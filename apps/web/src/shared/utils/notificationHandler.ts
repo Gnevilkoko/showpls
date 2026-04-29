@@ -26,6 +26,15 @@ export class NotificationHandler {
 
     // 2. Валидационные ошибки (объект)
     if (typeof message === "object" && message !== null) {
+      // Rate-limit payload: { wait: number(ms) }
+      const wait = (message as { wait?: unknown })?.wait
+      if (typeof wait === "number" && isFinite(wait) && wait > 0) {
+        const seconds = Math.max(1, Math.ceil(wait / 1000))
+        // Keep it simple and human-readable in both languages
+        const base = errorCode === "rate-limited" ? i18n.t("errors.rateLimited") : fallbackMessage || i18n.t("errors.rateLimited")
+        return `${base}. ${i18n.language === "ru" ? "Подождите" : "Please wait"} ${seconds}s`
+      }
+
       try {
         const errors = Object.values(message).flat()
         if (Array.isArray(errors) && errors.length > 0) {

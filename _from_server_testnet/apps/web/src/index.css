@@ -1,0 +1,57 @@
+/* iOS: не менять размер текста при повороте, меньше «прыжков» масштаба */
+html {
+  -webkit-text-size-adjust: 100%;
+}
+
+/* iOS: при фокусе в поле с font-size < 16px Safari делает авто-зум. Минимум 16px везде убирает это. */
+input,
+textarea,
+select {
+  font-size: max(16px, 1em);
+}
+
+body {
+  font-family: "Space Grotesk", sans-serif;
+}
+
+* {
+  margin: 0;
+  padding: 0;
+  -webkit-tap-highlight-color: transparent;
+}
+
+:root {
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* CSS переменные для светлой темы (по умолчанию) */
+:root[data-theme="light"],
+:root:not([data-theme]) {
+  --bg-primary: #edf3f7;
+  --bg-secondary: #ffffff;
+  --bg-modal: #0000008c;
+  --bg-active-order: #b4ffc6;
+  --bg-unread: #ffffff;
+  --text-primary: #263140;
+  --text-placeholder: #26314080;
+  --text-secondary: #3c454c;
+  --border-color: #d8e2ee;
+  --border-color-active-order: #5feeb2;
+}
+
+/* CSS переменные для темной темы */
+:root[data-theme="dark"] {
+  --bg-primary: #050d13;
+  --bg-secondary: #0b1d2a;
+  --bg-modal: #ffffff1f;
+  --bg-active-order: #173d5a;
+  --bg-unread: #132938;
+  --text-primary: #ffffff;
+  --text-placeholder: #ffffff80;
+  --text-secondary: #ffffff;
+  --border-color: #5b6674;
+  --border-color-active-order: #ffffff80;
+}

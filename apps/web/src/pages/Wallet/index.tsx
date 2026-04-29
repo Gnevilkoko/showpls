@@ -142,10 +142,13 @@ const Wallet = () => {
 
       if (!res.ok) {
         const errorData = await res.json().catch(() => ({}))
-        notification.handleError(
-          new Error(errorData.message || t("errors.topUpCreateError")),
-          t("errors.topUpCreateError")
-        )
+        // Backend can return `message` as object (validation/business errors). Passing object into `Error`
+        // becomes "[object Object]" in UI, so forward as API-like error shape.
+        if (errorData && typeof errorData === "object") {
+          notification.handleError({ data: errorData, status: res.status }, t("errors.topUpCreateError"))
+        } else {
+          notification.handleError(new Error(t("errors.topUpCreateError")), t("errors.topUpCreateError"))
+        }
         return
       }
 

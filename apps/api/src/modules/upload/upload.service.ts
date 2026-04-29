@@ -29,7 +29,7 @@ const ALLOWED_VIDEO_TYPES = [
   'video/x-msvideo', // .avi
 ];
 
-const MAX_IMAGE_SIZE = 10 * 1024 * 1024; // 10MB
+const MAX_IMAGE_SIZE = 100 * 1024 * 1024; // 100MB
 const MAX_VIDEO_SIZE = 100 * 1024 * 1024; // 100MB
 
 @Injectable()

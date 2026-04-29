@@ -21,6 +21,9 @@ import { AccountOwnerType, Entry } from "@ledger/entities"
 export class UserService {
   protected logger = new Logger(UserService.name)
 
+  // 100 STARS in minimal units (1 STAR = 1e6)
+  protected static readonly SIGNUP_STARS_ATOMIC = 100n * 10n ** 6n
+
   constructor(
     @InjectRepository(User) protected repository: Repository<User>,
     @InjectDataSource() protected dataSource: DataSource,
@@ -30,6 +33,7 @@ export class UserService {
 
   async create({ balances, ...params }: CreateUserParams, manager?: EntityManager | undefined) {
     try {
+      const effectiveManager = manager || this.repository.manager
       const insertResult = await (manager || this.repository.manager)
         .createQueryBuilder()
         .insert()
@@ -48,13 +52,25 @@ export class UserService {
       try {
         const account = await this.ledger.account.create(
           { ownerId: String(user.id), ownerType: AccountOwnerType.User },
-          undefined,
+          effectiveManager,
         )
         const starsCurrency = await this.ledger.currency.retrieve({ code: "STARS", blockchain: null })
         if (account && starsCurrency) {
           await this.ledger.balance.create(
             { accountId: account.id, currencyId: starsCurrency.id },
-            undefined,
+            effectiveManager,
+          )
+
+          // Signup bonus: +100 STARS on first user creation (idempotent by externalType+externalId).
+          await this.ledger.deposit.create(
+            {
+              userId: String(user.id),
+              amount: UserService.SIGNUP_STARS_ATOMIC,
+              currencyId: starsCurrency.id,
+              externalType: "signup_bonus",
+              externalId: `user-${user.id}`,
+            },
+            effectiveManager,
           )
         }
       } catch (ledgerErr) {

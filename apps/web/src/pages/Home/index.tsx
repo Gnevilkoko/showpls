@@ -40,7 +40,13 @@ const Home = () => {
 
   const specials = specialsResponse?.items ?? []
   const selectedSpecial = selectedSpecialData ?? specials.find((special) => special.id === selectedSpecialId) ?? null
-  const canLoadMore = (specialsResponse?.total ?? 0) > currentLimit
+
+  const total = specialsResponse?.total ?? 0
+  const canLoadMore =
+    !isLoadingSpecials &&
+    total > 0 &&
+    specials.length > 0 &&
+    total > currentLimit
 
   const handleClickOption = (val: SpecialSection) => {
     setActiveSection(val)

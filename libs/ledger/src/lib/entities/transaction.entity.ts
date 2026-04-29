@@ -83,7 +83,7 @@ export class Transaction {
   initiatorId: string | null
 
   @Index('idx_ledger_transactions_metadata_id', { synchronize: false })
-  @Column("jsonb")
+  @Column("jsonb", { name: "metadata" })
   meta: Record<string, any>
 
   @OneToMany(()=> Entry, (entry) => entry.transaction)

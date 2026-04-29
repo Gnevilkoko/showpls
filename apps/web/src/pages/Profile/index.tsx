@@ -41,6 +41,7 @@ import documentTextIcon from "../../assets/icons/ui/document-text.svg"
 import { useGetChatListQuery } from "../../store/api/chatApi"
 import ModalProfileNotifications from "./components/ModalProfileNotifications"
 import ModalPerformerVerification from "./components/ModalPerformerVerification"
+import ModalProfileOrders from "./components/ModalProfileOrders"
 import { useNotification } from "../../shared/hooks/useNotification"
 import { NotificationHandler } from "../../shared/utils/notificationHandler"
 import { requestGeolocationPosition } from "../../shared/utils/performerDeviceProfile"
@@ -61,6 +62,7 @@ const Profile = () => {
   const [isOpenReviews, setIsOpenReviews] = useState<boolean>(false)
   const [isOpenNotifications, setIsOpenNotifications] = useState<boolean>(false)
   const [isOpenVerification, setIsOpenVerification] = useState(false)
+  const [isOpenOrders, setIsOpenOrders] = useState(false)
 
   const selectedLang = useAppSelector((state) => state.language)
   const selectedTheme = useAppSelector((state) => state.theme)
@@ -251,11 +253,7 @@ const Profile = () => {
           <ProfileBtnItem
             title={t("myOrders")}
             icon={boxIcon}
-            onClick={() =>
-              navigate("/tasks", {
-                state: { mode: activeMode === "customer" ? "createTask" : undefined },
-              })
-            }
+            onClick={() => setIsOpenOrders(true)}
           />
 
           <ProfileBtnItem title={t("verification")} icon={verificationShieldIcon} onClick={() => setIsOpenVerification(true)}>
@@ -353,6 +351,12 @@ const Profile = () => {
       />
 
       <ModalPerformerVerification isOpen={isOpenVerification} onClose={() => setIsOpenVerification(false)} />
+
+      <ModalProfileOrders
+        isOpen={isOpenOrders}
+        onClose={() => setIsOpenOrders(false)}
+        mode={activeMode}
+      />
     </div>
   )
 }

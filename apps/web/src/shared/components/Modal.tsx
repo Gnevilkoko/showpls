@@ -4,9 +4,10 @@ interface ModalProps {
   isOpen: boolean
   onClose: () => void
   children: ReactNode
+  modalClassName?: string
 }
 
-const Modal = ({ isOpen, onClose, children }: ModalProps) => {
+const Modal = ({ isOpen, onClose, children, modalClassName }: ModalProps) => {
   // Блокируем прокрутку body когда модалка открыта
   useEffect(() => {
     if (isOpen) {
@@ -41,7 +42,7 @@ const Modal = ({ isOpen, onClose, children }: ModalProps) => {
 
   return (
     <div className={`modal__wrapper ${isOpen ? "active" : ""}`} onClick={onClose} onWheel={handleWheel}>
-      <div className="modal" onClick={(e) => e.stopPropagation()}>
+      <div className={`modal ${modalClassName ?? ""}`.trim()} onClick={(e) => e.stopPropagation()}>
         <div className="modal-content-container">{children}</div>
 
         <button className="modal__close" onClick={onClose}>

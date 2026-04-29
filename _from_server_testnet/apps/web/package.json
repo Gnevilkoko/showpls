@@ -1,0 +1,12 @@
+{
+  "name": "showpls-web",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "build": "cd ../.. && npm run build:web",
+    "dev": "cd ../.. && npm run dev:web",
+    "preview": "cd ../.. && npm run preview:web"
+  },
+  "dependencies": {},
+  "devDependencies": {}
+}

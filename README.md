@@ -11,12 +11,12 @@
 ```bash
 cd ~/showpls-testnet
 docker compose -f docker-compose.server.yaml up -d
-# Перезапуск только api и web (postgres/redis не трогаем):
-docker compose -f docker-compose.server.yaml restart api web
+# Пересборка/перезапуск только api и web (postgres/redis не трогаем):
+docker compose -f docker-compose.server.yaml up -d --no-deps --force-recreate api web
 ```
 
 - **Не запускать** на сервере `docker-compose-local.yaml` — там данные в томах, при `down -v` они удалятся.
-- **Деплой:** rsync без `--delete`, с `--exclude=data`; затем только `restart api web`. Не делать `down`, не перезапускать postgres/redis.
+- **Деплой:** `scripts/deploy-rsync-testnet.sh user@vps` — rsync без `--delete`, с `--exclude=data`, `.env*`, `_from_server_testnet`; затем `docker compose ... up -d --no-deps --force-recreate api web`. Не делать `down`, не перезапускать postgres/redis.
 
 ### Wallet balance on server
 

@@ -36,6 +36,13 @@ export default defineConfig({
       allow: [".."],
     },
   },
+  // `vite preview` на сервере за Traefik/nginx — Host ≠ localhost; иначе Vite блокирует запрос
+  preview: {
+    port: 3000,
+    host: true,
+    strictPort: true,
+    allowedHosts: true,
+  },
   build: {
     outDir: "dist/apps/web",
     emptyOutDir: true,
